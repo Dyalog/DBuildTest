@@ -403,7 +403,7 @@
           res ⎕SIGNAL(∨/'could not bring in'⍷res)/11
       :ElseIf DyaVersion<17
           res←⎕SE.SALT.Load file,' -target=',target
-          res ⎕SIGNAL('***'≡3↑res)/11
+          res ⎕SIGNAL('***'≡3↑⍕res)/11
       :Else
           :If 0=⎕NC target ⋄ target←target ⎕NS'' ⋄ :EndIf
           ⍝:If 326≠⎕DR target ⋄ target←⍎target ⋄ :EndIf ⍝ make sure it's a ref!
@@ -894,7 +894,7 @@
           :Case 'dyalogbuild'
               :If dVersion≥_version←GetNumParam'version' ''
                   0 Log'DyalogBuild version ',⍕dVersion
-                  Log'Processing "',file,'" (written for version > ',(⍕_version),')'
+                  Log'Processing "',file,'" (written for version ≥ ',(⍕_version),')'
               :Else
                   ('This version of ]',Ûcmd,' only supports Dyalog Test file format v',(⍕dVersion),' and lower')
               :EndIf
