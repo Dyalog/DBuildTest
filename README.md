@@ -13,13 +13,13 @@ when ⎕SE-fns are on the stack)
   Also optional parameter "save=1" now works. Commandline-modifiers -save=0|1/-off=0|1 can be used to overwrite this behaviour.
 
 * DBuild: new command-line switch "`TestClassic`" to test compatibility of build ws with classic editions (requires V16 or greater!)
-  NB: this will only test compatibility of the charset, not of APL-Features (ie. will not detect `⎕NPUT` in V12 etc.)
+  NB: this will only test compatibility of the charset, not of APL-Features (ie. will not detect `⎕NPUT` in v12.0 etc.)
 
 * DBuild now upports `$EnvVar` (for all arguments/parameters in a .dyalogbuild-file). NB: the first blank AFTER any EnvVar is consumed
   by the replacement (this is neccessary so the resulting code is not "polluted" with spaces needed to separate the Var from
   surrounding text, ie "`$GitDir DyalogBuild" → "C:\Git\DyalogBuild`")
 
-## Using the tools with Dyalog 12/13
+## Using the tools with Dyalog v12.0, v12.1 and v13.0
 
 Due to problems with SALT, we can't run the tools as user-commands under these old version. So you need to bring them in with `]Load` and then pass arguments to the differently.
 Follow these examples:
