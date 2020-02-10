@@ -80,8 +80,8 @@
       :EndIf
      
       :If 18≤DyaVersion
-          lc←1∘⎕C                                     ⍝ lower case
-          uc←¯1∘⎕C                                    ⍝ upper case
+          lc←¯1∘⎕C                                    ⍝ lower case
+          uc←1∘⎕C                                     ⍝ upper case
       :ElseIf 15≤DyaVersion
           lc←819⌶                                     ⍝ lower case
           uc←1∘(819⌶)                                 ⍝ upper case
