@@ -53,7 +53,7 @@
       :If 13≤DyaVersion
           table←⍪
           ltack←⊣
-          rtack←⍎⎕ucs 8866 
+          rtack←⍎⎕UCS 8866
           GetNumParam←{⍺←⊣ ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)
       :Else
           table←{r←(⍴⍵),(1≥⍴⍴⍵)/1 ⋄ r←r[1],×/1↓⍴⍵ ⋄ r⍴⍵}
@@ -398,7 +398,7 @@
     ⍝ Options defines SALT-Options
     ⍝ file_target: (filename )
       (file target)←file_target
-      :if 0=⎕nc'options'⋄options←''⋄:endif
+      :If 0=⎕NC'options' ⋄ options←'' ⋄ :EndIf
       options←((0<≢options)⍴' '),options
       :If DyaVersion<15
           res←⎕SE.SALT.Load file,' -target=',target,options
@@ -413,10 +413,10 @@
               ⍝res←2 target.⎕FIX¨(⊂'file://'),¨eis file
               ⍝ MK suggested 2⎕FIX - but some of the tests then failed - and I hesitate to add everything that SALT does to find files in its folders, so will continue to ]LOAD for the time being...
               res←⎕SE.SALT.Load file,' -target=',target,options
-              res ⎕SIGNAL('***'≡3↑⍕res)/11
           :Else
-              ('Error loading ',file,': ',⊃⎕DM)⎕SIGNAL 11
+              ('Error loading ',file,': ',∊⎕DM,¨⎕ucs 13)⎕SIGNAL 11
           :EndTrap
+          {(⍵,⎕UCS 13)⎕SIGNAL('***'≡3↑' '~⍨⍕⍵)/11}¨⊆res
       :EndIf
     ∇
 
@@ -522,14 +522,14 @@
       Ö←{ ⍝ ö over/depth (AB's suggested operator)
           ⍺←{⍵ ⋄ ⍺⍺}                 ⍝ monadic: pass-thorugh
           3=⎕NC'⍵⍵':(⍵⍵ ⍺)⍺⍺(⍵⍵ ⍵)   ⍝ fÖg: over
-          2=⎕NC'⍺⍺':rtack⍺((⍺⍺ ltack rtack)∇∇ ⍵⍵)⍵ 
+          2=⎕NC'⍺⍺':rtack ⍺((⍺⍺ ltack rtack)∇∇ ⍵⍵)⍵
           k←⌽3⍴⌽⍵⍵                   ⍝ r → r r r    q r → r q r    p q r → p q r
           n←k<0
           d←|≡¨3⍴⍵ ⍺ ⍵ ⍵
           (n/k)+←n/d
           3 4∊⍨⎕NC'⍺':⍺⍺{⍵⍵<|≡⍵:∇¨⍵ ⋄ ⍺⍺ ⍵}(⊃k)rtack ⍵ ⍝ called monadically
           b←1↓k<d
-          ⍱/b: rtack ⍺ ⍺⍺ ⍵
+          ⍱/b:rtack ⍺ ⍺⍺ ⍵
           </b:rtack ⍺∘∇¨⍵
           >/b:∇∘⍵¨rtack ⍺
           ∧/b:rtack ⍺ ∇¨⍵
@@ -991,7 +991,7 @@
               :Else
                   tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵,⍨⍺/⍨0∊⍴('^\[.*\]'⎕S 3)⍵}source
               :EndIf
-              :Trap halt/0
+              :Trap halt/11
                   ⍝z←⎕SE.SALT.Load tmp←tmpPath,((~0∊⍴target)/' -target=',target),options
                   z←options LoadCode tmpPath target
               :Else
@@ -1094,7 +1094,7 @@
               ∇¨(⊂⍵,'.'),¨(⍎⍵).⎕NL-2.1 3.1 9.1
           }¨(⊂'#.'),¨#.⎕NL-2.1 3.1 3.2 9.1
           :If 0<⍴z
-              LogError('Classic-Test found incompatible characters in following functions/variables:',⎕UCS 13 10),¯2↓∊z{('- ',⍺,⍵)/⍨×≢⍺}Ö 1 rtack (⎕UCS 13 10)
+              LogError('Classic-Test found incompatible characters in following functions/variables:',⎕UCS 13 10),¯2↓∊z{('- ',⍺,⍵)/⍨×≢⍺}Ö 1 rtack(⎕UCS 13 10)
           :Else
               Log'Workspace seems to be compatible with Classic Edition ',⍕{⍵>1:⍵ ⋄ 12}TestClassic
           :EndIf
