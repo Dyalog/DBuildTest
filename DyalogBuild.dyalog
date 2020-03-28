@@ -37,6 +37,7 @@
 ⍝ 2020 01 27 MBaas: DBuild: target: wsid, save=1, off=1 (and switch -save=1 to override settings from file);]DBuild: added -TestClassic
 ⍝ 2020 01 28 MBaas: DBuild: -TestClassic=version;bug fixes;doco
 ⍝ 2020 01 29 MBaas: DBuild: $EnvVar
+⍝ 2020 03 23 MBaas: made TestClassic is a simple switch w/o values assigned; fixes dealing with -halt in -save in DBuild;various minor fixes
 
 
     ⎕ML←1
@@ -409,7 +410,7 @@
       :Else
           :If 0=⎕NC target ⋄ target←target ⎕NS'' ⋄ :EndIf
           ⍝:If 326≠⎕DR target ⋄ target←⍎target ⋄ :EndIf ⍝ make sure it's a ref!
-          :Trap halt/0
+          :Trap (~halt)/0
               ⍝res←2 target.⎕FIX¨(⊂'file://'),¨eis file
               ⍝ MK suggested 2⎕FIX - but some of the tests then failed - and I hesitate to add everything that SALT does to find files in its folders, so will continue to ]LOAD for the time being...
               res←⎕SE.SALT.Load file,' -target=',target,options
@@ -579,15 +580,16 @@
 
     :Section TEST "DSL" FUNCTIONS
 
-    ∇ r←Test args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;ignored;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆
+    ∇ r←Test args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;ignored;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors
       ⍝ run some tests from a namespace or a folder
       ⍝ switches: args.(filter setup teardown verbose)
      
       ⍝ Not used here, but are for test scripts that need to locate data:
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
       WSFOLDER←⊃qNPARTS ⎕WSID
-     
-      LOGS←''
+    
+      LoggedErrors←LOGS←''
+      i←0  ⍝ just in case we're logging outside main loop
       (verbose filter halt quiet trace)←args.(verbose filter halt quiet trace)
       :If null≢repeat←args.repeat
           repeat←⊃2⊃⎕VFI repeat
@@ -618,9 +620,9 @@
                       :EndIf
                       f←¯1↓TESTSOURCE ⋄ type←1 ⍝ Load contents of folder
                   :Else                          ⍝ Arg is a source file - load it
-                  ⍝ns←⎕NS''  ⍝ ??? do we need this
-                      :Trap halt/0
-                          LoadCode f ns
+                      'ns'⎕NS''  
+                      :Trap (~halt)/0
+                          LoadCode f (⍕ns)
                           :If verbose ⋄ 0 Log'load file ',source ⋄ :EndIf
                       :Else
                           LogError⊃⎕DM
@@ -630,10 +632,10 @@
      
               :If 1=type
                   files←('*.dyalog'ListFiles f)[;1]
-                  ns←⎕NS''
+                  'ns'⎕NS''
                   :For f :In files
-                      :Trap halt/0
-                          LoadCode f ns
+                      :Trap (~halt)/0
+                          LoadCode f (⍕ns)
                       :Else
                           LogError⊃⎕DM
                       :EndTrap
@@ -668,7 +670,7 @@
           'ns'⎕NS'Check'
       :EndIf
       'ns'⎕NS'Because' 'Fail'
-      ns.Log←{⍺←rtack ⋄ ⍺ ##.LogTest ⍵}
+      ns.Log←{⍺←{⍵} ⋄ ⍺ ##.LogTest ⍵}  ⍝ a←rtack could cause problems with classic...
      
       :If args.tests≢0
           orig←fns←(','Split args.tests)~⊂''args.tests
@@ -865,7 +867,7 @@
      
       file←1⊃args.Arguments
       (prod quiet save halt TestClassic off)←args.(production quiet save halt TestClassic off) ⍝ save must be 0, ⎕SAVE does not work from a UCMD
-      (off TestClassic)←{2⊃⎕VFI⍕⍵}¨off TestClassic  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
+      (off TestClassic prod )←{2⊃⎕VFI⍕⍵}¨off TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
      
       halt←~halt  ⍝ invert it, so that we can use it directly for :trap halt/
       Clear args.clear
@@ -953,7 +955,7 @@
      
               :If (cmd≡'ns')∧0=⎕NC target
                   target ⎕NS''
-                  :Trap halt/0
+                  :Trap (~halt)/0
                       target⍎_defaults
                        ⍝ Log'Created namespace ',target
                   :Else
@@ -1054,7 +1056,7 @@
                       #.⎕LX←tmp
                       Log'Latent Expression set'
                   :ElseIf prod∨cmd≢'prod' ⍝ only execute PROD command if -production specified
-                      :Trap halt/0 ⋄ #⍎tmp
+                      :Trap (~halt)/0 ⋄ #⍎tmp
                       :Else
                           :If DyaVersion<13
                               LogError⊃⎕DM
@@ -1073,8 +1075,10 @@
                   ⎕WSID←∊1 qNPARTS path,tmp
                   Log'WSID set to ',⎕WSID
               :EndIf
-              :If 99≠tmp←GetNumParam'save' 99
-                  save←1=tmp
+              save←0
+              :If 99≠tmp←'99'GetNumParam'save'  ⍝ can be set as an option in build-file
+              :orif 1⊃tmp←⎕vfi ⍕args.save          ⍝ or a switch when calling UCMD (which actually override the setting from the buildfile)
+                  save←(,1)≡,2⊃tmp
               :EndIf
               :If off=2 ⋄ off←1=GetNumParam'off' 0 ⋄ :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default-value of 2)
           :Else
@@ -1099,7 +1103,7 @@
               Log'Workspace seems to be compatible with Classic Edition ',⍕{⍵>1:⍵ ⋄ 12}TestClassic
           :EndIf
       :EndIf
-      n←⍴LoggedErrors
+      n←≢LoggedErrors
       :If save≢0
           :If 0=n
               :If save≡1 ⋄ save←⎕WSID ⋄ :EndIf
@@ -1110,6 +1114,8 @@
                       Log'Saved as ',save,' (',tmp,' bytes)'
                   :EndTrap
               :Else
+                 Log'Cant 0⎕SAVE ws because:'
+                 Log ⎕DM
                   qNDELETE ⎕WSID  ⍝ avoid prompts during )SAVE
                   {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨')SAVE',⊂'ER'
                   Log'Enqueued keypresses to save upon exit'
@@ -1212,7 +1218,7 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1:2 -clear[=] -TestClassic[=112 13 14]' '1S -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -repeat='
+      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1:2 -clear[=] -TestClassic' '1S -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -repeat='
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
@@ -1229,7 +1235,7 @@
       :Select Cmd
       :Case 'DBuild'
           r←⊂'Run one or more DyalogBuild script files (.dyalogbuild)'
-          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet] [-halt] [-save=0|1] [-off=0|1] [-TestClassic[=12|13|14]'
+          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet] [-halt] [-save=0|1] [-off=0|1] [-TestClassic'
           :If level=0
               r,←⊂']',Cmd,' -?? ⍝ for more information'
           :EndIf
@@ -1243,7 +1249,7 @@
               r,←⊂'    -halt                     halt on error rather than log and continue'
               r,←⊂'    -save=0|1                 save the build workspace (overwrites TARGET''s save-option). NB: we only save if no errors were logged during Build-process!'
               r,←⊂'    -off=0|1                  )OFF after completion (if errors were logged, logfile will be created)'
-              r,←⊂'    -TestClassic[=12|13|14]   check imported code for compatibility with classic editions (charset, not language-features!)'
+              r,←⊂'    -TestClassic              check imported code for compatibility with classic editions (charset, not language-features!)'
               r,←⊂''
               r,←⊂']',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
           :EndIf
