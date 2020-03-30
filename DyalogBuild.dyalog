@@ -394,7 +394,7 @@
       :EndIf
     ∇
 
-    ∇ res←{options}LoadCode file_target;target;file
+    ∇ {res}←{options}LoadCode file_target;target;file
     ⍝ loads code from scriptfile (NB: file points to one or more existing files, no pattern etc.)
     ⍝ Options defines SALT-Options
     ⍝ file_target: (filename )
