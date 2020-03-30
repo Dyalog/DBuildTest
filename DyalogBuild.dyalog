@@ -1056,7 +1056,7 @@
                       #.⎕LX←tmp
                       Log'Latent Expression set'
                   :ElseIf prod∨cmd≢'prod' ⍝ only execute PROD command if -production specified
-                      :Trap (~halt)/0 ⋄ #⍎tmp
+                      :Trap halt/0 ⋄ #⍎tmp
                       :Else
                           :If DyaVersion<13
                               LogError⊃⎕DM
