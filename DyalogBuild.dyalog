@@ -415,7 +415,7 @@
               ⍝ MK suggested 2⎕FIX - but some of the tests then failed - and I hesitate to add everything that SALT does to find files in its folders, so will continue to ]LOAD for the time being...
               res←⎕SE.SALT.Load file,' -target=',target,options
           :Else
-              ('Error loading ',file,': ',∊⎕DM,¨⎕ucs 13)⎕SIGNAL 11
+              ('Error loading ',file,': ',∊⎕DM,¨⎕UCS 13)⎕SIGNAL 11
           :EndTrap
           {(⍵,⎕UCS 13)⎕SIGNAL('***'≡3↑' '~⍨⍕⍵)/11}¨⊆res
       :EndIf
@@ -587,7 +587,7 @@
       ⍝ Not used here, but are for test scripts that need to locate data:
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
       WSFOLDER←⊃qNPARTS ⎕WSID
-    
+     
       LoggedErrors←LOGS←''
       i←0  ⍝ just in case we're logging outside main loop
       (verbose filter halt quiet trace)←args.(verbose filter halt quiet trace)
@@ -598,7 +598,7 @@
       :If halt ⋄ ⎕TRAP←0 'S' ⋄ :EndIf ⍝ Defeat UCMD trapping
      
       repeat←1⌈repeat
-     
+      
       :If 0∊⍴args.Arguments
       :AndIf 9≠#.⎕NC source←⊃args.Arguments←,⊂'Tests'
           r←'An argument is required - see ]dtest -? for more information.' ⋄ →0
@@ -620,13 +620,16 @@
                       :EndIf
                       f←¯1↓TESTSOURCE ⋄ type←1 ⍝ Load contents of folder
                   :Else                          ⍝ Arg is a source file - load it
-                      'ns'⎕NS''  
-                      :Trap (~halt)/0
-                          LoadCode f (⍕ns)
-                          :If verbose ⋄ 0 Log'load file ',source ⋄ :EndIf
-                      :Else
-                          LogError⊃⎕DM
-                      :EndTrap
+                      'ns'⎕NS''
+                      files←(⊂f),{null≡⍵:'' ⋄ TESTSOURCE,⍵,'.dyalog'}¨args.(setup teardown)  ⍝ also load setup and teardown (if used)
+                      :For f :In files~⊂''
+                          :Trap (~halt)/0
+                              LoadCode f(⍕ns)
+                              :If verbose ⋄ 0 Log'load file ',f  ⋄ :EndIf
+                          :Else
+                              LogError⊃⎕DM
+                          :EndTrap
+                      :EndFor
                   :EndIf
               :EndIf
      
@@ -635,7 +638,7 @@
                   'ns'⎕NS''
                   :For f :In files
                       :Trap (~halt)/0
-                          LoadCode f (⍕ns)
+                          LoadCode f(⍕ns)
                       :Else
                           LogError⊃⎕DM
                       :EndTrap
@@ -727,6 +730,7 @@
                       f LogTest z←(ns⍎f)⍬
                       setupok←0=1↑⍴z
                   :Else ⋄ LogTest'-setup function not found: ',f
+                      ∘∘∘
                   :EndIf
               :EndIf
      
@@ -867,7 +871,7 @@
      
       file←1⊃args.Arguments
       (prod quiet save halt TestClassic off)←args.(production quiet save halt TestClassic off) ⍝ save must be 0, ⎕SAVE does not work from a UCMD
-      (off TestClassic prod )←{2⊃⎕VFI⍕⍵}¨off TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
+      (off TestClassic prod)←{2⊃⎕VFI⍕⍵}¨off TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
      
       halt←~halt  ⍝ invert it, so that we can use it directly for :trap halt/
       Clear args.clear
@@ -1077,7 +1081,7 @@
               :EndIf
               save←0
               :If 99≠tmp←'99'GetNumParam'save'  ⍝ can be set as an option in build-file
-              :orif 1⊃tmp←⎕vfi ⍕args.save          ⍝ or a switch when calling UCMD (which actually override the setting from the buildfile)
+              :OrIf 1⊃tmp←⎕VFI⍕args.save          ⍝ or a switch when calling UCMD (which actually override the setting from the buildfile)
                   save←(,1)≡,2⊃tmp
               :EndIf
               :If off=2 ⋄ off←1=GetNumParam'off' 0 ⋄ :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default-value of 2)
@@ -1114,8 +1118,8 @@
                       Log'Saved as ',save,' (',tmp,' bytes)'
                   :EndTrap
               :Else
-                 Log'Cant 0⎕SAVE ws because:'
-                 Log ⎕DM
+                  Log'Cant 0⎕SAVE ws because:'
+                  Log ⎕DM
                   qNDELETE ⎕WSID  ⍝ avoid prompts during )SAVE
                   {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨')SAVE',⊂'ER'
                   Log'Enqueued keypresses to save upon exit'
