@@ -38,7 +38,7 @@
 ⍝ 2020 01 28 MBaas: DBuild: -TestClassic=version;bug fixes;doco
 ⍝ 2020 01 29 MBaas: DBuild: $EnvVar
 ⍝ 2020 03 23 MBaas: made TestClassic is a simple switch w/o values assigned; fixes dealing with -halt in -save in DBuild;various minor fixes
-
+⍝ 2020 04 03 MBaas: added -clear to DTest to make sure that the ws is ⎕CLEARed before executing tests (simplifies repeated testing)
 
     ⎕ML←1
 
@@ -583,8 +583,10 @@
     ∇ r←Test args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;ignored;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors
       ⍝ run some tests from a namespace or a folder
       ⍝ switches: args.(filter setup teardown verbose)
-     
-      ⍝ Not used here, but are for test scripts that need to locate data:
+   i←quiet←0  ⍝ Clear/Log needs these  
+      Clear args.clear 
+
+      ⍝ Not used here, but we define them test scripts that need to locate data:
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
       WSFOLDER←⊃qNPARTS ⎕WSID
      
@@ -672,7 +674,7 @@
       :Else
           'ns'⎕NS'Check'
       :EndIf
-      'ns'⎕NS'Because' 'Fail'
+      'ns'⎕NS'Because' 'Fail' 'IsNotElement'
       ns.Log←{⍺←{⍵} ⋄ ⍺ ##.LogTest ⍵}  ⍝ a←rtack could cause problems with classic...
      
       :If args.tests≢0
@@ -781,9 +783,12 @@
     ∇ r←expect Check got
       :If r←expect≢got
           ⎕←'expect≢got:'
+          :if 200≥⎕size'expect'⋄⎕←'expect=',,expect⋄:endif 
+          :if 200≥⎕size'got'⋄⎕←'got<0',,got ⋄ :endif
           ⍝ ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃(1⊃⎕RSI).⎕NR 2⊃⎕SI
           ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕SI
-          :If ##.halt ⋄ ∘∘∘ ⋄ :EndIf
+          ⍝:If ##.halt ⋄ ∘∘∘ ⋄ :EndIf
+          (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
       :EndIf
     ∇
 
@@ -791,6 +796,17 @@
      ⍝ set global "r", return branch label
       r←(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: ',msg
     ∇
+
+∇ z←A IsNotElement B
+:if z←~A{a←⍺⋄1<≢a:^/(⊂a)∊⍵⋄3+^/a∊⍵}B
+:andif ##.halt
+⎕←'A IsNotElement B!'
+:if 200≥⎕size 'A'⋄⎕←'A=',,A  ⋄:endif
+:if 200≥⎕size 'B'⋄⎕←'B=',,B  ⋄:endif
+          ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕SI
+          (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
+      :EndIf
+∇
 
     ∇ args←LoadTestSuite suite;setups;lines;i;cmd;params;names;values;tmp;f
      
@@ -1222,7 +1238,7 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1:2 -clear[=] -TestClassic' '1S -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -repeat='
+      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1:2 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -repeat='
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
@@ -1311,13 +1327,14 @@
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory'
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-trace] [-verbose]'
+          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-trace] [-verbose] [-clear[=n]]'
           :If level>0
               r,←'' 'Argument is one of:'
               r,←⊂'    ns              namespace in the current workspace'
               r,←⊂'    file            .dyalog file containing a namespace'
               r,←⊂'    path            path to directory containing functions in .dyalog files'
               r,←'' 'Optional modifiers are:'
+              r,←'     -clear[=n]      clear ws before running tests (optionally delete nameclass n only)'
               r,←⊂'    -tests=         comma-separated list of tests to run'
               r,←⊂'    -halt           halt on error rather than log and continue'
               r,←⊂'    -filter=string  only run functions where string is found in the leading ⍝Test: comment'
@@ -1333,6 +1350,11 @@
           :EndIf
       :EndSelect
     ∇
+
+
+
+
+
 
     :EndSection ────────────────────────────────────────────────────────────────────────────────────
 :Endnamespace ⍝ DyalogBuild  $Revision$
