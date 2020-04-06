@@ -785,7 +785,7 @@
       :If r←expect≢got
           ⎕←'expect≢got:'
           :if 200≥⎕size'expect'⋄⎕←'expect=',,expect⋄:endif 
-          :if 200≥⎕size'got'⋄⎕←'got<0',,got ⋄ :endif
+          :if 200≥⎕size'got'⋄⎕←'got=',,got ⋄ :endif
           ⍝ ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃(1⊃⎕RSI).⎕NR 2⊃⎕SI
           ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕SI
           ⍝:If ##.halt ⋄ ∘∘∘ ⋄ :EndIf
