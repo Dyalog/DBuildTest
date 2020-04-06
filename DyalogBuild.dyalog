@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.24
+﻿:Namespace DyalogBuild ⍝ V 1.25
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -39,6 +39,7 @@
 ⍝ 2020 01 29 MBaas: DBuild: $EnvVar
 ⍝ 2020 03 23 MBaas: made TestClassic is a simple switch w/o values assigned; fixes dealing with -halt in -save in DBuild;various minor fixes
 ⍝ 2020 04 03 MBaas: added -clear to DTest to make sure that the ws is ⎕CLEARed before executing tests (simplifies repeated testing)
+⍝ 2020 04 06 MBaas: ]DBuild 1.25 executes the content of secret variable ⎕SE.DBuild_postSave after saving the ws 
 
     ⎕ML←1
 
@@ -1128,13 +1129,13 @@
           :If 0=n
               :If save≡1 ⋄ save←⎕WSID ⋄ :EndIf
               :Trap 0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
-                  0 #.⎕SAVE save ⍝→ Mantis 17479
+                  0 #.⎕SAVE save ⍝→ Mantis 18008
                   :Trap 0  ⍝ paranoid, but want to avoid any bugs here to trigger the save again...
                       tmp←⍕{0::0 ⋄ (ListFiles ⍵)[1;2]}save
                       Log'Saved as ',save,' (',tmp,' bytes)'
                   :EndTrap
               :Else
-                  Log'Cant 0⎕SAVE ws because:'
+                  Log'Cant 0 ⎕SAVE ws because:'
                   Log ⎕DM
                   qNDELETE ⎕WSID  ⍝ avoid prompts during )SAVE
                   {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨')SAVE',⊂'ER'
@@ -1158,6 +1159,8 @@
           (∊LoggedMessages,¨⊂⎕UCS 13 10)Put logfile
           ⍝⎕OFF 13×~0∊⍴,LoggedErrors  ⍝ requires DyaVers ≥ 14.0
           {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨')OFF',⊂'ER'  ⍝ as long as 17479 isn't fixed (and for all older versions) we can't use ⎕OFF but have to ⎕NQ'KeyPress'
+       :elseif 2=⎕SE.⎕nc'DBuild_postSave'
+          ⍎⎕←⎕se.DBuild_postSave
       :EndIf  ⍝ we exit with 1 if there were errors, 0 if everything's fine.
     ∇
 
@@ -1207,6 +1210,8 @@
       :If 2=⎕NC'f' ⋄ msg←(f,': ')∘,¨eis msg ⋄ :EndIf
       :If verbose ⋄ ⎕←msg ⋄ :EndIf
       LOGS,←eis msg
+      :If 0=⎕NC'LoggedMessages' ⋄ LoggedMessages←'' ⋄ :EndIf
+      LoggedMessages,←eis msg
     ∇
 
     ∇ {pre}Log msg
