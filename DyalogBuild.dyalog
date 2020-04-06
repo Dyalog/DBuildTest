@@ -799,7 +799,7 @@
     ∇
 
 ∇ z←A IsNotElement B
-:if z←~A{a←⍺⋄1<≢a:^/(⊂a)∊⍵⋄3+^/a∊⍵}B
+:if z←~A{a←⍺⋄1<≢a:^/(⊂a)∊⍵⋄ ^/a∊⍵}B
 :andif ##.halt
 ⎕←'A IsNotElement B!'
 :if 200≥⎕size 'A'⋄⎕←'A=',,A  ⋄:endif
