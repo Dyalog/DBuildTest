@@ -581,7 +581,7 @@
 
     :Section TEST "DSL" FUNCTIONS
 
-    ∇ r←Test args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;ignored;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors
+    ∇ r←Test args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors
       ⍝ run some tests from a namespace or a folder
       ⍝ switches: args.(filter setup teardown verbose)
    i←quiet←0  ⍝ Clear/Log needs these  
@@ -656,17 +656,17 @@
      
       :If null≢suite←args.suite ⍝ Is a test suite defined?
           ⍝ Merge settings
-          ignored←⍬
+          overwritten←⍬
           sargs←LoadTestSuite suite
-     
           :For v :In (sargs.⎕NL-2)∩args.⎕NL-2 ⍝ overlap?
               :If null≢args⍎v
-                  ignored,←⊂v
+                  overwritten,←⊂v
+                  ⍎'sargs.',v,'←args.',v
               :EndIf
           :EndFor
           'args'⎕NS sargs ⍝ merge
-          :If 0≠⍴ignored
-              0 Log'*** warning - modifiers overwritten by test suite contents: ',,⍕ignored
+          :If 0≠⍴overwritten
+              0 Log'*** warning - test-suite overridden my modifiers: ',,⍕overwritten
           :EndIf
       :EndIf
      
@@ -1260,7 +1260,7 @@
       :Select Cmd
       :Case 'DBuild'
           r←⊂'Run one or more DyalogBuild script files (.dyalogbuild)'
-          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet] [-halt] [-save=0|1] [-off=0|1] [-TestClassic'
+          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet] [-halt] [-save=0|1] [-off=0|1] [-TestClassic]'
           :If level=0
               r,←⊂']',Cmd,' -?? ⍝ for more information'
           :EndIf
