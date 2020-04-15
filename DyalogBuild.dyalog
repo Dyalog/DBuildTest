@@ -39,7 +39,8 @@
 ⍝ 2020 01 29 MBaas: DBuild: $EnvVar
 ⍝ 2020 03 23 MBaas: made TestClassic is a simple switch w/o values assigned; fixes dealing with -halt in -save in DBuild;various minor fixes
 ⍝ 2020 04 03 MBaas: added -clear to DTest to make sure that the ws is ⎕CLEARed before executing tests (simplifies repeated testing)
-⍝ 2020 04 06 MBaas: ]DBuild 1.25 executes the content of secret variable ⎕SE.DBuild_postSave after saving the ws 
+⍝ 2020 04 06 MBaas: ]DBuild 1.25 executes the content of secret variable ⎕SE.DBuild_postSave after saving the ws
+⍝ 2020 04 15 MBaas: ]DTest {file} now loads ALL fn present in folder of {file}, but only execute the test specified in file. (So test may use utils w/o bothering about loading them)
 
     ⎕ML←1
 
@@ -399,6 +400,8 @@
     ⍝ loads code from scriptfile (NB: file points to one or more existing files, no pattern etc.)
     ⍝ Options defines SALT-Options
     ⍝ file_target: (filename )
+      res←''
+      →(0=≢file_target)/0  ⍝ gracefully treatment of empty calls
       (file target)←file_target
       :If 0=⎕NC'options' ⋄ options←'' ⋄ :EndIf
       options←((0<≢options)⍴' '),options
@@ -409,12 +412,12 @@
           res←⎕SE.SALT.Load file,' -target=',target,options
           res ⎕SIGNAL('***'≡3↑⍕res)/11
       :Else
-          :If 0=⎕NC target ⋄ target←target ⎕NS'' ⋄ :EndIf
+          :If 0=⎕NC⍕target ⋄ target←target ⎕NS'' ⋄ :EndIf
           ⍝:If 326≠⎕DR target ⋄ target←⍎target ⋄ :EndIf ⍝ make sure it's a ref!
           :Trap (~halt)/0
               ⍝res←2 target.⎕FIX¨(⊂'file://'),¨eis file
               ⍝ MK suggested 2⎕FIX - but some of the tests then failed - and I hesitate to add everything that SALT does to find files in its folders, so will continue to ]LOAD for the time being...
-              res←⎕SE.SALT.Load file,' -target=',target,options
+              res←⎕SE.SALT.Load file,' -target=',(⍕target),options
           :Else
               ('Error loading ',file,': ',∊⎕DM,¨⎕UCS 13)⎕SIGNAL 11
           :EndTrap
@@ -584,9 +587,9 @@
     ∇ r←Test args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors
       ⍝ run some tests from a namespace or a folder
       ⍝ switches: args.(filter setup teardown verbose)
-   i←quiet←0  ⍝ Clear/Log needs these  
-      Clear args.clear 
-
+      i←quiet←0  ⍝ Clear/Log needs these
+      Clear args.clear
+     
       ⍝ Not used here, but we define them test scripts that need to locate data:
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
       WSFOLDER←⊃qNPARTS ⎕WSID
@@ -601,7 +604,7 @@
       :If halt ⋄ ⎕TRAP←0 'S' ⋄ :EndIf ⍝ Defeat UCMD trapping
      
       repeat←1⌈repeat
-      
+     
       :If 0∊⍴args.Arguments
       :AndIf 9≠#.⎕NC source←⊃args.Arguments←,⊂'Tests'
           r←'An argument is required - see ]dtest -? for more information.' ⋄ →0
@@ -616,27 +619,21 @@
           :OrIf qNEXISTS f←WSFOLDER,'Tests/',source
           :OrIf qNEXISTS f←WSFOLDER,'Tests/',source,'.dyalogtest'
               (TESTSOURCE z extension)←qNPARTS f
-              :If 2=type←GetFilesystemType f
+              :If 2=type←GetFilesystemType f  ⍝ it's a file
                   :If '.dyalogtest'≡lc extension ⍝ That's a suite
                       :If null≡args.suite
                           args.suite←f
                       :EndIf
                       f←¯1↓TESTSOURCE ⋄ type←1 ⍝ Load contents of folder
                   :Else                          ⍝ Arg is a source file - load it
+                      :If filter≢null ⋄ LogTest'Can''t run test with file-argument AND -filter-switch!' ⋄ →FAIL ltack r←LOGS ⋄ :EndIf
                       'ns'⎕NS''
-                      files←(⊂f),{null≡⍵:'' ⋄ TESTSOURCE,⍵,'.dyalog'}¨args.(setup teardown)  ⍝ also load setup and teardown (if used)
-                      :For f :In files~⊂''
-                          :Trap (~halt)/0
-                              LoadCode f(⍕ns)
-                              :If verbose ⋄ 0 Log'load file ',f  ⋄ :EndIf
-                          :Else
-                              LogError⊃⎕DM
-                          :EndTrap
-                      :EndFor
+                      filter←LoadCode source(⍕ns)
+                      f←¯1↓TESTSOURCE ⋄ type←1 ⍝ Load contents of folder
                   :EndIf
               :EndIf
      
-              :If 1=type
+              :If 1=type  ⍝ deal with directories in f
                   files←('*.dyalog'ListFiles f)[;1]
                   'ns'⎕NS''
                   :For f :In files
@@ -784,8 +781,8 @@
     ∇ r←expect Check got
       :If r←expect≢got
           ⎕←'expect≢got:'
-          :if 200≥⎕size'expect'⋄⎕←'expect=',,expect⋄:endif 
-          :if 200≥⎕size'got'⋄⎕←'got=',,got ⋄ :endif
+          :If 200≥⎕SIZE'expect' ⋄ ⎕←'expect=',,expect ⋄ :EndIf
+          :If 200≥⎕SIZE'got' ⋄ ⎕←'got=',,got ⋄ :EndIf
           ⍝ ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃(1⊃⎕RSI).⎕NR 2⊃⎕SI
           ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕SI
           ⍝:If ##.halt ⋄ ∘∘∘ ⋄ :EndIf
@@ -798,16 +795,16 @@
       r←(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: ',msg
     ∇
 
-∇ z←A IsNotElement B
-:if z←~A{a←⍺⋄1<≢a:^/(⊂a)∊⍵⋄ ^/a∊⍵}B
-:andif ##.halt
-⎕←'A IsNotElement B!'
-:if 200≥⎕size 'A'⋄⎕←'A=',,A  ⋄:endif
-:if 200≥⎕size 'B'⋄⎕←'B=',,B  ⋄:endif
+    ∇ z←A IsNotElement B
+      :If z←~A{a←⍺ ⋄ 1<≢a:∧/(⊂a)∊⍵ ⋄ ∧/a∊⍵}B
+      :AndIf ##.halt
+          ⎕←'A IsNotElement B!'
+          :If 200≥⎕SIZE'A' ⋄ ⎕←'A=',,A ⋄ :EndIf
+          :If 200≥⎕SIZE'B' ⋄ ⎕←'B=',,B ⋄ :EndIf
           ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕SI
           (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
       :EndIf
-∇
+    ∇
 
     ∇ args←LoadTestSuite suite;setups;lines;i;cmd;params;names;values;tmp;f
      
@@ -1159,8 +1156,8 @@
           (∊LoggedMessages,¨⊂⎕UCS 13 10)Put logfile
           ⍝⎕OFF 13×~0∊⍴,LoggedErrors  ⍝ requires DyaVers ≥ 14.0
           {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨')OFF',⊂'ER'  ⍝ as long as 17479 isn't fixed (and for all older versions) we can't use ⎕OFF but have to ⎕NQ'KeyPress'
-       :elseif 2=⎕SE.⎕nc'DBuild_postSave'
-          ⍎⎕←⎕se.DBuild_postSave
+      :ElseIf 2=⎕SE.⎕NC'DBuild_postSave'
+          ⍎⎕←⎕SE.DBuild_postSave
       :EndIf  ⍝ we exit with 1 if there were errors, 0 if everything's fine.
     ∇
 
@@ -1209,17 +1206,17 @@
       →(0=⍴∊msg)⍴0
       :If 2=⎕NC'f' ⋄ msg←(f,': ')∘,¨eis msg ⋄ :EndIf
       :If verbose ⋄ ⎕←msg ⋄ :EndIf
-      LOGS,←eis msg
+      msg←eis msg
+      LOGS,←msg
       :If 0=⎕NC'LoggedMessages' ⋄ LoggedMessages←'' ⋄ :EndIf
-      LoggedMessages,←eis msg
+      LoggedMessages,←msg
     ∇
 
     ∇ {pre}Log msg
       →quiet⍴0
       :If 0=⎕NC'pre' ⋄ :OrIf pre=1 ⋄ msg←' ',(LineNo i),' ',msg ⋄ :EndIf
       :If 0=⎕NC'LoggedMessages' ⋄ LoggedMessages←'' ⋄ :EndIf
-      ⎕←msg
-      LoggedMessages,←⊂msg
+      LoggedMessages,←⊂⎕←,msg
     ∇
 
     ∇ dm Signal en
