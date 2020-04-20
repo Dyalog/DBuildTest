@@ -792,7 +792,8 @@
 
     ∇ line←line Because msg
      ⍝ set global "r", return branch label
-      r←(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: ',msg
+     :if 0=⎕nc'r'⋄r←'' ⋄ :endif
+      r←r,(⎕ucs 13),(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: ',msg
     ∇
 
     ∇ z←A IsNotElement B
