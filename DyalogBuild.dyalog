@@ -41,6 +41,7 @@
 ⍝ 2020 04 03 MBaas: added -clear to DTest to make sure that the ws is ⎕CLEARed before executing tests (simplifies repeated testing)
 ⍝ 2020 04 06 MBaas: ]DBuild 1.25 executes the content of secret variable ⎕SE.DBuild_postSave after saving the ws
 ⍝ 2020 04 15 MBaas: ]DTest {file} now loads ALL fn present in folder of {file}, but only execute the test specified in file. (So test may use utils w/o bothering about loading them)
+⍝ 2020 04 21 MBaas: ]DTest - timestamp (adds ⎕TS to log-messages)
 
     ⎕ML←1
 
@@ -49,7 +50,7 @@
       R←{2⊃⎕VFI(2>+\'.'=⍵)/⍵}2⊃'.'⎕WG'APLVersion'
     ∇
 
-    Classic←{92::1 ⋄ 0×⎕ucs ⎕ucs ⍵}9056  ⍝ running on a classic edition???
+    Classic←{92::1 ⋄ 0×⎕ucs ⎕ucs ⍵}9056  ⍝ running on classic edition???
 
     ∇ {sink}←SetupCompatibilityFns
       sink←⍬   ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
@@ -584,7 +585,7 @@
 
     :Section TEST "DSL" FUNCTIONS
 
-    ∇ r←Test args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors
+    ∇ r←Test args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl
       ⍝ run some tests from a namespace or a folder
       ⍝ switches: args.(filter setup teardown verbose)
       i←quiet←0  ⍝ Clear/Log needs these
@@ -596,7 +597,7 @@
      
       LoggedErrors←LOGS←''
       i←0  ⍝ just in case we're logging outside main loop
-      (verbose filter halt quiet trace)←args.(verbose filter halt quiet trace)
+      (verbose filter halt quiet trace timestamp)←args.(verbose filter halt quiet trace timestamp)
       :If null≢repeat←args.repeat
           repeat←⊃2⊃⎕VFI repeat
       :EndIf
@@ -714,7 +715,7 @@
           setups←' 'Split args.setup
       :EndIf
       r←LOGS
-     
+      start0←⎕AI[3]
       :For run :In ⍳repeat
           :If verbose∧repeat≠0
               0 Log'run #',(⍕run),' of ',⍕repeat
@@ -766,9 +767,11 @@
                   r,←(quiet≡null)/⊂'   ',((1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' passed in ',(1⍕0.001×⎕AI[3]-start),'s'
               :Else
                   r,←(⊂'Errors encountered',(setup≢null)/' with setup "',setup,'":'),'   '∘,¨LOGS
+                  r,←⊂' Time spent: ',(1⍕0.001×⎕AI[3]-start),'s'
               :EndIf
           :EndFor ⍝ Setup
       :EndFor ⍝ repeat
+      r,←⊂' Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
      
      FAIL:
       r←table r
@@ -792,8 +795,8 @@
 
     ∇ line←line Because msg
      ⍝ set global "r", return branch label
-     :if 0=⎕nc'r'⋄r←'' ⋄ :endif
-      r←r,(⎕ucs 13),(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: ',msg
+      :If 0=⎕NC'r' ⋄ r←'' ⋄ :EndIf
+      r←r,(⎕UCS 13),(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: ',msg
     ∇
 
     ∇ z←A IsNotElement B
@@ -1205,7 +1208,10 @@
     ∇ {r}←{f}LogTest msg
       r←0 0⍴0
       →(0=⍴∊msg)⍴0
-      :If 2=⎕NC'f' ⋄ msg←(f,': ')∘,¨eis msg ⋄ :EndIf
+      :If 2=⎕NC'timestamp' ⋄ :AndIf timestamp=1
+          f←(⍕3↓⎕TS),' ',⍎(1+2=⎕NC'f')⊃'''' 'f'
+      :EndIf
+      msg←(f,': ')∘,¨eis msg
       :If verbose ⋄ ⎕←msg ⋄ :EndIf
       msg←eis msg
       LOGS,←msg
@@ -1241,7 +1247,7 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1:2 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -repeat='
+      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1:2 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -timestamp -repeat='
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
@@ -1330,7 +1336,7 @@
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory'
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-trace] [-verbose] [-clear[=n]]'
+          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-timestamp] [-trace] [-verbose] [-clear[=n]]'
           :If level>0
               r,←'' 'Argument is one of:'
               r,←⊂'    ns              namespace in the current workspace'
@@ -1340,12 +1346,13 @@
               r,←'     -clear[=n]      clear ws before running tests (optionally delete nameclass n only)'
               r,←⊂'    -tests=         comma-separated list of tests to run'
               r,←⊂'    -halt           halt on error rather than log and continue'
-              r,←⊂'    -filter=string  only run functions where string is found in the leading ⍝Test: comment'
+              r,←⊂'    -filter=string  only run functions whose name start with filter'
               r,←⊂'    -quiet          qa mode: only output actual errors'
               r,←⊂'    -repeat=n       repeat test n times'
               r,←⊂'    -setup=fn       run the function fn before any tests'
               r,←⊂'    -suite=file     run tests defined by a .dyalogtest file'
               r,←⊂'    -teardown=fn    run the function fn after all tests'
+              r,←⊂'    -timestamp      add timestamp (no date) to logged messages'
               r,←⊂'    -trace          set stop on line 1 of each test function'
               r,←⊂'    -verbose        display more status messages while running'
           :Else
