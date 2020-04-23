@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.25
+:Namespace DyalogBuild ⍝ V 1.25
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -42,6 +42,7 @@
 ⍝ 2020 04 06 MBaas: ]DBuild 1.25 executes the content of secret variable ⎕SE.DBuild_postSave after saving the ws
 ⍝ 2020 04 15 MBaas: ]DTest {file} now loads ALL fn present in folder of {file}, but only execute the test specified in file. (So test may use utils w/o bothering about loading them)
 ⍝ 2020 04 21 MBaas: ]DTest - timestamp (adds ⎕TS to log-messages)
+⍝ 2020 04 23 MBaas: renamed -timestamp to -ts; added -timeout; added missing _SH-Fn (Compatibility-Section)
 
     ⎕ML←1
 
@@ -146,7 +147,15 @@
       :EndSelect
     ∇
 
-
+    ∇ r←{quietly}_SH cmd
+      :Access public shared
+      quietly←{6::⍵ ⋄ quietly}0
+      :If quietly
+          cmd←cmd,' </dev/null 2>&1'
+      :EndIf
+      r←{0::'' ⋄ ⎕SH ⍵}cmd
+    ∇
+    
     ∇ {larg}qMKDIR path;CreateDirectory;GetLastError;err
       ⍝ Create a folder
       :If 15>DyaVersion      ⍝ Versions < 15 can't deal with the different ⍺ of ⎕MKDIR, so larg is ignored here...
@@ -585,19 +594,40 @@
 
     :Section TEST "DSL" FUNCTIONS
 
-    ∇ r←Test args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl
+    ∇ r←Test args;TID;timeout;ai
       ⍝ run some tests from a namespace or a folder
       ⍝ switches: args.(filter setup teardown verbose)
+      ⍝ result "r" is build in XTest (excute test) as global "r" gets updated. Can't return explicit result because we're running it in a thread.
       i←quiet←0  ⍝ Clear/Log needs these
       Clear args.clear
      
+      timeout←0 args.Switch'timeout'
+      r←''
+      :If timeout>0
+          ai←⎕AI[3]+timeout×1000
+          TID←XTest&args
+          :While ⎕AI[3]<ai
+          :AndIf TID∊⎕TNUMS
+              ⎕DL 0.1  ⍝ wait a little bit...
+          :EndWhile
+          :If TID∊⎕TNUMS
+              r,←⊂'*** Test aborted because thread was still running after timeout of ',(⍕timeout),' seconds'
+              0 ⎕TKILL TID
+          :EndIf
+      :Else
+          XTest args
+      :EndIf
+    ∇
+
+    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl
+      i←quiet←0  ⍝ Clear/Log needs these
       ⍝ Not used here, but we define them test scripts that need to locate data:
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
       WSFOLDER←⊃qNPARTS ⎕WSID
      
       LoggedErrors←LOGS←''
       i←0  ⍝ just in case we're logging outside main loop
-      (verbose filter halt quiet trace timestamp)←args.(verbose filter halt quiet trace timestamp)
+      (verbose filter halt quiet trace timestamp)←args.(verbose filter halt quiet trace ts)
       :If null≢repeat←args.repeat
           repeat←⊃2⊃⎕VFI repeat
       :EndIf
@@ -890,7 +920,6 @@
       file←1⊃args.Arguments
       (prod quiet save halt TestClassic off)←args.(production quiet save halt TestClassic off) ⍝ save must be 0, ⎕SAVE does not work from a UCMD
       (off TestClassic prod)←{2⊃⎕VFI⍕⍵}¨off TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
-     
       halt←~halt  ⍝ invert it, so that we can use it directly for :trap halt/
       Clear args.clear
      
@@ -1208,10 +1237,11 @@
     ∇ {r}←{f}LogTest msg
       r←0 0⍴0
       →(0=⍴∊msg)⍴0
+      :If 0=⎕NC'f' ⋄ f←'' ⋄ :EndIf
       :If 2=⎕NC'timestamp' ⋄ :AndIf timestamp=1
-          f←(⍕3↓⎕TS),' ',⍎(1+2=⎕NC'f')⊃'''' 'f'
+          f←(⍕3↓⎕TS),' ',f
       :EndIf
-      msg←(f,': ')∘,¨eis msg
+      msg←(f,(0<≢f)/': ')∘,¨eis msg
       :If verbose ⋄ ⎕←msg ⋄ :EndIf
       msg←eis msg
       LOGS,←msg
@@ -1247,7 +1277,7 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1:2 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -timestamp -repeat='
+      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1:2 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat='
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
@@ -1336,7 +1366,7 @@
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory'
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-timestamp] [-trace] [-verbose] [-clear[=n]]'
+          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]]'
           :If level>0
               r,←'' 'Argument is one of:'
               r,←⊂'    ns              namespace in the current workspace'
@@ -1352,7 +1382,8 @@
               r,←⊂'    -setup=fn       run the function fn before any tests'
               r,←⊂'    -suite=file     run tests defined by a .dyalogtest file'
               r,←⊂'    -teardown=fn    run the function fn after all tests'
-              r,←⊂'    -timestamp      add timestamp (no date) to logged messages'
+              r,←⊂'    -timeout        sets a timeout. Seconds after which test(suite)s will be terminated. (Default=0 means: no timeout)'
+              r,←⊂'    -ts             add timestamp (no date) to logged messages'
               r,←⊂'    -trace          set stop on line 1 of each test function'
               r,←⊂'    -verbose        display more status messages while running'
           :Else
