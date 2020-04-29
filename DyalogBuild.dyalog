@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.25
+﻿:Namespace DyalogBuild ⍝ V 1.25
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -42,7 +42,8 @@
 ⍝ 2020 04 06 MBaas: ]DBuild 1.25 executes the content of secret variable ⎕SE.DBuild_postSave after saving the ws
 ⍝ 2020 04 15 MBaas: ]DTest {file} now loads ALL fn present in folder of {file}, but only execute the test specified in file. (So test may use utils w/o bothering about loading them)
 ⍝ 2020 04 21 MBaas: ]DTest - timestamp (adds ⎕TS to log-messages)
-⍝ 2020 04 23 MBaas: renamed -timestamp to -ts; added -timeout; added missing _SH-Fn (Compatibility-Section)
+⍝ 2020 04 23 MBaas: renamed -timestamp to -ts; added -timeout     
+⍝ 2020 04 29 MBaas: ]DTest -order=0|1|"NumVec". Default is random order when executing tests and setups. If tests fail, order will be accessible in *.rng.txt-files!
 
     ⎕ML←1
 
@@ -155,7 +156,7 @@
       :EndIf
       r←{0::'' ⋄ ⎕SH ⍵}cmd
     ∇
-    
+
     ∇ {larg}qMKDIR path;CreateDirectory;GetLastError;err
       ⍝ Create a folder
       :If 15>DyaVersion      ⍝ Versions < 15 can't deal with the different ⍺ of ⎕MKDIR, so larg is ignored here...
@@ -435,8 +436,8 @@
       :EndIf
     ∇
 
-    ∇ r←data Put name
-     ⍝ Write data to file
+    ∇ {r}←data Put name
+     ⍝ Write data to file. r=number of bytes written.
       r←{(⎕NUNTIE ⍵)rtack data ⎕NAPPEND(0 ⎕NRESIZE ⍵)(⎕DR data)}Nopen name
     ∇
 
@@ -627,7 +628,7 @@
      
       LoggedErrors←LOGS←''
       i←0  ⍝ just in case we're logging outside main loop
-      (verbose filter halt quiet trace timestamp)←args.(verbose filter halt quiet trace ts)
+      (verbose filter halt quiet trace timestamp order)←args.(verbose filter halt quiet trace ts order)
       :If null≢repeat←args.repeat
           repeat←⊃2⊃⎕VFI repeat
       :EndIf
@@ -681,7 +682,6 @@
               →FAIL ltack r←LOGS
           :EndIf
       :EndIf
-     
       :If null≢suite←args.suite ⍝ Is a test suite defined?
           ⍝ Merge settings
           overwritten←⍬
@@ -696,6 +696,7 @@
           :If 0≠⍴overwritten
               0 Log'*** warning - test-suite overridden my modifiers: ',,⍕overwritten
           :EndIf
+     
       :EndIf
      
     ⍝ Establish test DSL in the namespace
@@ -703,8 +704,8 @@
       :Else
           'ns'⎕NS'Check'
       :EndIf
-      'ns'⎕NS'Because' 'Fail' 'IsNotElement'
-      ns.Log←{⍺←{⍵} ⋄ ⍺ ##.LogTest ⍵}  ⍝ a←rtack could cause problems with classic...
+      'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal'
+      ns.Log←{⍺←{⍵} ⋄ ⍺ ##.LogTest ⍵}  ⍝ ⍺←rtack could cause problems with classic...
      
       :If args.tests≢0
           orig←fns←(','Split args.tests)~⊂''args.tests
@@ -746,11 +747,20 @@
       :EndIf
       r←LOGS
       start0←⎕AI[3]
+      :Select ,order
+      :Case ,0  ⍝ order=0: random (or reproduce random from file)
+          order←(('order',⍕≢fns)RandomVal 2⍴≢fns)∩⍳≢fns
+      :Case ,1
+          order←⍳≢fns   ⍝ 1: sequential
+      :Else
+          order←order{(⍺∩⍵),⍵~⍺}⍳≢fns  ⍝ numvec: validate and use that order (but make sure every test gets executed!)
+      :EndSelect
+     
       :For run :In ⍳repeat
           :If verbose∧repeat≠0
               0 Log'run #',(⍕run),' of ',⍕repeat
           :EndIf
-          :For setup :In setups
+          :For setup :In setups['setups'RandomVal 2⍴≢setups]   ⍝ randomize order of setups
               steps←0
               start←⎕AI[3]
               LOGS←''
@@ -770,7 +780,7 @@
               :If verbose
                   0 Log'running ',(⍕1↑⍴fns),' tests'↓⍨¯1×1=↑⍴fns
               :EndIf
-              :For f :In fns
+              :For f :In fns[order]
                   steps+←1
                   :If verbose ⋄ 0 Log'running: ',f ⋄ :EndIf
                   (trace/1)ns.⎕STOP f
@@ -795,6 +805,7 @@
      END:
               :If 0∊⍴LOGS
                   r,←(quiet≡null)/⊂'   ',((1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' passed in ',(1⍕0.001×⎕AI[3]-start),'s'
+                  (⎕NDELETE⍠1)TESTSOURCE,'*.rng.txt' ⍝ delete memorized random-numbers when tests succeeded
               :Else
                   r,←(⊂'Errors encountered',(setup≢null)/' with setup "',setup,'":'),'   '∘,¨LOGS
                   r,←⊂' Time spent: ',(1⍕0.001×⎕AI[3]-start),'s'
@@ -802,7 +813,9 @@
           :EndFor ⍝ Setup
       :EndFor ⍝ repeat
       r,←⊂' Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
-     
+      :If 0<≢LOGS
+          r,←⊂'-order="',(⍕order),'"'
+      :EndIf
      FAIL:
       r←table r
     ∇
@@ -840,9 +853,24 @@
       :EndIf
     ∇
 
+    ∇ R←{ctxt}RandomVal arg;rFile;r
+⍝ generate random values
+      :If 0=⎕NC'ctxt' ⋄ ctxt←⎕SI[2 3]{(1⊃⍺),'_',(1⊃⍵),'_',(2⊃⍺),'_',2⊃⍵}⍕¨⎕LC[2 3] ⋄ :EndIf  ⍝ use ⎕SI as indicator of context
+      rFile←TESTSOURCE,ctxt,'.rng.txt'    ⍝ name of rng-file
+      :If qNEXISTS rFile         ⍝ found one - so re-use those numbers (instead of creating new series)
+          r←∊1⊃qNGET rFile
+          (((⎕UCS r)∊10 13)/r)←' '
+          R←2⊃⎕VFI r
+      :Else
+          :If 1<≢arg ⋄ R←arg[2]?arg[1]
+          :Else ⋄ R←?arg
+          :EndIf
+          (⍕R)Put rFile   ⍝ "remember" the generated numbers
+      :EndIf
+    ∇
+
+
     ∇ args←LoadTestSuite suite;setups;lines;i;cmd;params;names;values;tmp;f
-     
-      args←⎕NS''
      
       :If qNEXISTS suite
           lines←⊃qNGET suite
@@ -850,6 +878,9 @@
           r←,⊂'Test suite "',suite,'" not found.' ⋄ →0
       :EndIf
      
+      args←⎕NS''
+      ⎕RL←2  ⍝ use O/S rng
+      path←1⊃1 qNPARTS suite
       args.tests←⍬
      
       :For i :In ⍳⍴lines
@@ -887,6 +918,8 @@
      
               :CaseList 'id' 'description'
                   :If verbose ⋄ Log cmd,': ',GetParam'' ⋄ :EndIf
+              :Case 'order'
+                  args.order←2⊃⎕VFI params
               :Else
                   Log'Invalid keyword: ',cmd
               :EndSelect
@@ -1277,7 +1310,7 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1:2 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat='
+      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1:2 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order='
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
@@ -1295,10 +1328,10 @@
       :Case 'DBuild'
           r←⊂'Run one or more DyalogBuild script files (.dyalogbuild)'
           r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet] [-halt] [-save=0|1] [-off=0|1] [-TestClassic]'
-          :If level=0
+          :Select level
+          :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more information'
-          :EndIf
-          :If level=1
+          :Case 1
               r,←'' 'Argument is:'
               r,←⊂'    files         name of one or more .dyalogbuild files'
               r,←'' 'Optional modifiers are:'
@@ -1311,8 +1344,7 @@
               r,←⊂'    -TestClassic              check imported code for compatibility with classic editions (charset, not language-features!)'
               r,←⊂''
               r,←⊂']',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
-          :EndIf
-          :If level≥2
+          :Case 2
               r,←⊂''
               r,←⊂'each non-empty line of a DyalogBuild script has the following syntax:'
               r,←⊂'INSTRUCTION : argument, Parameter1=value1, Parameter2=value2,...'
@@ -1362,33 +1394,35 @@
               r,←⊂'    save=0|1 (Default 0): save the workspace after a successfull (=no errors were logged) build'
               r,←⊂'    off=0|1  (Default=0): )OFF after completion of Build. If errors were logged, a logfile (same name as the .dyalogbuiöd-file with .log-extension)'
               r,←⊂'                          will be created and exit code 1 will be set.'
-          :EndIf
+          :EndSelect
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory'
           r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]]'
-          :If level>0
-              r,←'' 'Argument is one of:'
-              r,←⊂'    ns              namespace in the current workspace'
-              r,←⊂'    file            .dyalog file containing a namespace'
-              r,←⊂'    path            path to directory containing functions in .dyalog files'
-              r,←'' 'Optional modifiers are:'
-              r,←'     -clear[=n]      clear ws before running tests (optionally delete nameclass n only)'
-              r,←⊂'    -tests=         comma-separated list of tests to run'
-              r,←⊂'    -halt           halt on error rather than log and continue'
-              r,←⊂'    -filter=string  only run functions whose name start with filter'
-              r,←⊂'    -quiet          qa mode: only output actual errors'
-              r,←⊂'    -repeat=n       repeat test n times'
-              r,←⊂'    -setup=fn       run the function fn before any tests'
-              r,←⊂'    -suite=file     run tests defined by a .dyalogtest file'
-              r,←⊂'    -teardown=fn    run the function fn after all tests'
-              r,←⊂'    -timeout        sets a timeout. Seconds after which test(suite)s will be terminated. (Default=0 means: no timeout)'
-              r,←⊂'    -ts             add timestamp (no date) to logged messages'
-              r,←⊂'    -trace          set stop on line 1 of each test function'
-              r,←⊂'    -verbose        display more status messages while running'
-          :Else
+          :Select level
+          :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more info'
-          :EndIf
+          :Case 1
+              r,←'' 'Argument is one of:'
+              r,←⊂'    ns                namespace in the current workspace'
+              r,←⊂'    file              .dyalog file containing a namespace or a test-fn'
+              r,←⊂'    path              path to directory containing functions in .dyalog files'
+              r,←'' 'Optional modifiers are:'
+              r,←'     -clear[=n]        clear ws before running tests (optionally delete nameclass n only)'
+              r,←⊂'    -tests=           comma-separated list of tests to run'
+              r,←⊂'    -halt             halt on error rather than log and continue'
+              r,←⊂'    -filter=string    only run functions whose name start with filter'
+              r,←⊂'    -quiet            qa mode: only output actual errors'
+              r,←⊂'    -repeat=n         repeat test n times'
+              r,←⊂'    -setup=fn         run the function fn before any tests'
+              r,←⊂'    -suite=file       run tests defined by a .dyalogtest file'
+              r,←⊂'    -teardown=fn      run the function fn after all tests'
+              r,←⊂'    -timeout          sets a timeout. Seconds after which test(suite)s will be terminated. (Default=0 means: no timeout)'
+              r,←⊂'    -ts               add timestamp (no date) to logged messages'
+              r,←⊂'    -trace            set stop on line 1 of each test function'
+              r,←⊂'    -verbose          display more status messages while running'
+              r,←⊂'    -order=0|1|"NumVec" control sequence of tests (default 0: random; 1:sequential;"NumVec":order)'
+          :EndSelect
       :EndSelect
     ∇
 
