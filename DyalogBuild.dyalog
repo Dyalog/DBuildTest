@@ -42,9 +42,8 @@
 ⍝ 2020 04 06 MBaas: ]DBuild 1.25 executes the content of secret variable ⎕SE.DBuild_postSave after saving the ws
 ⍝ 2020 04 15 MBaas: ]DTest {file} now loads ALL fn present in folder of {file}, but only execute the test specified in file. (So test may use utils w/o bothering about loading them)
 ⍝ 2020 04 21 MBaas: ]DTest - timestamp (adds ⎕TS to log-messages)
-⍝ 2020 04 23 MBaas: ]DTest: renamed -timestamp to -ts; added -timeout
+⍝ 2020 04 23 MBaas: renamed -timestamp to -ts; added -timeout     
 ⍝ 2020 04 29 MBaas: ]DTest -order=0|1|"NumVec". Default is random order when executing tests and setups. If tests fail, order will be accessible in *.rng.txt-files!
-⍝ 2020 05 19 MBaas: colon in arguments to the instructions (i.e. LX/EXEC/PROD/DEFAULTS with pathnames) caused trouble. Fixed.
 
     ⎕ML←1
 
@@ -530,7 +529,6 @@
 
     eis←{1=≡⍵:⊂⍵ ⋄ ⍵}                                ⍝ enclose if simple
     Split←{dlb¨1↓¨(1,⍵=⍺)⊂⍺,⍵}                       ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
-    SplitFirst←{dlb¨1↓¨(1,<\⍵=⍺)⊂⍺,⍵}                ⍝ Split ⍵ on first occurence of ⍺, and remove leading blanks from each segment
     GetParam←{⍺←'' ⋄ (⌊/names⍳eis ⍵)⊃values,⊂⍺}      ⍝ Get value of parameter
     dlb←{(∨\' '≠⍵)/⍵}                                ⍝ delete leading blanks
     null←0                                           ⍝ UCMD switch not specified
@@ -970,10 +968,9 @@
       _description←''
       _defaults←'⎕ML←⎕IO←1'
      
-      :If ~halt ⋄ i600←600⌶0 ⋄ :EndIf
       :For i :In ⍳⍴lines
           :If ~':'∊i⊃lines ⋄ :Continue ⋄ :EndIf ⍝ Ignore blank lines
-          (cmd params)←':'SplitFirst whiteout i⊃lines
+          (cmd params)←':'Split whiteout i⊃lines
           params←ExpandEnvVars params
           (names values)←↓[1]↑¯2↑¨(⊂⊂''),¨'='Split¨','Split params
           cmd←lc cmd~' ' ⋄ names←lc names
@@ -1143,10 +1140,7 @@
                       #.⎕LX←tmp
                       Log'Latent Expression set'
                   :ElseIf prod∨cmd≢'prod' ⍝ only execute PROD command if -production specified
-                      :Trap halt/0
-                          :With #
-                              ⍎tmp
-                          :EndWith
+                      :Trap halt/0 ⋄ #⍎tmp
                       :Else
                           :If DyaVersion<13
                               LogError⊃⎕DM
@@ -1180,7 +1174,6 @@
       :EndFor
      
       :If prod ⋄ ⎕EX'#.SALT_Var_Data' ⋄ :EndIf
-      :If ~halt ⋄ {}600⌶i600 ⋄ :EndIf ⍝ reset
      
       :If TestClassic>0
           z←TestClassic{
