@@ -622,13 +622,14 @@
       :EndIf
     ∇
 
-    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl
+    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;LoggedMessages;i;start0;nl
       i←quiet←0  ⍝ Clear/Log needs these
       ⍝ Not used here, but we define them test scripts that need to locate data:
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
       WSFOLDER←⊃qNPARTS ⎕WSID
      
       LoggedErrors←LOGS←''
+      LoggedMessages←''
       i←0  ⍝ just in case we're logging outside main loop
       (verbose filter halt quiet trace timestamp order)←args.(verbose filter halt quiet trace ts order)
       :If null≢repeat←args.repeat
@@ -942,7 +943,7 @@
       extension←'.dyalogbuild' ⍝ default extension
      
       LoggedErrors←0⍴⊂''
-     
+      LoggedMessages←''
       i←0 ⍝ we are on "line zero" if any logging happens
      
       :If 0∊⍴args.Arguments
@@ -1285,14 +1286,12 @@
       :If verbose ⋄ ⎕←msg ⋄ :EndIf
       msg←eis msg
       LOGS,←msg
-      :If 0=⎕NC'LoggedMessages' ⋄ LoggedMessages←'' ⋄ :EndIf
       LoggedMessages,←msg
     ∇
 
     ∇ {pre}Log msg
       →quiet⍴0
       :If 0=⎕NC'pre' ⋄ :OrIf pre=1 ⋄ msg←' ',(LineNo i),' ',msg ⋄ :EndIf
-      :If 0=⎕NC'LoggedMessages' ⋄ LoggedMessages←'' ⋄ :EndIf
       LoggedMessages,←⊂⎕←,msg
     ∇
 
@@ -1410,12 +1409,12 @@
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more info'
           :Case 1
-              r,←'' 'Argument is one of:'
+              r,'' 'Argument is one of:'
               r,←⊂'    ns                namespace in the current workspace'
               r,←⊂'    file              .dyalog file containing a namespace or a test-fn'
               r,←⊂'    path              path to directory containing functions in .dyalog files'
               r,←'' 'Optional modifiers are:'
-              r,←'     -clear[=n]        clear ws before running tests (optionally delete nameclass n only)'
+              r,←⊂'    -clear[=n]        clear ws before running tests (optionally delete nameclass n only)'
               r,←⊂'    -tests=           comma-separated list of tests to run'
               r,←⊂'    -halt             halt on error rather than log and continue'
               r,←⊂'    -filter=string    only run functions whose name start with filter'
