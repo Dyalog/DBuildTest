@@ -42,9 +42,10 @@
 ⍝ 2020 04 06 MBaas: ]DBuild 1.25 executes the content of secret variable ⎕SE.DBuild_postSave after saving the ws
 ⍝ 2020 04 15 MBaas: ]DTest {file} now loads ALL fn present in folder of {file}, but only execute the test specified in file. (So test may use utils w/o bothering about loading them)
 ⍝ 2020 04 21 MBaas: ]DTest - timestamp (adds ⎕TS to log-messages)
-⍝ 2020 04 23 MBaas: renamed -timestamp to -ts; added -timeout     
+⍝ 2020 04 23 MBaas: ]DTest: renamed -timestamp to -ts; added -timeout
 ⍝ 2020 04 29 MBaas: ]DTest -order=0|1|"NumVec". Default is random order when executing tests and setups. If tests fail, order will be accessible in *.rng.txt-files!
-
+⍝ 2020 05 19 MBaas: colon in arguments to the instructions (i.e. LX/EXEC/PROD/DEFAULTS with pathnames) caused trouble. Fixed.
+⍝ 2020 05 20 MBaas: variables with platform-info; typos fixed (in Help);]DBuild only creates logfile (with -off) if it found errors
     ⎕ML←1
 
     :Section Compatibility
@@ -52,7 +53,15 @@
       R←{2⊃⎕VFI(2>+\'.'=⍵)/⍵}2⊃'.'⎕WG'APLVersion'
     ∇
 
-    Classic←{92::1 ⋄ 0×⎕ucs ⎕ucs ⍵}9056  ⍝ running on classic edition???
+    ⍝ Setup some name with information about the platform we're working on
+    _isClassic←Classic←{92::1 ⋄ 0×⎕ucs ⎕ucs ⍵}9056  ⍝ running on classic edition???
+    _is32bit←~_is64bit←∨/'64'⍷1⊃'.'⎕WG'APLVersion'
+    _isWin←'Windows'≡7↑1⊃'.'⎕wg'APLVersion'
+    _isLinux←'Linux'≡5↑1⊃'.'⎕wg'APLVersion'
+    _isAIX←'AIX'≡3↑1⊃'.'⎕wg'APLVersion'
+    _isMacOS←'Mac'≡3↑1⊃'.'⎕wg'APLVersion'
+    _isSolaris←'Solaris'≡7↑1⊃'.'⎕wg'APLVersion'
+    _Version←{2⊃⎕vfi ⍵}¨{'.'~¨⍨(1↓+\1,⍵='.')⊆⍵}2⊃'.'⎕WG'APLVersion'
 
     ∇ {sink}←SetupCompatibilityFns
       sink←⍬   ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
@@ -529,6 +538,7 @@
 
     eis←{1=≡⍵:⊂⍵ ⋄ ⍵}                                ⍝ enclose if simple
     Split←{dlb¨1↓¨(1,⍵=⍺)⊂⍺,⍵}                       ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
+    SplitFirst←{dlb¨1↓¨(1,<\⍵=⍺)⊂⍺,⍵}                ⍝ Split ⍵ on first occurence of ⍺, and remove leading blanks from each segment
     GetParam←{⍺←'' ⋄ (⌊/names⍳eis ⍵)⊃values,⊂⍺}      ⍝ Get value of parameter
     dlb←{(∨\' '≠⍵)/⍵}                                ⍝ delete leading blanks
     null←0                                           ⍝ UCMD switch not specified
@@ -620,13 +630,14 @@
       :EndIf
     ∇
 
-    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl
+    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;LoggedMessages;i;start0;nl
       i←quiet←0  ⍝ Clear/Log needs these
       ⍝ Not used here, but we define them test scripts that need to locate data:
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
       WSFOLDER←⊃qNPARTS ⎕WSID
      
       LoggedErrors←LOGS←''
+      LoggedMessages←''
       i←0  ⍝ just in case we're logging outside main loop
       (verbose filter halt quiet trace timestamp order)←args.(verbose filter halt quiet trace ts order)
       :If null≢repeat←args.repeat
@@ -940,7 +951,7 @@
       extension←'.dyalogbuild' ⍝ default extension
      
       LoggedErrors←0⍴⊂''
-     
+      LoggedMessages←''
       i←0 ⍝ we are on "line zero" if any logging happens
      
       :If 0∊⍴args.Arguments
@@ -950,9 +961,10 @@
           'Build file not named and no default found'⎕SIGNAL 22
       :EndIf
      
-      file←1⊃args.Arguments
-      (prod quiet save halt TestClassic off)←args.(production quiet save halt TestClassic off) ⍝ save must be 0, ⎕SAVE does not work from a UCMD
-      (off TestClassic prod)←{2⊃⎕VFI⍕⍵}¨off TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
+      file←∊1⎕nparts 1⊃args.Arguments
+      (prod quiet save halt TestClassic )←args.(production quiet save halt TestClassic ) ⍝ save must be 0, ⎕SAVE does not work from a UCMD
+      ( TestClassic prod)←{2⊃⎕VFI⍕⍵}¨ TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
+      off←2 args.Switch'off' 
       halt←~halt  ⍝ invert it, so that we can use it directly for :trap halt/
       Clear args.clear
      
@@ -968,9 +980,10 @@
       _description←''
       _defaults←'⎕ML←⎕IO←1'
      
+      :If ~halt ⋄ i600←600⌶0 ⋄ :EndIf
       :For i :In ⍳⍴lines
           :If ~':'∊i⊃lines ⋄ :Continue ⋄ :EndIf ⍝ Ignore blank lines
-          (cmd params)←':'Split whiteout i⊃lines
+          (cmd params)←':'SplitFirst whiteout i⊃lines
           params←ExpandEnvVars params
           (names values)←↓[1]↑¯2↑¨(⊂⊂''),¨'='Split¨','Split params
           cmd←lc cmd~' ' ⋄ names←lc names
@@ -1140,7 +1153,8 @@
                       #.⎕LX←tmp
                       Log'Latent Expression set'
                   :ElseIf prod∨cmd≢'prod' ⍝ only execute PROD command if -production specified
-                      :Trap halt/0 ⋄ #⍎tmp
+                      :Trap halt/0
+                              #⍎tmp
                       :Else
                           :If DyaVersion<13
                               LogError⊃⎕DM
@@ -1174,6 +1188,7 @@
       :EndFor
      
       :If prod ⋄ ⎕EX'#.SALT_Var_Data' ⋄ :EndIf
+      :If ~halt ⋄ {}600⌶i600 ⋄ :EndIf ⍝ reset
      
       :If TestClassic>0
           z←TestClassic{
@@ -1219,7 +1234,7 @@
       :If off
           logfile←∊(2↑qNPARTS file),'.log'
           qNDELETE logfile
-          (∊LoggedMessages,¨⊂⎕UCS 13 10)Put logfile
+          :if 0⊤ ⋄ (∊LoggedMessages,¨⊂⎕UCS 13 10)Put logfile⋄:endif
           ⍝⎕OFF 13×~0∊⍴,LoggedErrors  ⍝ requires DyaVers ≥ 14.0
           {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨')OFF',⊂'ER'  ⍝ as long as 17479 isn't fixed (and for all older versions) we can't use ⎕OFF but have to ⎕NQ'KeyPress'
       :ElseIf 2=⎕SE.⎕NC'DBuild_postSave'
@@ -1278,14 +1293,12 @@
       :If verbose ⋄ ⎕←msg ⋄ :EndIf
       msg←eis msg
       LOGS,←msg
-      :If 0=⎕NC'LoggedMessages' ⋄ LoggedMessages←'' ⋄ :EndIf
       LoggedMessages,←msg
     ∇
 
     ∇ {pre}Log msg
       →quiet⍴0
       :If 0=⎕NC'pre' ⋄ :OrIf pre=1 ⋄ msg←' ',(LineNo i),' ',msg ⋄ :EndIf
-      :If 0=⎕NC'LoggedMessages' ⋄ LoggedMessages←'' ⋄ :EndIf
       LoggedMessages,←⊂⎕←,msg
     ∇
 
@@ -1296,7 +1309,7 @@
 
     ∇ {r}←LogError msg
      ⍝ subroutine of Build: uses globals i and file
-      r←' *****  ',msg
+      r←'***** ERROR ***** ',msg
       Log r
       LoggedErrors,←⊂r
     ∇
@@ -1310,7 +1323,7 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1:2 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order='
+      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order='
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
@@ -1350,7 +1363,8 @@
               r,←⊂'INSTRUCTION : argument, Parameter1=value1, Parameter2=value2,...'
               r,←⊂'              Everything after INSTRUCTION: may reference environment-variables using syntax $EnvVar.'
               r,←⊂'              You can continue with any non-alphabetic chars immediately following the name of the var, otherwise leave a blank.'
-              r,←⊂'              ie: "$Foo\Goo" => "C:\TEMP\Goo", "$Git MyDir" => "c:\git\MyDir", "$Git  MyDir" => "c:\git\ MyDir"'
+              r,←⊂'              ie: with EnvVars FOO="C:\TEMP" and Git="c:\git\", you can do'
+              r,←⊂'                  "$Foo\Goo" => "C:\TEMP\Goo", "$Git MyDir" => "c:\git\MyDir", "$Git  MyDir" => "c:\git\ MyDir"'
               r,←⊂''
               r,←⊂'INSTRUCTION may be one of the following:'
               r,←⊂'  DYALOGBUILD : nnn'
@@ -1392,7 +1406,7 @@
               r,←⊂'    Sets the WSID to "wsname.dws" so the workspace is ready to )SAVE.'
               r,←⊂'    Supports optional parameters:'
               r,←⊂'    save=0|1 (Default 0): save the workspace after a successfull (=no errors were logged) build'
-              r,←⊂'    off=0|1  (Default=0): )OFF after completion of Build. If errors were logged, a logfile (same name as the .dyalogbuiöd-file with .log-extension)'
+              r,←⊂'    off=0|1  (Default=0): )OFF after completion of Build. If errors were logged, a logfile (same name as the .dyalogbuild-file with .log-extension)'
               r,←⊂'                          will be created and exit code 1 will be set.'
           :EndSelect
      
@@ -1403,12 +1417,12 @@
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more info'
           :Case 1
-              r,←'' 'Argument is one of:'
+              r,'' 'Argument is one of:'
               r,←⊂'    ns                namespace in the current workspace'
               r,←⊂'    file              .dyalog file containing a namespace or a test-fn'
               r,←⊂'    path              path to directory containing functions in .dyalog files'
               r,←'' 'Optional modifiers are:'
-              r,←'     -clear[=n]        clear ws before running tests (optionally delete nameclass n only)'
+              r,←⊂'    -clear[=n]        clear ws before running tests (optionally delete nameclass n only)'
               r,←⊂'    -tests=           comma-separated list of tests to run'
               r,←⊂'    -halt             halt on error rather than log and continue'
               r,←⊂'    -filter=string    only run functions whose name start with filter'
