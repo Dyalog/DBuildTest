@@ -44,8 +44,9 @@
 ⍝ 2020 04 21 MBaas: ]DTest - timestamp (adds ⎕TS to log-messages)
 ⍝ 2020 04 23 MBaas: ]DTest: renamed -timestamp to -ts; added -timeout
 ⍝ 2020 04 29 MBaas: ]DTest -order=0|1|"NumVec". Default is random order when executing tests and setups. If tests fail, order will be accessible in *.rng.txt-files!
-⍝ 2020 05 19 MBaas: colon in arguments to the instructions (i.e. LX/EXEC/PROD/DEFAULTS with pathnames) caused trouble. Fixed.
+⍝ 2020 05 19 MBaas: colon in arguments of the instructions (i.e. LX/EXEC/PROD/DEFAULTS with pathnames) caused trouble. Fixed.
 ⍝ 2020 05 20 MBaas: variables with platform-info; typos fixed (in Help);]DBuild only creates logfile (with -off) if it found errors
+⍝ 2020 07 01 MBaas: ]DTest -init; fixed bugs when ]DBuild used -save-Modifier
     ⎕ML←1
 
     :Section Compatibility
@@ -689,7 +690,17 @@
                   :If verbose ⋄ 0 Log(⍕1↑⍴files),' files loaded from ',source ⋄ :EndIf
               :EndIf
           :Else
-              LogTest'"',source,'" is neither a namespace nor a folder.'
+              :if args.init   ⍝ can we init it?
+              :andif ^/0<≢¨(TESTSOURCE z extension)←qNPARTS source  ⍝ did user give a file-spec? then try to create it!
+              :if ~⎕nexists TESTSOURCE   ⍝ does directory exist?
+              {}3 qMKDIR TESTSOURCE
+              :endif
+              templ←'DyalogTest : 1.25' 'ID         :' 'Description:' '' 'Setup   :' 'Teardown:' '' 'Test:'
+              (⊂templ)⎕nput source
+             Log'Initialised ',source
+             →0
+              :endif
+              LogTest'"',source,'" is neither a namespace nor a folder or a .dyalogtest-file.'
               →FAIL ltack r←LOGS
           :EndIf
       :EndIf
@@ -705,7 +716,7 @@
           :EndFor
           'args'⎕NS sargs ⍝ merge
           :If 0≠⍴overwritten
-              0 Log'*** warning - test-suite overridden my modifiers: ',,⍕overwritten
+              0 Log'*** warning - test-suite overridden by modifiers: ',,⍕overwritten
           :EndIf
      
       :EndIf
@@ -717,7 +728,7 @@
       :EndIf
       'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal'
       ns.Log←{⍺←{⍵} ⋄ ⍺ ##.LogTest ⍵}  ⍝ ⍺←rtack could cause problems with classic...
-     
+
       :If args.tests≢0
           orig←fns←(','Split args.tests)~⊂''args.tests
           nl←ns.⎕NL ¯3
@@ -775,7 +786,7 @@
               steps←0
               start←⎕AI[3]
               LOGS←''
-              :If verbose∧1<⍴,setups ⋄ r,←⊂'For setup = ',setup ⋄ :EndIf
+              :If verbose ⋄ r,←⊂'For setup = ',setup ⋄ :EndIf
               :If ~setupok←null≡f←setup
                   :If 3=ns.⎕NC f ⍝ function is there
                       :If verbose ⋄ 0 Log'running setup: ',f ⋄ :EndIf
@@ -962,7 +973,7 @@
       :EndIf
      
       file←∊1⎕nparts 1⊃args.Arguments
-      (prod quiet save halt TestClassic )←args.(production quiet save halt TestClassic ) ⍝ save must be 0, ⎕SAVE does not work from a UCMD
+      (prod quiet save halt TestClassic )←args.(production quiet save halt TestClassic ) 
       ( TestClassic prod)←{2⊃⎕VFI⍕⍵}¨ TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
       off←2 args.Switch'off' 
       halt←~halt  ⍝ invert it, so that we can use it directly for :trap halt/
@@ -1174,8 +1185,8 @@
                   Log'WSID set to ',⎕WSID
               :EndIf
               save←0
-              :If 99≠tmp←'99'GetNumParam'save'  ⍝ can be set as an option in build-file
-              :OrIf 1⊃tmp←⎕VFI⍕args.save          ⍝ or a switch when calling UCMD (which actually override the setting from the buildfile)
+              :If 99≠⊃tmp←2⍴'99'GetNumParam'save'  ⍝ can be set as an option in build-file
+              :OrIf 1⊃tmp←⎕VFI⍕args.save          ⍝ or a switch when calling UCMD (which actually overrides the settings from the buildfile)
                   save←(,1)≡,2⊃tmp
               :EndIf
               :If off=2 ⋄ off←1=GetNumParam'off' 0 ⋄ :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default-value of 2)
@@ -1234,9 +1245,9 @@
       :If off
           logfile←∊(2↑qNPARTS file),'.log'
           qNDELETE logfile
-          :if 0⊤ ⋄ (∊LoggedMessages,¨⊂⎕UCS 13 10)Put logfile⋄:endif
+          :if 2=⎕nc'LoggedMessages' ⋄ :andif 0<≢LoggedMessages ⋄ (∊LoggedMessages,¨⊂⎕UCS 13 10)Put logfile⋄:endif
           ⍝⎕OFF 13×~0∊⍴,LoggedErrors  ⍝ requires DyaVers ≥ 14.0
-          {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨')OFF',⊂'ER'  ⍝ as long as 17479 isn't fixed (and for all older versions) we can't use ⎕OFF but have to ⎕NQ'KeyPress'
+          {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨')OFF',⊂'ER'  ⍝ as long as 18008 isn't fixed (and for all older versions) we can't use ⎕OFF but have to ⎕NQ'KeyPress'
       :ElseIf 2=⎕SE.⎕NC'DBuild_postSave'
           ⍎⎕←⎕SE.DBuild_postSave
       :EndIf  ⍝ we exit with 1 if there were errors, 0 if everything's fine.
@@ -1323,7 +1334,7 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order='
+      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init'
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
@@ -1412,7 +1423,7 @@
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory'
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]]'
+          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init]'
           :Select level
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more info'
@@ -1436,6 +1447,7 @@
               r,←⊂'    -trace            set stop on line 1 of each test function'
               r,←⊂'    -verbose          display more status messages while running'
               r,←⊂'    -order=0|1|"NumVec" control sequence of tests (default 0: random; 1:sequential;"NumVec":order)'
+              r,←⊂'    -init             if specified test-file wasn''t found, it will be initialised with a template'
           :EndSelect
       :EndSelect
     ∇
