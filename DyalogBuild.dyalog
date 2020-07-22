@@ -1044,7 +1044,6 @@
       off←2 args.Switch'off'
       halt←~halt  ⍝ invert it, so that we can use it directly for :trap halt/
       Clear args.clear
-     ∘∘∘
       (exists file)←OpenFile file
       (path name extn)←qNPARTS file
      
@@ -1348,7 +1347,13 @@
 
     ∇ Clear clear;tmp;n
       →(clear≡0)⍴0
-      :If (clear≡1)∨0∊⍴,clear ⋄ #.(⎕EX ⎕NL⍳9) ⋄ Log'workspace cleared'
+      :If (clear≡1)∨0∊⍴,clear
+          #.(⎕EX ⎕NL⍳9)
+          Log'workspace cleared'
+          :If 0<≢#.⎕NL ¯2.1 ¯3.1 9
+              ⎕←'Duh....something went terribly wrong!'
+              ∘∘∘
+          :EndIf
       :ElseIf ∧/1⊃tmp←⎕VFI clear
           n←#.⎕NL 2⊃tmp
           #.⎕EX n ⋄ Log'Expunged ',(⍕⍴n),' names of class ',clear
