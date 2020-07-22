@@ -1,12 +1,14 @@
 DYALOGBUILD: 1.3
 ID: DBuild_TEST_1, Version 1
 
-DEFAULTS: ⎕IO←0⋄⎕ML←2⋄⎕CT←1E¯11 ⋄ ⎕PP←11
+DEFAULTS: ⎕IO←0 ⋄ ⎕ML←2 
+DEFAULTS: ⎕CT←1E¯11 ⋄ ⎕PP←11
 
 LIB: InitConga, Target=#.conga
 LIB: HttpCommand, Target=#.httpcommand
 
 EXEC: #.ProdFlag←'Test'
 EXEC: #.MyEnvVar←'$DB_EnvVar'
+EXEC: #.Dollar←'$$foo'
 
 PROD: #.ProdFlag←'Production'

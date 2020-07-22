@@ -1,6 +1,6 @@
-﻿ r←test_DBuild_1 dummy
+﻿ r←test_DBuild_1 dummy;ucmd_flags
  r←''
- :If ##.halt ⋄ ⎕SE.UCMD'UDEBUG on' ⋄ :EndIf ⍝ otherwise halt won't propagate properly into the ]DBUild-Call...
+ :If ##.halt ⋄ ⎕SE.UCMD'sink←UDEBUG on' ⋄ :EndIf ⍝ otherwise halt won't propagate properly into the ]DBUild-Call...
 
  :If 0
  ⍝ can't do this because changes to EnvVars are not visible to dyalog⌈
@@ -21,14 +21,15 @@
  #.⎕CY'dfns'
  #.foo←'goo'
 
-⍝ run build-script
- ⎕SE.UCMD'DBuild ',##.TESTSOURCE,'DBuild_1.dyalogbuild -c',##.halt/' -h'
+ucmd_flags←(##.halt/' -h'),(##.verbose/' -v'),##.quiet/' -q'
+⍝ run build-script (non-prod mode)
+ ⎕SE.UCMD'DBuild ',##.TESTSOURCE,'DBuild_1.dyalogbuild -c',ucmd_flags
 
  :If 'conga' 'httpcommand'Check #.⎕NL-9
      →0 Because'Did not find exactly two namespace in #' ⋄ :EndIf
 
- :If 'MyEnvVar' 'ProdFlag'Check #.⎕NL-2.1
-     →0 Because'Did not find exactly two variables in #' ⋄ :EndIf
+ :If 'Dollar' 'MyEnvVar' 'ProdFlag'Check #.⎕NL-2.1
+     →0 Because'Did not find exactly 3 variables in #' ⋄ :EndIf
 
  :If (0/⊂'')Check #.⎕NL-3.1
      →0 Because'List of functions in # not empty as expected!' ⋄ :EndIf
@@ -41,8 +42,7 @@
          →0 Because'EnvironmentVariable was not retrieved with correct value' ⋄ :EndIf
  :EndIf
 
- 'ic'#.⎕NS''
- #.ic ⎕SE.UCMD'LOAD initconga'
+ 'ic'#.⎕NS''⋄#.ic ⎕SE.UCMD'sink←LOAD initconga'
 
  :If (¯1↓#.ic.⎕CR'InitConga')Check ¯1↓#.conga.⎕CR'InitConga'
      →0 Because'InitConga not loaded identically to ]LOAD' ⋄ :EndIf
@@ -55,3 +55,9 @@
      →0 Because'DEFAULTS did not correctly process ⎕CT' ⋄ :EndIf
  :If 11 Check #.⎕PP
      →0 Because'DEFAULTS did not correctly process ⎕PP' ⋄ :EndIf
+
+⍝ re-run build-script (this time in production mode)
+ ⎕SE.UCMD'DBuild ',##.TESTSOURCE,'DBuild_1.dyalogbuild -c -p',ucmd_flags
+
+:If 'Production'Check #.ProdFlag
+     →0 Because'ProdFlag did not have expected value "Production", but rather "',#.ProdFlag,'"' ⋄ :EndIf
