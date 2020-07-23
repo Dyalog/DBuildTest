@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.25
+﻿:Namespace DyalogBuild ⍝ V 1.30
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -47,6 +47,8 @@
 ⍝ 2020 05 19 MBaas: colon in arguments of the instructions (i.e. LX/EXEC/PROD/DEFAULTS with pathnames) caused trouble. Fixed.
 ⍝ 2020 05 20 MBaas: variables with platform-info; typos fixed (in Help);]DBuild only creates logfile (with -off) if it found errors
 ⍝ 2020 07 01 MBaas: ]DTest -init; fixed bugs when ]DBuild used -save-Modifier
+⍝ 2020 07 21 MBaas: v1.30
+⍝ todo: ]DTest -off (returncodes as described in Andy's mail from July 21st)
     ⎕ML←1
 
     :Section Compatibility
@@ -54,6 +56,35 @@
       R←{2⊃⎕VFI(2>+\'.'=⍵)/⍵}2⊃'.'⎕WG'APLVersion'
     ∇
 
+    ∇ R←GetDOTNETVersion;vers;⎕IO;⎕USING
+⍝ R[1] = 0/1/2: 0=nothing, 1=.net Framework, 2=NET CORE
+⍝ R[2] = Version (text-vector)
+⍝ R[3] = Version (identifiable x.y within [2] in numerical form)
+⍝ R[4] = Textual description of the framework
+      ⎕IO←1
+      R←0 '' 0 ''
+      :Trap 0
+          ⎕USING←'System' ''
+          vers←System.Environment.Version
+          R[2]←⊂⍕vers
+          R[3]←vers.(Major+0.1×Minor)
+          :If 4=⌊R[3]   ⍝ a 4 indicates .net Framework!
+              R[1]←1
+              :If (⍕vers)≡'4.0.30319.42000'   ⍝ .NET 4.6 and higher!
+                  R[4]←⊂Runtime.InteropServices.RuntimeInformation.FrameworkDescription
+              :ElseIf (10↑⍕vers)≡'4.0.30319.' ⍝ .NET 4, 4.5, 4.5.1, 4.5.2
+                  R[4]←⊂'.NET Framework ',2⊃R  ⍝ JD: good enough?  Otherwise I may need to dig into the registry according to https://docs.microsoft.com/de-de/dotnet/framework/migration-guide/how-to-determine-which-versions-are-installed?view=netframework-4.8
+              :EndIf
+          :ElseIf 3.1=R[3]  ⍝ .NET CORE
+          :OrIf 4<R[3]
+              R[1]←2
+              ⎕USING←'System,System.Runtime.InteropServices.RuntimeInformation'
+              R[4]←⊂Runtime.InteropServices.RuntimeInformation.FrameworkDescription
+          :EndIf
+      :Else
+      ⍝ bad luck, go with the defaults
+      :EndTrap
+    ∇
     ⍝ Setup some name with information about the platform we're working on
     _isClassic←Classic←{92::1 ⋄ 0×⎕ucs ⎕ucs ⍵}9056  ⍝ running on classic edition???
     _is32bit←~_is64bit←∨/'64'⍷1⊃'.'⎕WG'APLVersion'
@@ -63,6 +94,7 @@
     _isMacOS←'Mac'≡3↑1⊃'.'⎕wg'APLVersion'
     _isSolaris←'Solaris'≡7↑1⊃'.'⎕wg'APLVersion'
     _Version←{2⊃⎕vfi ⍵}¨{'.'~¨⍨(1↓+\1,⍵='.')⊆⍵}2⊃'.'⎕WG'APLVersion'
+    _DotNet←1⊃GetDOTNETVersion
 
     ∇ {sink}←SetupCompatibilityFns
       sink←⍬   ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
@@ -157,6 +189,8 @@
           :EndIf
       :EndSelect
     ∇
+
+
 
     ∇ r←{quietly}_SH cmd
       :Access public shared
@@ -662,6 +696,8 @@
           :OrIf qNEXISTS f←WSFOLDER,source,'.dyalogtest'
           :OrIf qNEXISTS f←WSFOLDER,'Tests/',source
           :OrIf qNEXISTS f←WSFOLDER,'Tests/',source,'.dyalogtest'
+          :OrIf qNEXISTS f←∊1 qNPARTS source                     ⍝ deal with relative names for folders
+          :OrIf qNEXISTS f←∊1 qNPARTS source,'.dyalogtest'       ⍝ or individual tests
               (TESTSOURCE z extension)←qNPARTS f
               :If 2=type←GetFilesystemType f  ⍝ it's a file
                   :If '.dyalogtest'≡lc extension ⍝ That's a suite
@@ -678,6 +714,7 @@
               :EndIf
      
               :If 1=type  ⍝ deal with directories in f
+                  TESTSOURCE←f,(~'/\'∊⍨⊢/f)/⎕SE.SALTUtils.FS ⍝ use it accordingly! (and be sure it ends with dir-sep)
                   files←('*.dyalog'ListFiles f)[;1]
                   'ns'⎕NS''
                   :For f :In files
@@ -687,19 +724,37 @@
                           LogError⊃⎕DM
                       :EndTrap
                   :EndFor
-                  :If verbose ⋄ 0 Log(⍕1↑⍴files),' files loaded from ',source ⋄ :EndIf
+                  :If verbose ⋄ 0 Log(⍕1↑⍴files),' file',('s'/⍨1<≢files),' loaded from ',source ⋄ :EndIf
+                  :If null≡args.suite  ⍝ if no suite is given
+                      :If null≡args.setup
+                          :If 0<≢v←('setup_'⎕S'%')ns.⎕NL ¯3
+                              args.setup←¯1↓∊v,¨' '
+                              :If 2=GetFilesystemType f   ⍝ single file given
+                                  Log'No -suite nor -setup selected - running test against all setups!'
+                              :Else                       ⍝ directory
+                                  Log'No -suite nor -setup selected - running all tests in "',f,'" against all setups!'
+                              :EndIf
+                          :EndIf
+                          :If 0<≢v←('teardown_'⎕S'&')ns.⎕NL-3 ⋄ args.teardown←¯1↓∊v,¨' ' ⋄ :EndIf
+     
+                      :EndIf
+                  :EndIf
               :EndIf
           :Else
-              :if args.init   ⍝ can we init it?
-              :andif ^/0<≢¨(TESTSOURCE z extension)←qNPARTS source  ⍝ did user give a file-spec? then try to create it!
-              :if ~⎕nexists TESTSOURCE   ⍝ does directory exist?
-              {}3 qMKDIR TESTSOURCE
-              :endif
-              templ←'DyalogTest : 1.25' 'ID         :' 'Description:' '' 'Setup   :' 'Teardown:' '' 'Test:'
-              (⊂templ)⎕nput source
-             Log'Initialised ',source
-             →0
-              :endif
+              :If args.init   ⍝ can we init it?
+              :AndIf ∧/0<≢¨(TESTSOURCE z extension)←qNPARTS source  ⍝ did user give a file-spec? then try to create it!
+                  :If ~qNEXISTS TESTSOURCE   ⍝ does directory exist?
+                      {}3 qMKDIR TESTSOURCE
+                  :EndIf
+                  :If 'dyalogtest'≡lc extension
+                      templ←'DyalogTest : 1.25' 'ID         :' 'Description:' '' 'Setup   :' 'Teardown:' '' 'Test:'
+                  :Else
+                      templ←('r←',z,' dummy;foo' 'r←''''')':If .. Check ..'('      →0 Because ''test failed'' ⋄ :EndIf')
+                  :EndIf
+                  (⊂templ)⎕NPUT source
+                  Log'Initialised ',source
+                  →0
+              :EndIf
               LogTest'"',source,'" is neither a namespace nor a folder or a .dyalogtest-file.'
               →FAIL ltack r←LOGS
           :EndIf
@@ -707,18 +762,23 @@
       :If null≢suite←args.suite ⍝ Is a test suite defined?
           ⍝ Merge settings
           overwritten←⍬
-          sargs←LoadTestSuite suite
-          :For v :In (sargs.⎕NL-2)∩args.⎕NL-2 ⍝ overlap?
-              :If null≢args⍎v
-                  overwritten,←⊂v
-                  ⍎'sargs.',v,'←args.',v
+          ∘∘∘
+          v←LoadTestSuite suite
+          :If ~1⊃v
+              0 Log'*** error loading suite "',suite,'": ',2⊃v
+          :Else
+              sargs←2⊃v
+              :For v :In (sargs.⎕NL-2)∩args.⎕NL-2 ⍝ overlap?
+                  :If null≢args⍎v
+                      overwritten,←⊂v
+                      ⍎'sargs.',v,'←args.',v
+                  :EndIf
+              :EndFor
+              'args'⎕NS sargs ⍝ merge
+              :If 0≠⍴overwritten
+                  0 Log'*** warning - test-suite overridden by modifiers: ',,⍕overwritten
               :EndIf
-          :EndFor
-          'args'⎕NS sargs ⍝ merge
-          :If 0≠⍴overwritten
-              0 Log'*** warning - test-suite overridden by modifiers: ',,⍕overwritten
           :EndIf
-     
       :EndIf
      
     ⍝ Establish test DSL in the namespace
@@ -728,7 +788,7 @@
       :EndIf
       'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal'
       ns.Log←{⍺←{⍵} ⋄ ⍺ ##.LogTest ⍵}  ⍝ ⍺←rtack could cause problems with classic...
-
+     
       :If args.tests≢0
           orig←fns←(','Split args.tests)~⊂''args.tests
           nl←ns.⎕NL ¯3
@@ -767,6 +827,7 @@
       :If null≢setups←args.setup
           setups←' 'Split args.setup
       :EndIf
+     
       r←LOGS
       start0←⎕AI[3]
       :Select ,order
@@ -779,27 +840,26 @@
       :EndSelect
      
       :For run :In ⍳repeat
-          :If verbose∧repeat≠0
+          :If verbose∧repeat>1
               0 Log'run #',(⍕run),' of ',⍕repeat
           :EndIf
-          :For setup :In setups['setups'RandomVal 2⍴≢setups]   ⍝ randomize order of setups
+          :For setup :In (,setups)[('setups',⍕≢setups)RandomVal 2⍴≢setups]   ⍝ randomize order of setups
               steps←0
               start←⎕AI[3]
               LOGS←''
-              :If verbose ⋄ r,←⊂'For setup = ',setup ⋄ :EndIf
+              :If verbose ⋄ :AndIf setup≢null ⋄ r,←⊂'For setup = ',setup ⋄ :EndIf
               :If ~setupok←null≡f←setup
                   :If 3=ns.⎕NC f ⍝ function is there
                       :If verbose ⋄ 0 Log'running setup: ',f ⋄ :EndIf
                       f LogTest z←(ns⍎f)⍬
                       setupok←0=1↑⍴z
                   :Else ⋄ LogTest'-setup function not found: ',f
-                      ∘∘∘
                   :EndIf
               :EndIf
      
               →setupok↓END
      
-              :If verbose
+              :If verbose ⋄ :AndIf 1<≢fns
                   0 Log'running ',(⍕1↑⍴fns),' tests'↓⍨¯1×1=↑⍴fns
               :EndIf
               :For f :In fns[order]
@@ -826,7 +886,7 @@
      
      END:
               :If 0∊⍴LOGS
-                  r,←(quiet≡null)/⊂'   ',((1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' passed in ',(1⍕0.001×⎕AI[3]-start),'s'
+                  r,←(quiet≡null)/⊂'   ',(((setup≢null)∧1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' passed in ',(1⍕0.001×⎕AI[3]-start),'s'
                   (⎕NDELETE⍠1)TESTSOURCE,'*.rng.txt' ⍝ delete memorized random-numbers when tests succeeded
               :Else
                   r,←(⊂'Errors encountered',(setup≢null)/' with setup "',setup,'":'),'   '∘,¨LOGS
@@ -834,8 +894,9 @@
               :EndIf
           :EndFor ⍝ Setup
       :EndFor ⍝ repeat
-      r,←⊂' Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
+      r,←(((1<≢setups)∨1<≢fns)∧quiet≡null)/⊂' Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
       :If 0<≢LOGS
+      :AndIf 1<≢order
           r,←⊂'-order="',(⍕order),'"'
       :EndIf
      FAIL:
@@ -892,12 +953,16 @@
     ∇
 
 
-    ∇ args←LoadTestSuite suite;setups;lines;i;cmd;params;names;values;tmp;f
+    ∇ res←LoadTestSuite suite;setups;lines;i;cmd;params;names;values;tmp;f;args
+      :If 0=≢1⊃qNPARTS suite ⋄ suite←TESTSOURCE,suite
+      :ElseIf '.'≡1⊃1⊃qNPARTS suite ⋄ suite←∊1 qNPARTS TESTSOURCE,suite ⍝ deal with relative paths
+      :EndIf      ⍝ default path for a suite is the TESTSOURCE-folder
+      :If 0=≢3⊃qNPARTS suite ⋄ suite←suite,'.dyalogtest' ⋄ :EndIf   ⍝ default extension
      
       :If qNEXISTS suite
           lines←⊃qNGET suite
       :Else
-          r←,⊂'Test suite "',suite,'" not found.' ⋄ →0
+          args←,⊂'Test suite "',suite,'" not found.' ⋄ res←0,args ⋄ →0
       :EndIf
      
       args←⎕NS''
@@ -949,6 +1014,7 @@
       :EndFor
      
       args.tests↓⍨←1  ⍝ drop off leading comma
+      res←1,args
     ∇
 
     :EndSection ────────────────────────────────────────────────────────────────────────────────────
@@ -972,13 +1038,12 @@
           'Build file not named and no default found'⎕SIGNAL 22
       :EndIf
      
-      file←∊1⎕nparts 1⊃args.Arguments
-      (prod quiet save halt TestClassic )←args.(production quiet save halt TestClassic ) 
-      ( TestClassic prod)←{2⊃⎕VFI⍕⍵}¨ TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
-      off←2 args.Switch'off' 
+      file←∊1 qNPARTS 1⊃args.Arguments
+      (prod quiet save halt TestClassic)←args.(production quiet save halt TestClassic)
+      (TestClassic prod)←{2⊃⎕VFI⍕⍵}¨TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
+      off←2 args.Switch'off'
       halt←~halt  ⍝ invert it, so that we can use it directly for :trap halt/
       Clear args.clear
-     
       (exists file)←OpenFile file
       (path name extn)←qNPARTS file
      
@@ -1165,7 +1230,7 @@
                       Log'Latent Expression set'
                   :ElseIf prod∨cmd≢'prod' ⍝ only execute PROD command if -production specified
                       :Trap halt/0
-                              #⍎tmp
+                          #⍎tmp
                       :Else
                           :If DyaVersion<13
                               LogError⊃⎕DM
@@ -1242,10 +1307,10 @@
           LoggedMessages,←⊂r
       :EndIf
      
-      :If off
+      :If off=1  ⍝ careful: off∊0 1 2!
           logfile←∊(2↑qNPARTS file),'.log'
           qNDELETE logfile
-          :if 2=⎕nc'LoggedMessages' ⋄ :andif 0<≢LoggedMessages ⋄ (∊LoggedMessages,¨⊂⎕UCS 13 10)Put logfile⋄:endif
+          :If 2=⎕NC'LoggedMessages' ⋄ :AndIf 0<≢LoggedMessages ⋄ (∊LoggedMessages,¨⊂⎕UCS 13 10)Put logfile ⋄ :EndIf
           ⍝⎕OFF 13×~0∊⍴,LoggedErrors  ⍝ requires DyaVers ≥ 14.0
           {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨')OFF',⊂'ER'  ⍝ as long as 18008 isn't fixed (and for all older versions) we can't use ⎕OFF but have to ⎕NQ'KeyPress'
       :ElseIf 2=⎕SE.⎕NC'DBuild_postSave'
@@ -1282,7 +1347,13 @@
 
     ∇ Clear clear;tmp;n
       →(clear≡0)⍴0
-      :If (clear≡1)∨0∊⍴,clear ⋄ #.(⎕EX ⎕NL⍳9) ⋄ Log'workspace cleared'
+      :If (clear≡1)∨0∊⍴,clear
+          #.(⎕EX ⎕NL⍳9)
+          Log'workspace cleared'
+          :If 0<≢#.⎕NL ¯2.1 ¯3.1 9
+              ⎕←'Duh....something went terribly wrong!'
+              ∘∘∘
+          :EndIf
       :ElseIf ∧/1⊃tmp←⎕VFI clear
           n←#.⎕NL 2⊃tmp
           #.⎕EX n ⋄ Log'Expunged ',(⍕⍴n),' names of class ',clear
@@ -1359,7 +1430,7 @@
               r,←'' 'Argument is:'
               r,←⊂'    files         name of one or more .dyalogbuild files'
               r,←'' 'Optional modifiers are:'
-              r,←⊂'    -clear[=NCs]              expunge all objects, optionally of specified name classes only'
+              r,←⊂'    -clear[=NCs]              expunge all objects, optionally of specified nameclasses only'
               r,←⊂'    -production               remove links to source files'
               r,←⊂'    -quiet                    only output actual errors'
               r,←⊂'    -halt                     halt on error rather than log and continue'
@@ -1419,6 +1490,8 @@
               r,←⊂'    save=0|1 (Default 0): save the workspace after a successfull (=no errors were logged) build'
               r,←⊂'    off=0|1  (Default=0): )OFF after completion of Build. If errors were logged, a logfile (same name as the .dyalogbuild-file with .log-extension)'
               r,←⊂'                          will be created and exit code 1 will be set.'
+              r,←⊂''
+              r,←⊂'More info in the wiki!  → https://github.com/Dyalog/DBuildTest/wiki/DBuild'
           :EndSelect
      
       :Case 'DTest'
@@ -1448,6 +1521,8 @@
               r,←⊂'    -verbose          display more status messages while running'
               r,←⊂'    -order=0|1|"NumVec" control sequence of tests (default 0: random; 1:sequential;"NumVec":order)'
               r,←⊂'    -init             if specified test-file wasn''t found, it will be initialised with a template'
+              r,←⊂''
+              r,←⊂'More info in the wiki!  → https://github.com/Dyalog/DBuildTest/wiki/DTest'
           :EndSelect
       :EndSelect
     ∇
