@@ -1,0 +1,8 @@
+DyalogTest : 1.25
+ID         : DyalogBuild
+Description: test suite for ]DTest and ]DBuild 
+Description: We need a suite because we can't just run ALL tests - as test_failure fails expectedly (and is executed/tested by test_ReturnCode)
+
+Test: test_DSL        ⍝ basic tests of the DSL
+Test: test_DBuild_1   ⍝ some features of DBuild
+Test: test_ReturnCode ⍝ testing returncode of DTest 
