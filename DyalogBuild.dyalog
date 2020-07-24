@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.30
+:Namespace DyalogBuild ⍝ V 1.30
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -30,7 +30,7 @@
 ⍝ 2019 02 01 Adam: help
 ⍝ 2019 02 13 Brian: allow commented lines in build scripts
 ⍝ 2019 03 14 MBaas: handle nested msgs
-⍝ 2020 01 21 MBaas: mostly backward-compatibile with v12 (need to sort out ⎕R/⎕S,@)
+⍝ 2020 01 21 MBaas: mostly backward-compatible with v12 (need to sort out ⎕R/⎕S,@)
 ⍝ 2020 01 22 MBaas: compatibility with Classic
 ⍝ 2020 01 23 MBaas: took care of ⎕R,⎕S,@
 ⍝ 2020 01 24 MBaas: DBuild: added switch -halt for "halt on error" as in DTest; fixed bugs found while testing under v12
@@ -48,8 +48,9 @@
 ⍝ 2020 05 20 MBaas: variables with platform-info; typos fixed (in Help);]DBuild only creates logfile (with -off) if it found errors
 ⍝ 2020 07 01 MBaas: ]DTest -init; fixed bugs when ]DBuild used -save-Modifier
 ⍝ 2020 07 23 MBaas: v1.30 ]DTest -off;lots of small fixes & enhancements - see commit-msg for details
-    ⎕ML←1
+⍝ 2020 07 24 MBaas: some fixes for compatibility with old Dyalog-Versions
 
+    ⎕ML←1
     :Section Compatibility
     ∇ R←DyaVersion
       R←{2⊃⎕VFI(2>+\'.'=⍵)/⍵}2⊃'.'⎕WG'APLVersion'
@@ -92,16 +93,16 @@
     _isAIX←'AIX'≡3↑1⊃'.'⎕wg'APLVersion'
     _isMacOS←'Mac'≡3↑1⊃'.'⎕wg'APLVersion'
     _isSolaris←'Solaris'≡7↑1⊃'.'⎕wg'APLVersion'
-    _Version←{2⊃⎕vfi ⍵}¨{'.'~¨⍨(1↓+\1,⍵='.')⊆⍵}2⊃'.'⎕WG'APLVersion'
+    _Version←{2⊃⎕VFI ⍵}¨{1↓¨(⍵='.')⊂⍵}'.',2⊃'.'⎕WG'APLVersion'
     _DotNet←1⊃GetDOTNETVersion
 
     ∇ {sink}←SetupCompatibilityFns
       sink←⍬   ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
       :If 13≤DyaVersion
-          table←⍪
-          ltack←⊣
-          rtack←⍎⎕UCS 8866
-          GetNumParam←{⍺←⊣ ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)
+          table←⍪ ⍝ CompCheck: ignore
+          ltack←⊣ ⍝ CompCheck: ignore
+          rtack←⍎⎕UCS 8866 
+          GetNumParam←{⍺←⊣ ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)  ⍝ CompCheck: ignore
       :Else
           table←{r←(⍴⍵),(1≥⍴⍴⍵)/1 ⋄ r←r[1],×/1↓⍴⍵ ⋄ r⍴⍵}
           ltack←{⍺}
@@ -110,9 +111,9 @@
       :EndIf
      
       :If 15≤DyaVersion
-          GetFilesystemType←{⊃1 ⎕NINFO ⍵} ⍝ 1=Directory, 2=Regular file
+          GetFilesystemType←{⊃1 ⎕NINFO ⍵} ⍝ 1=Directory, 2=Regular file  ⍝ CompCheck: ignore
           ListFiles←{⍺←'' ⋄ ⍺ ListPost15 ⍵}
-          qNGET←{⎕NGET ⍵ 1}
+          qNGET←{⎕NGET ⍵ 1}  ⍝ CompCheck: ignore
       :Else
           ListFiles←{⍺←'' ⋄ ⍺ ListPre15 ⍵}
           GetFilesystemType←{2-(ListFiles{(-∨/'\/'=¯1↑⍵)↓⍵}⍵)[1;4]}
@@ -120,18 +121,25 @@
       :EndIf
      
       :If 16≤DyaVersion
-      :AndIf ~Classic
+      :andIf ~Classic
           where←⍎⎕UCS 9080
       :Else
           where←{(,⍵)/,⍳⍴⍵}
       :EndIf
-     
+     :if 16≤DyaVersion
+     qJSONi←qSONe←⎕JSON ⍝ CompCheck: ignore
+     :elseif 14.1≤DyaVersion
+               qJSONi←{0(7159⌶)⍵} ⍝ CompCheck: ignore
+          qJSONe←{(7160⌶)⍵} ⍝ CompCheck: ignore
+          :else 
+          qSONi←qSONe←{'This functionality not available in versions < 14.1'⎕signal 11}
+     :endif  
       :If 18≤DyaVersion
-          lc←¯1∘⎕C                                    ⍝ lower case
-          uc←1∘⎕C                                     ⍝ upper case
+          lc←¯1∘⎕C                                    ⍝ lower case ⍝ CompCheck: ignore
+          uc←1∘⎕C                                     ⍝ upper case ⍝ CompCheck: ignore
       :ElseIf 15≤DyaVersion
-          lc←819⌶                                     ⍝ lower case
-          uc←1∘(819⌶)                                 ⍝ upper case
+          lc←819⌶                                     ⍝ lower case ⍝ CompCheck: ignore
+          uc←1∘(819⌶)                                 ⍝ upper case ⍝ CompCheck: ignore
       :Else
           lowerAlphabet←'abcdefghijklmnopqrstuvwxyzáâãçèêëìíîïðòóôõùúûýàäåæéñöøü'
           upperAlphabet←'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÂÃÇÈÊËÌÍÎÏÐÒÓÔÕÙÚÛÝÀÄÅÆÉÑÖØÜ'
@@ -147,7 +155,7 @@
           ⍝ splits a filename into: path name ext
       :If 0=⎕NC'normalize' ⋄ normalize←0 ⋄ :EndIf
       :If 15≤DyaVersion
-          r←normalize ⎕NPARTS filename
+          r←normalize ⎕NPARTS filename ⍝ CompCheck: ignore
       :Else
           filesep←(~isWin)↓'\/'
           mask←⌽∨\⌽filename∊filesep
@@ -217,9 +225,9 @@
           :EndSelect
       :Else
           :If 0=⎕NC'larg'
-              ⎕MKDIR path
+              ⎕MKDIR path ⍝ CompCheck: ignore
           :Else
-              larg ⎕MKDIR path
+              larg ⎕MKDIR path ⍝ CompCheck: ignore
           :EndIf
       :EndIf
     ∇
@@ -231,11 +239,11 @@
               R←0<1↑⍴ListFiles FileOrDir
           :EndTrap
       :Else
-          R←⎕NEXISTS FileOrDir
-      :EndIf
+          R←⎕NEXISTS FileOrDir ⍝ CompCheck: ignore
+     :endif
     ∇
 
-    ∇ qNDELETE name;DeleteFileX;GetLastError;FindFirstFile;FindNextFile;FindClose;handle;rslt;ok;next;⎕IO;path
+    ∇ {wild}qNDELETE name;DeleteFileX;GetLastError;FindFirstFile;FindNextFile;FindClose;handle;rslt;ok;next;⎕IO;path
       :If qNEXISTS name
           :If DyaVersion≤15
               ⎕IO←0
@@ -271,16 +279,23 @@
                   :EndIf
               :EndSelect
           :Else
-              ⎕NDELETE name
+          :if 2=⎕nc'wild'
+          :andif wild 
+          (⎕NDELETE⍠1) name   ⍝ CompCheck: ignore
+          :else
+              ⎕NDELETE name   ⍝ CompCheck: ignore
+              :endif
           :EndIf
       :EndIf
     ∇
+
+    
 
     ∇ r←{pattern}ListPost15 path
       :If 0=⎕NC'pattern' ⋄ :OrIf pattern≡'' ⋄ pattern←''
       :Else ⋄ path,←(~path[≢path]∊'\/')/'/'
       :EndIf
-      r←⍉↑0 2 9 1(⎕NINFO ⎕OPT 1)(path,pattern)
+      r←⍉↑0 2 9 1(⎕NINFO ⎕OPT 1)(path,pattern) ⍝ CompCheck: ignore
       r[;4]←r[;4]=1
     ∇
 
@@ -475,7 +490,7 @@
           :Else
               ('Error loading ',file,': ',∊⎕DM,¨⎕UCS 13)⎕SIGNAL 11
           :EndTrap
-          {(⍵,⎕UCS 13)⎕SIGNAL('***'≡3↑' '~⍨⍕⍵)/11}¨⊆res
+          {(⍵,⎕UCS 13)⎕SIGNAL('***'≡3↑' '~⍨⍕⍵)/11}¨⊆res  ⍝ CompCheck: ignore
       :EndIf
     ∇
 
@@ -518,7 +533,7 @@
     :Section ADOC
 
     ∇ t←Describe
-      t←1↓∊(⎕UCS 10),¨{⍵/⍨∧\(⊂'')≢¨⍵}Comments ⎕SRC ⎕THIS ⍝ first block of non-empty comment lines
+      t←1↓∊(⎕UCS 10),¨{⍵/⍨∧\(⊂'')≢¨⍵}Comments ⎕SRC ⎕THIS ⍝ first block of non-empty comment lines   ⍝ CompCheck: ignore
     ∇
 
     ∇ (n v d)←Version;f;s;z
@@ -532,7 +547,7 @@
               :EndTrap
           :EndIf
           :If ~z
-              (n v d)←'DyalogBuild' '1.24' '2020-01-28'  ⍝ this happens during ]LOAD with Dyalog ≤ 15 or regular usage with v12! - it doesn't matter if this data isn't accurate (no harm during ]LOAD, need to find workaround for v12!)
+              (n v d)←'DyalogBuild' '1.30' '2020-07-24'  ⍝ this happens during ]LOAD with Dyalog ≤ 15 or regular usage with v12! - it doesn't matter if this data isn't accurate (no harm during ]LOAD, need to find workaround for v12!)  ⍝ TODO: get version-# 
               →0
           :EndIf
       :EndIf
@@ -624,7 +639,7 @@
     ⍝ No validation, no options
      
       :Trap 2 ⍝ Syntax Error if ⎕CSV not available
-          r←⎕CSV args
+          r←⎕CSV args  ⍝ CompCheck: ignore
       :Else
           (file encoding coltypes)←args
           z←1⊃qNGET file
@@ -722,7 +737,7 @@
               :EndIf
      
               :If 1=type  ⍝ deal with directories in f
-                  TESTSOURCE←f,(~'/\'∊⍨⊢/f)/⎕SE.SALTUtils.FS ⍝ use it accordingly! (and be sure it ends with dir-sep)
+                  TESTSOURCE←f,(~'/\'∊⍨⊃⌽f)/⎕SE.SALTUtils.FS ⍝ use it accordingly! (and be sure it ends with dir-sep)
                   files←('*.dyalog'ListFiles f)[;1]
                   'ns'⎕NS''
                   :For f :In files
@@ -735,7 +750,7 @@
                   :If verbose ⋄ 0 Log(⍕1↑⍴files),' file',('s'/⍨1<≢files),' loaded from ',source ⋄ :EndIf
                   :If null≡args.suite  ⍝ if no suite is given
                       :If null≡args.setup
-                          :If 0<≢v←('setup_'⎕S'%')ns.⎕NL ¯3
+                          :If 0<≢v←({⊃'setup_'⍷⍵}¨ns.⎕nl-3)/ns.⎕nl-3
                               args.setup←¯1↓∊v,¨' '
                               :If 2=GetFilesystemType f   ⍝ single file given
                                   Log'No -suite nor -setup selected - running test against all setups!'
@@ -743,14 +758,16 @@
                                   Log'No -suite nor -setup selected - running all tests in "',f,'" against all setups!'
                               :EndIf
                           :EndIf
-                          :If 0<≢v←('teardown_'⎕S'&')ns.⎕NL-3 ⋄ args.teardown←¯1↓∊v,¨' ' ⋄ :EndIf
+                          :If 0<≢v←({⊃'teardown_'⍷⍵}¨ns.⎕nl-3)/ns.⎕nl-3
+                           args.teardown←¯1↓∊v,¨' ' 
+                            :EndIf
      
                       :EndIf
                   :EndIf
               :EndIf
           :Else
               :If args.init   ⍝ can we init it?
-              :AndIf ∧/0<≢¨(TESTSOURCE z extension)←qNPARTS source  ⍝ did user give a file-spec? then try to create it!
+              :AndIf ∧/0<⍴¨1↑¨(TESTSOURCE z extension)←qNPARTS source  ⍝ did user give a file-spec? then try to create it!
                   :If ~qNEXISTS TESTSOURCE   ⍝ does directory exist?
                       {}3 qMKDIR TESTSOURCE
                   :EndIf
@@ -759,7 +776,7 @@
                   :Else
                       templ←('r←',z,' dummy;foo')'r←''''' ':If .. Check ..'('      →0 Because ''test failed'' ⋄ :EndIf')
                   :EndIf
-                  (⊂templ)⎕NPUT source
+                  (⊂templ)qNPUT source
                   Log'Initialised ',source
                   →0
               :EndIf
@@ -803,7 +820,7 @@
               fns←{w←⍵ ⋄ ((w='?')/w)←'.' ⋄ ((w='*')/w)←⊂'.*' ⋄ ∊⍵}¨fns   ⍝ replace bare * wildcard with .* to and ? with . make it valid regex
               fns←1⌽¨'$^'∘,¨fns ⍝ note ^ is shift-6, not the APL function ∧
               t←1
-              :If 0∊⍴matches←↑(fns ⎕S{⍵.(Block PatternNum)})ns.⎕NL ¯3
+              :If 0∊⍴matches←↑(fns ⎕S{⍵.(Block PatternNum)})ns.⎕NL ¯3   ⍝ CompCheck: ignore
                   0 Log'*** function(s) not found: ',,⍕t/orig
                   fns←⍬
               :Else
@@ -894,7 +911,7 @@
      END:
               :If 0∊⍴LOGS
                   r,←(quiet≡null)/⊂'   ',(((setup≢null)∧1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' passed in ',(1⍕0.001×⎕AI[3]-start),'s'
-                  (⎕NDELETE⍠1)TESTSOURCE,'*.rng.txt' ⍝ delete memorized random-numbers when tests succeeded
+                  1 qNDELETE TESTSOURCE,'*.rng.txt' ⍝ delete memorized random-numbers when tests succeeded
               :Else
                   r,←(⊂'Errors encountered',(setup≢null)/' with setup "',setup,'":'),'   '∘,¨LOGS
                   r,←⊂' Time spent: ',(1⍕0.001×⎕AI[3]-start),'s'
@@ -911,7 +928,8 @@
       :If off
           :If 0<≢LOGS
               :If 2=⎕NC'base'
-                  (⊂∊r,⎕UCS 13)⎕NPUT(TESTSOURCE,base,'.log')1
+                  qNDELETE TESTSOURCE,base,'.log'
+                  (⊂∊r,⎕UCS 13)qNPUT(TESTSOURCE,base,'.log')
               :EndIf
               ⎕OFF 21
           :EndIf
@@ -1119,7 +1137,7 @@
                   :For f :In files
                       cmd←((1+WIN)⊃'cp' 'copy'),' "',f,'" "',path,target,'/"'
                       ((WIN∧cmd∊'/')/cmd)←'\'
-                      {}⎕CMD cmd
+                      {}⎕CMD cmd  
                   :EndFor
               :EndIf
               :If (n←⍴files)≠tmp←⍴'*'ListFiles path,target,'/'
@@ -1152,7 +1170,7 @@
                       :If DyaVersion<13
                           LogError'Error establishing defaults in namespace ',target,': ',⊃⎕DM
                       :Else
-                          LogError'Error establishing defaults in namespace ',target,': ',⊃⎕DMX.DM
+                          LogError'Error establishing defaults in namespace ',target,': ',⊃⎕DMX.DM  ⍝ CompCheck: ignore
                       :EndIf
                   :EndTrap
               :EndIf
@@ -1170,7 +1188,7 @@
                       :If DyaVersion<13
                           LogError⊃⎕DM
                       :Else
-                          LogError⊃⎕DMX.DM
+                          LogError⊃⎕DMX.DM  ⍝ CompCheck: ignore
                       :EndIf
                   :EndTrap
                   :Continue
@@ -1181,7 +1199,7 @@
               :If DyaVersion<13
                   tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵[1,⍴⍵]≡'[]':⍵ ⋄ ⍺,⍵}source
               :Else
-                  tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵,⍨⍺/⍨0∊⍴('^\[.*\]'⎕S 3)⍵}source
+                  tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵,⍨⍺/⍨0∊⍴('^\[.*\]'⎕S 3)⍵}source   ⍝ CompCheck: ignore
               :EndIf
               :Trap halt/11
                   ⍝z←⎕SE.SALT.Load tmp←tmpPath,((~0∊⍴target)/' -target=',target),options
@@ -1204,7 +1222,7 @@
                           :Else ⋄ eol←⎕UCS 2⊃⎕VFI z⊃chars
                           :EndIf
                       :Else
-                          eol←⎕UCS⍎¨(chars,nums)⎕S(,⍨nums)rtack lc'lf'GetParam'seteol'
+                          eol←⎕UCS⍎¨(chars,nums)⎕S(,⍨nums)rtack lc'lf'GetParam'seteol'   ⍝ CompCheck: ignore
                       :EndIf
                   :EndIf
                   tmpExt←3⊃qNPARTS tmpPath
@@ -1217,7 +1235,7 @@
                       :Case 'charmat'
                           fileData←↑fileContent
                       :Case 'json'
-                          fileData←0 ⎕JSON∊fileContent
+                          fileData←0 qJSON∊fileContent ⍝ CompCheck: ignore
                       :Case 'charvecs'
                           fileData←fileContent
                       :EndSelect
@@ -1252,7 +1270,7 @@
                           :If DyaVersion<13
                               LogError⊃⎕DM
                           :Else
-                              LogError⊃⎕DMX.DM
+                              LogError⊃⎕DMX.DM  ⍝ CompCheck: ignore
                           :EndIf
                       :EndTrap
                       :If cmd≡'defaults' ⋄ _defaults←_defaults,'⋄',tmp ⋄ Log'Set defaults ',tmp ⋄ :EndIf ⍝ Store for use each time a NS is created
@@ -1290,7 +1308,7 @@
               ∇¨(⊂⍵,'.'),¨(⍎⍵).⎕NL-2.1 3.1 9.1
           }¨(⊂'#.'),¨#.⎕NL-2.1 3.1 3.2 9.1
           :If 0<⍴z
-              LogError('Classic-Test found incompatible characters in following functions/variables:',⎕UCS 13 10),¯2↓∊z{('- ',⍺,⍵)/⍨×≢⍺}Ö 1 rtack(⎕UCS 13 10)
+              LogError('Classic-Test found incompatible characters in following functions/variables:',⎕UCS 13 10),¯2↓∊z{('- ',⍺,⍵)/⍨×,⍴⍺}Ö 1 rtack(⎕UCS 13 10)
           :Else
               Log'Workspace seems to be compatible with Classic Edition ',⍕{⍵>1:⍵ ⋄ 12}TestClassic
           :EndIf
@@ -1476,7 +1494,7 @@
               r,←⊂'  LIB : name[, Target=namespace]'
               r,←⊂'    Loads the library utility "name" into "namespace" (default is #).'
               r,←⊂'  CSV : pathname, Target=matname[, ColTypes=spec]'
-              r,←⊂'    Loads the CSV file "pathname" as a matrix called "matname". "spec" corresponds to the third element of ⎕CSV''s right argument; for details, see ',⎕SE.UCMD'Help ⎕CSV -url'
+              r,←⊂'    Loads the CSV file "pathname" as a matrix called "matname". "spec" corresponds to the third element of ⎕CSV''s right argument; for details, see ',⎕SE.UCMD'Help ⎕CSV -url' ⍝ CompCheck: ignore
               r,←⊂'  DATA : pathname, Target=namespace[, Format=type[, SetEOL=nl]]'
               r,←⊂'    Loads the contents of the file(s) matching the pattern "pathname" into one or more variables in "namespace" (default is #). The variable(s) will be named with the base filename(s). "type" dictates how the file content of each file is interpreted, and may be one of:'
               r,←⊂'      charvec   meaning as a simple character vector. If SetEOL=nl is specified, the lines will be separated by the chosen line ending sequence; one or more of the leftmost character codes or the corresponding decimal numbers of:'
