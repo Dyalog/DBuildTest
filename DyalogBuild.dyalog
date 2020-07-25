@@ -101,7 +101,7 @@
       :If 13≤DyaVersion
           table←⍪ ⍝ CompCheck: ignore
           ltack←⊣ ⍝ CompCheck: ignore
-          rtack←⍎⎕UCS 8866 
+          rtack←⍎⎕UCS 8866
           GetNumParam←{⍺←⊣ ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)  ⍝ CompCheck: ignore
       :Else
           table←{r←(⍴⍵),(1≥⍴⍴⍵)/1 ⋄ r←r[1],×/1↓⍴⍵ ⋄ r⍴⍵}
@@ -121,19 +121,19 @@
       :EndIf
      
       :If 16≤DyaVersion
-      :andIf ~Classic
+      :AndIf ~Classic
           where←⍎⎕UCS 9080
       :Else
           where←{(,⍵)/,⍳⍴⍵}
       :EndIf
-     :if 16≤DyaVersion
-     qJSONi←qSONe←⎕JSON ⍝ CompCheck: ignore
-     :elseif 14.1≤DyaVersion
-               qJSONi←{0(7159⌶)⍵} ⍝ CompCheck: ignore
+      :If 16≤DyaVersion
+          qJSONi←qSONe←⎕JSON ⍝ CompCheck: ignore
+      :ElseIf 14.1≤DyaVersion
+          qJSONi←{0(7159⌶)⍵} ⍝ CompCheck: ignore
           qJSONe←{(7160⌶)⍵} ⍝ CompCheck: ignore
-          :else 
-          qSONi←qSONe←{'This functionality not available in versions < 14.1'⎕signal 11}
-     :endif  
+      :Else
+          qSONi←qSONe←{'This functionality not available in versions < 14.1'⎕SIGNAL 11}
+      :EndIf
       :If 18≤DyaVersion
           lc←¯1∘⎕C                                    ⍝ lower case ⍝ CompCheck: ignore
           uc←1∘⎕C                                     ⍝ upper case ⍝ CompCheck: ignore
@@ -240,7 +240,7 @@
           :EndTrap
       :Else
           R←⎕NEXISTS FileOrDir ⍝ CompCheck: ignore
-     :endif
+      :EndIf
     ∇
 
     ∇ {wild}qNDELETE name;DeleteFileX;GetLastError;FindFirstFile;FindNextFile;FindClose;handle;rslt;ok;next;⎕IO;path
@@ -279,17 +279,17 @@
                   :EndIf
               :EndSelect
           :Else
-          :if 2=⎕nc'wild'
-          :andif wild 
-          (⎕NDELETE⍠1) name   ⍝ CompCheck: ignore
-          :else
-              ⎕NDELETE name   ⍝ CompCheck: ignore
-              :endif
+              :If 2=⎕NC'wild'
+              :AndIf wild
+                  (⎕NDELETE ⎕OPT 1)name   ⍝ CompCheck: ignore
+              :Else
+                  ⎕NDELETE name   ⍝ CompCheck: ignore
+              :EndIf
           :EndIf
       :EndIf
     ∇
 
-    
+
 
     ∇ r←{pattern}ListPost15 path
       :If 0=⎕NC'pattern' ⋄ :OrIf pattern≡'' ⋄ pattern←''
@@ -490,7 +490,7 @@
           :Else
               ('Error loading ',file,': ',∊⎕DM,¨⎕UCS 13)⎕SIGNAL 11
           :EndTrap
-          {(⍵,⎕UCS 13)⎕SIGNAL('***'≡3↑' '~⍨⍕⍵)/11}¨⊆res  ⍝ CompCheck: ignore
+          {(⍵,⎕UCS 13)⎕SIGNAL('***'≡3↑' '~⍨⍕⍵)/11}¨eis res  ⍝ CompCheck: ignore
       :EndIf
     ∇
 
@@ -547,7 +547,7 @@
               :EndTrap
           :EndIf
           :If ~z
-              (n v d)←'DyalogBuild' '1.30' '2020-07-24'  ⍝ this happens during ]LOAD with Dyalog ≤ 15 or regular usage with v12! - it doesn't matter if this data isn't accurate (no harm during ]LOAD, need to find workaround for v12!)  ⍝ TODO: get version-# 
+              (n v d)←'DyalogBuild' '1.30' '2020-07-24'  ⍝ this happens during ]LOAD with Dyalog ≤ 15 or regular usage with v12! - it doesn't matter if this data isn't accurate (no harm during ]LOAD, need to find workaround for v12!)  ⍝ TODO: get version-#
               →0
           :EndIf
       :EndIf
@@ -585,7 +585,7 @@
       R←⍎{(∧\(2>+\⍵='.')∧⍵∊⎕D,'.')/⍵}2⊃Version       ⍝ max file version number that this can handle (fn instead of Constant because it would not ]LOAD with V12 otherwise... - ns not set up so ⎕SRC not working)
     ∇
 
-    eis←{1=≡⍵:⊂⍵ ⋄ ⍵}                                ⍝ enclose if simple
+    eis←{1=≡⍵:⊂⍵ ⋄ ⍵}                                ⍝ enclose if simple (can't use left-shoe underbasr because of classic compatibility )
     Split←{dlb¨1↓¨(1,⍵=⍺)⊂⍺,⍵}                       ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
     SplitFirst←{dlb¨1↓¨(1,<\⍵=⍺)⊂⍺,⍵}                ⍝ Split ⍵ on first occurence of ⍺, and remove leading blanks from each segment
     GetParam←{⍺←'' ⋄ (⌊/names⍳eis ⍵)⊃values,⊂⍺}      ⍝ Get value of parameter
@@ -750,7 +750,7 @@
                   :If verbose ⋄ 0 Log(⍕1↑⍴files),' file',('s'/⍨1<≢files),' loaded from ',source ⋄ :EndIf
                   :If null≡args.suite  ⍝ if no suite is given
                       :If null≡args.setup
-                          :If 0<≢v←({⊃'setup_'⍷⍵}¨ns.⎕nl-3)/ns.⎕nl-3
+                          :If 0<≢v←({⊃'setup_'⍷⍵}¨ns.⎕NL-3)/ns.⎕NL-3
                               args.setup←¯1↓∊v,¨' '
                               :If 2=GetFilesystemType f   ⍝ single file given
                                   Log'No -suite nor -setup selected - running test against all setups!'
@@ -758,9 +758,9 @@
                                   Log'No -suite nor -setup selected - running all tests in "',f,'" against all setups!'
                               :EndIf
                           :EndIf
-                          :If 0<≢v←({⊃'teardown_'⍷⍵}¨ns.⎕nl-3)/ns.⎕nl-3
-                           args.teardown←¯1↓∊v,¨' ' 
-                            :EndIf
+                          :If 0<≢v←({⊃'teardown_'⍷⍵}¨ns.⎕NL-3)/ns.⎕NL-3
+                              args.teardown←¯1↓∊v,¨' '
+                          :EndIf
      
                       :EndIf
                   :EndIf
@@ -806,7 +806,7 @@
       :EndIf
      
     ⍝ Establish test DSL in the namespace
-      :If halt=0 ⋄ ns.Check←≢
+      :If halt=0 ⋄ :AndIf DyaVersion≥14 ⋄ ns.Check←≢   ⍝ CompCheck: ignore
       :Else
           'ns'⎕NS'Check'
       :EndIf
@@ -944,6 +944,7 @@
 
     ∇ r←expect Check got
       :If r←expect≢got
+      :AndIf halt
           ⎕←'expect≢got:'
           :If 200≥⎕SIZE'expect' ⋄ ⎕←'expect=',,expect ⋄ :EndIf
           :If 200≥⎕SIZE'got' ⋄ ⎕←'got=',,got ⋄ :EndIf
@@ -1137,7 +1138,7 @@
                   :For f :In files
                       cmd←((1+WIN)⊃'cp' 'copy'),' "',f,'" "',path,target,'/"'
                       ((WIN∧cmd∊'/')/cmd)←'\'
-                      {}⎕CMD cmd  
+                      {}⎕CMD cmd
                   :EndFor
               :EndIf
               :If (n←⍴files)≠tmp←⍴'*'ListFiles path,target,'/'
