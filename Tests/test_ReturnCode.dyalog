@@ -8,18 +8,17 @@
 
      ⎕SE.SALT.Load'aplprocess -target=#'
 
-     myapl←⎕NEW #.APLProcess('dfns'('LX="{2 ⎕nq ⎕se ''KeyPress'' ⍵}¨'']dtest ',##.TESTSOURCE,'test_failure.dyalog -off'',⊂''ER''"'))
+     myapl←⎕NEW #.APLProcess('dfns'('ok=0 LX="{2 ⎕nq ⎕se ''KeyPress'' ⍵}¨'']dtest ',##.TESTSOURCE,'test_retcode.dyalog -off'',⊂''ER''"'))
      :While ~myapl.HasExited ⋄ :EndWhile ⍝ let it run...
      :If 21 Check myapl.GetExitCode
          →0 Because'Failing test did not end with code 21' ⋄ :EndIf
 
-     :If 1 Check ⎕NEXISTS ##.TESTSOURCE,'test_failure.log'  ⍝ was a log-file written?
+     :If 1 Check ⎕NEXISTS ##.TESTSOURCE,'test_retcode.log'  ⍝ was a log-file written?
          →0 Because'Failing test did not produce log-file' ⋄ :EndIf
 
-     1 ⎕NDELETE ##.TESTSOURCE,'test_failure.log'  ⍝ wipe out that expected log-file
-     1 ⎕NDELETE ##.TESTSOURCE,'test_ok.log'  ⍝ make sure next test doesn't have a log file before it starts
+     1 ⎕NDELETE ##.TESTSOURCE,'test_retcode.log'  ⍝ wipe out that expected log-file
 
-     myapl←⎕NEW #.APLProcess('dfns'('LX="{2 ⎕nq ⎕se ''KeyPress'' ⍵}¨'']dtest ',##.TESTSOURCE,'test_ok.dyalog -off'',⊂''ER''"'))
+     myapl←⎕NEW #.APLProcess('dfns'('ok=1 LX="{2 ⎕nq ⎕se ''KeyPress'' ⍵}¨'']dtest ',##.TESTSOURCE,'test_retcode.dyalog -off'',⊂''ER''"'))
      :While ~myapl.HasExited ⋄ :EndWhile ⍝ let it run...
      :If 20 Check myapl.GetExitCode
          →0 Because'Succeeding test did not end with code 20' ⋄ :EndIf
