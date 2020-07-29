@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.30
+﻿:Namespace DyalogBuild ⍝ V 1.30
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -114,10 +114,12 @@
           GetFilesystemType←{⊃1 ⎕NINFO ⍵} ⍝ 1=Directory, 2=Regular file  ⍝ CompCheck: ignore
           ListFiles←{⍺←'' ⋄ ⍺ ListPost15 ⍵}
           qNGET←{⎕NGET ⍵ 1}  ⍝ CompCheck: ignore
+          qNPUT←{⍺⎕NPUT ⍵ }  ⍝ CompCheck: ignore
       :Else
           ListFiles←{⍺←'' ⋄ ⍺ ListPre15 ⍵}
           GetFilesystemType←{2-(ListFiles{(-∨/'\/'=¯1↑⍵)↓⍵}⍵)[1;4]}
           qNGET←{,⊂GetVTV ⍵}              ⍝ return nested content, so that 1⊃qNGET is ≡ 1⊃⎕NGET (no other elements used here!)
+          qNPUT←{ (,1)≡2⊃(eis ⍵),0: (⍺ Put ⊃eis ⍵)⊣(qNDELETE ⊃⍵    ⋄ ⍺ Put ⊃eis ⍵}  ⍝ extra-complicated to at least handle overwrite (no append yet)
       :EndIf
      
       :If 16≤DyaVersion
@@ -243,7 +245,8 @@
       :EndIf
     ∇
 
-    ∇ {wild}qNDELETE name;DeleteFileX;GetLastError;FindFirstFile;FindNextFile;FindClose;handle;rslt;ok;next;⎕IO;path
+    ∇ {sink}←{wild}qNDELETE name;DeleteFileX;GetLastError;FindFirstFile;FindNextFile;FindClose;handle;rslt;ok;next;⎕IO;path
+    sink←⍬
       :If qNEXISTS name
           :If DyaVersion≤15
               ⎕IO←0
@@ -767,7 +770,7 @@
               :EndIf
           :Else
               :If args.init   ⍝ can we init it?
-              :AndIf ∧/0<⍴¨1↑¨(TESTSOURCE z extension)←qNPARTS source  ⍝ did user give a file-spec? then try to create it!
+              :AndIf ∧/0<∊⍴¨1↑¨(TESTSOURCE z extension)←qNPARTS source  ⍝ did user give a file-spec? then try to create it!
                   :If ~qNEXISTS TESTSOURCE   ⍝ does directory exist?
                       {}3 qMKDIR TESTSOURCE
                   :EndIf
