@@ -49,6 +49,7 @@
 ⍝ 2020 07 01 MBaas: ]DTest -init; fixed bugs when ]DBuild used -save-Modifier
 ⍝ 2020 07 23 MBaas: v1.30 ]DTest -off;lots of small fixes & enhancements - see commit-msg for details
 ⍝ 2020 07 24 MBaas: some fixes for compatibility with old Dyalog-Versions
+⍝ 2020 08 05 AWS: Avoid calling ⎕USING if on AIX or using a classic interpreter - avoids extraneous errors on status window stream 
 
     ⎕ML←1
     :Section Compatibility
@@ -63,6 +64,12 @@
 ⍝ R[4] = Textual description of the framework
       ⎕IO←1
       R←0 '' 0 ''
+      :If (82=⎕DR' ')∨'AIX'≡3↑⊃'.'⎕WG'APLVersion'
+          ⍝ calls on ⎕USING generate output which is not wanted on AIX or classic interpreters.  On Windows or Unicode
+          ⍝ .NET Core may not be installed, so the output is valid. ⎕USING may generate trappable errors in future
+          ⍝ rendering this redundant.
+          →0
+      :Endif
       :Trap 0
           ⎕USING←'System' ''
           vers←System.Environment.Version
