@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.30
+:Namespace DyalogBuild ⍝ V 1.31
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -50,9 +50,11 @@
 ⍝ 2020 07 23 MBaas: v1.30 ]DTest -off;lots of small fixes & enhancements - see commit-msg for details
 ⍝ 2020 07 24 MBaas: some fixes for compatibility with old Dyalog-Versions
 ⍝ 2020 08 05 AWS: Avoid calling ⎕USING if on AIX or using a classic interpreter - avoids extraneous errors on status window stream 
+⍝ 2020 08 21 MBaas: v1.31 ]DTest accepts any # of arguments (can be useful for selection of Tests as in DUI-QAs)
 
     ⎕ML←1
     :Section Compatibility
+
     ∇ R←DyaVersion
       R←{2⊃⎕VFI(2>+\'.'=⍵)/⍵}2⊃'.'⎕WG'APLVersion'
     ∇
@@ -121,12 +123,12 @@
           GetFilesystemType←{⊃1 ⎕NINFO ⍵} ⍝ 1=Directory, 2=Regular file  ⍝ CompCheck: ignore
           ListFiles←{⍺←'' ⋄ ⍺ ListPost15 ⍵}
           qNGET←{⎕NGET ⍵ 1}  ⍝ CompCheck: ignore
-          qNPUT←{⍺⎕NPUT ⍵ }  ⍝ CompCheck: ignore
+          qNPUT←{⍺ ⎕NPUT ⍵}  ⍝ CompCheck: ignore
       :Else
           ListFiles←{⍺←'' ⋄ ⍺ ListPre15 ⍵}
           GetFilesystemType←{2-(ListFiles{(-∨/'\/'=¯1↑⍵)↓⍵}⍵)[1;4]}
           qNGET←{,⊂GetVTV ⍵}              ⍝ return nested content, so that 1⊃qNGET is ≡ 1⊃⎕NGET (no other elements used here!)
-          qNPUT←{ (,1)≡2⊃(eis ⍵),0: (⍺ Put ⊃eis ⍵)⊣(qNDELETE ⊃⍵    ⋄ ⍺ Put ⊃eis ⍵}  ⍝ extra-complicated to at least handle overwrite (no append yet)
+          qNPUT←{(,1)≡2⊃(eis ⍵),0:(⍺ Put⊃eis ⍵)⊣(qNDELETE⊃⍵ ⋄ ⍺ Put⊃eis ⍵}  ⍝ extra-complicated to at least handle overwrite (no append yet)
       :EndIf
      
       :If 16≤DyaVersion
@@ -253,7 +255,7 @@
     ∇
 
     ∇ {sink}←{wild}qNDELETE name;DeleteFileX;GetLastError;FindFirstFile;FindNextFile;FindClose;handle;rslt;ok;next;⎕IO;path
-    sink←⍬
+      sink←⍬
       :If qNEXISTS name
           :If DyaVersion≤15
               ⎕IO←0
@@ -557,7 +559,7 @@
               :EndTrap
           :EndIf
           :If ~z
-              (n v d)←'DyalogBuild' '1.30' '2020-07-24'  ⍝ this happens during ]LOAD with Dyalog ≤ 15 or regular usage with v12! - it doesn't matter if this data isn't accurate (no harm during ]LOAD, need to find workaround for v12!)  ⍝ TODO: get version-#
+              (n v d)←'DyalogBuild' '1.31' '2020-08-21'  ⍝ this happens during ]LOAD with Dyalog ≤ 15 or regular usage with v12! - it doesn't matter if this data isn't accurate (no harm during ]LOAD, need to find workaround for v12!)  ⍝ TODO: get version-#
               →0
           :EndIf
       :EndIf
@@ -782,7 +784,7 @@
                       {}3 qMKDIR TESTSOURCE
                   :EndIf
                   :If '.dyalogtest'≡lc extension
-                      templ←'DyalogTest : 1.30' 'ID         :' 'Description:' '' 'Setup   :' 'Teardown:' '' 'Test:'
+                      templ←('DyalogTest : ',2⊃Version)'ID         :' 'Description:' '' 'Setup   :' 'Teardown:' '' 'Test:'
                   :Else
                       templ←('r←',z,' dummy;foo')'r←''''' ':If .. Check ..'('      →0 Because ''test failed'' ⋄ :EndIf')
                   :EndIf
@@ -1448,7 +1450,7 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -TestClassic' '1S -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init -off'
+      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -TestClassic' '1-999 -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init -off'
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
