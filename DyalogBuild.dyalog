@@ -1541,7 +1541,7 @@
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory'
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init]'
+          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-tests=] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init] [-order=]'
           :Select level
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more info'
