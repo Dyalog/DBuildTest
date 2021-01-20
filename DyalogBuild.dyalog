@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.31
+:Namespace DyalogBuild ⍝ V 1.32
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -103,7 +103,9 @@
     _isMacOS←'Mac'≡3↑1⊃'.'⎕wg'APLVersion'
     _isSolaris←'Solaris'≡7↑1⊃'.'⎕wg'APLVersion'
     _Version←{2⊃⎕VFI ⍵}¨{1↓¨(⍵='.')⊂⍵}'.',2⊃'.'⎕WG'APLVersion'
-    _DotNet←1⊃GetDOTNETVersion
+    ∇ _DotNet←_DotNet
+      _DotNet←1⊃GetDOTNETVersion
+    ∇
 
     ∇ {sink}←SetupCompatibilityFns
       sink←⍬   ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
