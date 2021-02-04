@@ -1,0 +1,4 @@
+R←goo foo hoo;you
+⍝ dummy fn
+you←goo+hoo
+R←you*2

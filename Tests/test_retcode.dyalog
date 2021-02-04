@@ -5,4 +5,4 @@ r←test_retcode dummy;ok
 r←''
 ok←⊃1↑2⊃⎕vfi{0=≢⍵:'1'⋄⍵}2⎕nq'.' 'GetEnvironment' 'ok'
 :if 1 Check ok
-   →0 Because 'Very surprisingly this test did not work out as intended!' ⋄ :endif
+   →0 Because 'This test was instructed to fail by passing envvar "ok" with value ',(⍕ok),'!' ⋄ :endif

@@ -1,0 +1,1 @@
+ qNGET←{⎕NGET ⍵ 1}
