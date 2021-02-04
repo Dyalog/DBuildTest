@@ -1,0 +1,18 @@
+{
+    "DyalogVersions": "12.1+",
+    "Bits": [32, 64],
+    "Platforms": [""],
+    "Environments": [""],
+    "Editions": "UC",
+    "Load": "./Tests/DTest.dyalogtest",
+    "Params": "",
+    "EMail" [{
+        "All": "mbaas@dyalog.com"
+    }],
+    "EnvVars": {},
+    "Setup": "",
+    "TearDown": "",
+    "TacitVersion": {
+        "release": "latest"
+    }
+}
