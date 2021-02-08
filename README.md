@@ -1,6 +1,7 @@
 # DBuild
 
 DBuild is a tool to build a distributeable version of your code (currently: a workspace) from source-code in files. DTest supports unit tests. More doc in the [wiki](https://github.com/Dyalog/DBuildTest/wiki).
+The only file that is required to run DBuild or DTest is DBuildTest.dyalog, the file TACIT.json is used to manage the testing of the repository.
 
 ## Using the tools with Dyalog v12.0, v12.1 and v13.0
 
