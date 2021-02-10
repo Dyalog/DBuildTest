@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.32
+:Namespace DyalogBuild ⍝ V 1.33
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -49,8 +49,10 @@
 ⍝ 2020 07 01 MBaas: ]DTest -init; fixed bugs when ]DBuild used -save-Modifier
 ⍝ 2020 07 23 MBaas: v1.30 ]DTest -off;lots of small fixes & enhancements - see commit-msg for details
 ⍝ 2020 07 24 MBaas: some fixes for compatibility with old Dyalog-Versions
-⍝ 2020 08 05 AWS: Avoid calling ⎕USING if on AIX or using a classic interpreter - avoids extraneous errors on status window stream 
+⍝ 2020 08 05 AWS: Avoid calling ⎕USING if on AIX or using a classic interpreter - avoids extraneous errors on status window stream
 ⍝ 2020 08 21 MBaas: v1.31 ]DTest accepts any # of arguments (can be useful for selection of Tests as in DUI-QAs)
+⍝ 2021 01 10 Adam: v1.32 defer getting .NET Version until needed
+⍝ 2021 01 20 MBaas: v1.33 moved assignments into dedicated Init-fn to avoid running them when UCMD is loaded
 
     ⎕ML←1
     :Section Compatibility
@@ -71,7 +73,7 @@
           ⍝ .NET Core may not be installed, so the output is valid. ⎕USING may generate trappable errors in future
           ⍝ rendering this redundant.
           →0
-      :Endif
+      :EndIf
       :Trap 0
           ⎕USING←'System' ''
           vers←System.Environment.Version
@@ -93,18 +95,6 @@
       :Else
       ⍝ bad luck, go with the defaults
       :EndTrap
-    ∇
-    ⍝ Setup some name with information about the platform we're working on
-    _isClassic←Classic←{92::1 ⋄ 0×⎕ucs ⎕ucs ⍵}9056  ⍝ running on classic edition???
-    _is32bit←~_is64bit←∨/'64'⍷1⊃'.'⎕WG'APLVersion'
-    _isWin←'Windows'≡7↑1⊃'.'⎕wg'APLVersion'
-    _isLinux←'Linux'≡5↑1⊃'.'⎕wg'APLVersion'
-    _isAIX←'AIX'≡3↑1⊃'.'⎕wg'APLVersion'
-    _isMacOS←'Mac'≡3↑1⊃'.'⎕wg'APLVersion'
-    _isSolaris←'Solaris'≡7↑1⊃'.'⎕wg'APLVersion'
-    _Version←{2⊃⎕VFI ⍵}¨{1↓¨(⍵='.')⊂⍵}'.',2⊃'.'⎕WG'APLVersion'
-    ∇ _DotNet←_DotNet
-      _DotNet←1⊃GetDOTNETVersion
     ∇
 
     ∇ {sink}←SetupCompatibilityFns
@@ -161,8 +151,6 @@
           uc←upperAlphabet lowerAlphabet∘fromto ⍝ Ditto Upper-casification
       :EndIf
     ∇
-
-    SetupCompatibilityFns
 
     ∇ r←{normalize}qNPARTS filename;filesep;mask;path;file;ext;cd;i;pth
           ⍝ splits a filename into: path name ext
@@ -671,6 +659,18 @@
           ⎕UCS(cm×32)+(~cm)×⎕UCS ⍵    ⍝ blanks for comments in source matrix.
       }
 
+    ∇ Init;aplv1
+        ⍝ Setup some name with information about the platform we're working on
+          ⍝ Setup some name with information about the platform we're working on
+      _isClassic←Classic←82=⎕DR' '
+      _is32bit←~_is64bit←∨/'64'⍷aplv1←1⊃'.'⎕WG'APLVersion'
+      (_isWin _isLinux _isAIX _isMacOS _isSolaris)←'Win' 'Lin' 'AIX' 'Mac' 'Sol'∊⊂3↑aplv1
+      _Version←2⊃'.'⎕VFI 2⊃'.'⎕WG'APLVersion'
+      _DotNet←1⊃GetDOTNETVersion
+     
+      SetupCompatibilityFns ⍝ dedicated fn avoid unneccessary execution of that code when loading the UCMD
+    ∇
+
     :EndSection ────────────────────────────────────────────────────────────────────────────────────
 
     :Section TEST "DSL" FUNCTIONS
@@ -679,6 +679,7 @@
       ⍝ run some tests from a namespace or a folder
       ⍝ switches: args.(filter setup teardown verbose)
       ⍝ result "r" is build in XTest (excute test) as global "r" gets updated. Can't return explicit result because we're running it in a thread.
+      Init
       i←quiet←0  ⍝ Clear/Log needs these
       Clear args.clear
      
@@ -1073,7 +1074,7 @@
 
     ∇ r←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;LoggedErrors;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;logfile;LoggedMessages;TestClassic;production;ClassicVersion
     ⍝ Process a .dyalogbuild file
-     
+      Init
       start←⎕AI[3]
       extension←'.dyalogbuild' ⍝ default extension
      
@@ -1089,8 +1090,8 @@
       :EndIf
      
       file←∊1 qNPARTS 1⊃args.Arguments
-      (prod quiet save halt TestClassic)←args.(production quiet save halt TestClassic)
-      (TestClassic prod)←{2⊃⎕VFI⍕⍵}¨TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
+      (prod quiet save halt TestClassic)←args.(production quiet save halt testclassic)
+      (TestClassic prod)←2⊃⎕VFI⍕TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
       off←2 args.Switch'off'
       halt←~halt  ⍝ invert it, so that we can use it directly for :trap halt/
       Clear args.clear
@@ -1452,7 +1453,7 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -TestClassic' '1-999 -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init -off'
+      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -testclassic' '1-999 -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init -off'
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
