@@ -1,4 +1,5 @@
 {
+    "Comment":"This file is only needed by TACIT - the Tool for Continous Integration Testing in APL. Not needed to use DBuild/DTest.",
     "DyalogVersions": "12.1+",
     "Bits": [32, 64],
     "Platforms": [""],
