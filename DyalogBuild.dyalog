@@ -782,7 +782,8 @@
      
               :If 1=type  ⍝ deal with directories in f
                   TESTSOURCE←f,(~'/\'∊⍨⊃⌽f)/⎕SE.SALTUtils.FS ⍝ use it accordingly! (and be sure it ends with dir-sep)
-                  files←('*.dyalog'ListFiles f)[;1]
+                  files←('*.dyalog'ListFiles f)[;1]  
+                  files,←('*.aplf'ListFiles f)[;1]    ⍝ .aplf-extension!
                   'ns'⎕NS''
                   :For f :In files
                       :Trap (~halt)/0
