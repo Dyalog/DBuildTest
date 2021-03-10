@@ -4,7 +4,7 @@
 
 ⍝ create some fns/vars to test if "-c" really clears them...
  #.⎕CY'dfns'
- #.foo←'goo'
+#.⎕ex'foo' ⋄  #.foo←'goo'
 
 ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
 ⍝ run build-script (non-prod mode)
