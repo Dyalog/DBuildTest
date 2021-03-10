@@ -971,11 +971,13 @@
      FAIL:
       r←table r
       :If off
-          600⌶1
+          {}600⌶1
           :If 0<≢LOGS
               :If 2=⎕NC'base'
-                  qNDELETE TESTSOURCE,base,'.log'
-                  (⊂∊r,⎕UCS 13)qNPUT(TESTSOURCE,base,'.log')
+              logFile←TESTSOURCE,base,'.log'
+              :if null≢args.testlog ⋄ logFile←args.testlog ⋄ :endif
+                  qNDELETE logFile
+                  (⊂∊r,⎕UCS 13)qNPUT logFile
               :EndIf
               ⎕OFF 21
           :EndIf
@@ -1503,7 +1505,7 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -testclassic' '1-999 -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init -off'
+      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -testclassic' '1-999 -clear[=] -tests= -testlog= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init -off'
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
@@ -1594,7 +1596,7 @@
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory'
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-tests=] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init] [-order=]'
+          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-testlog=] [-tests=] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init] [-order=]'
           :Select level
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more info'
@@ -1615,6 +1617,7 @@
               r,←⊂'    -setup=fn         run the function fn before any tests'
               r,←⊂'    -suite=file       run tests defined by a .dyalogtest file'
               r,←⊂'    -teardown=fn      run the function fn after all tests'
+              r,←⊂'    -testlog=         force name of logfile'
               r,←⊂'    -tests=           comma-separated list of tests to run'
               r,←⊂'    -timeout          sets a timeout. Seconds after which test(suite)s will be terminated. (Default=0 means: no timeout)'
               r,←⊂'    -ts               add timestamp (no date) to logged messages'
