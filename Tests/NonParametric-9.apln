@@ -1,0 +1,35 @@
+:Namespace NonParametric  
+
+
+
+
+
+
+      signTest←{
+ ⍝ Written by Steve Mansour  2020
+⍝∇ Perform sign Test
+⍝⍺ Significance Level (Default 0.05)
+⍝⍵ Vector of Differences or Two Vectors or Matrix   
+⍝← Namespace
+⍝NS←.95 signTest BEFORE AFTER  
+          ⎕io←0 ⋄ ⎕ml←3
+          ⍺←0.05 ⋄ NS←⎕NS''
+          D←⊃-/⊆⍣(1=↑⍴⍴⍵)⊢⍵                   ⍝ Differences
+          FR←+/¯1 1∘.=×⍵                      ⍝ Frequency
+          X N←(⌊/,+/)FR                       ⍝ Less frequent sign occurances
+          Z←N{⍺>25:(1-⍺-2×⍵)÷⍺*÷2 ⋄ ⍵}X       ⍝ Test Statistic
+          CV←N 0.5 binomial criticalValue>⍺ ⍝ Critical Value
+          P←N{⍺>25:normal prob≥⍵              ⍝ P-Value
+              ⍺ 0.5 binomial prob≥⍵}Z
+          NS.TestStatistic←Z
+          NS.CriticalValue←CV
+          NS.P←P
+          NS.Significance←⍺
+          NS
+      }
+
+
+
+
+
+:EndNamespace

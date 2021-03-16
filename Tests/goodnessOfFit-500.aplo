@@ -1,0 +1,33 @@
+ goodnessOfFit←{
+ ⍝⍟ Copyright (c) 2018, 2020 by Stephen M. Mansour
+ ⍝∇ Determine whether a sample fits a particular distribution
+ ⍝∊ Operators
+ ⍝⍺  N    [Number of categories]  Optional
+ ⍝⍺⍺ fD:  Distribution function:  normal, poisson, uniform or multinomial
+ ⍝⍵  Xv:  Numeric variable
+ ⍝⍵  Av:  Categorical variable
+ ⍝⍵  W:   2-column (possibly nested) matrix (Frequency Distribution)
+ ⍝←  NS:   Namespace containing the following variables
+ ⍝         DegreesOfFreedom  Factors  P  Table  TestStatistic  Type
+ ⍝⍕ NS ← fD goodnessOfFit Av|Xv|W
+ ⍝⍎ normal goodnessOfFit D.Height
+ ⍝⍎ uniform goodnessOfFit D.State
+ ⍝⍎ poisson goodnessOfFit D.Family
+     ⍺←⍬ ⋄ ⎕ML←3 ⋄ ⎕IO←0                     ⍝ Set system variables
+     c←'Continuous'≡⍺⍺'Type'                 ⍝ Is distribution continuous?
+     rAv∧2=⎕NC'⍺⍺':⍺⍺ goodnessOfFitR ⍵      ⍝ If requested use R
+     rAv:⍺ goodnessOfFitR ⍵                  ⍝
+     ns←⎕NS''                                ⍝ Create namespace for output
+     d pm p x2 df tbl←⍺ ⍺⍺{                  ⍝ Get variables
+         'Continuous'≡⍺⍺'Type':⍺ ngof ⍵      ⍝   from normal or
+         2=⎕NC'⍺⍺':(↓⍉frequency↑⌽⍺⍺)mgof ⍵ 0 ⍝ Frequency or raw data
+         p≠⌈p←1 ⍺⍺ 1:⍺ pgof ⍵ ⋄ ⍺ mgof ⍵ p}⍵ ⍝ Determine distribution
+     ns.(TestStatistic P Parameters)←x2 p pm ⍝ Put variables into namespace
+     ns.DegreesOfFreedom←df                  ⍝   "      "
+     h←⊂('-'∊∊tbl[1;0])⊃'Value' 'From/To'
+     h←(h,'Observed' 'Expected' 'Difference' 'ChiSquare') ⍝,[¯0.5]¨'-'
+     ns.Table←h⍪tbl                          ⍝ Assign table
+     ns.Factors←'CAT1' 'CAT2'                ⍝ Dummyvalues
+     ns.Type←'GoodnessOfFit'                 ⍝ Set Type
+     ns._Distribution←d                      ⍝
+     ns}

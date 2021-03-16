@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.33
+﻿:Namespace DyalogBuild ⍝ V 1.4
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -51,10 +51,11 @@
 ⍝ 2020 07 24 MBaas: some fixes for compatibility with old Dyalog-Versions
 ⍝ 2020 08 05 AWS: Avoid calling ⎕USING if on AIX or using a classic interpreter - avoids extraneous errors on status window stream
 ⍝ 2020 08 21 MBaas: v1.31 ]DTest accepts any # of arguments (can be useful for selection of Tests as in DUI-QAs)
+⍝ 2021 02 04 MBaas: v1.4 ]DBuild deals with ]LINKed files;fixed various bugs in Build & Test
 ⍝ 2021 01 10 Adam: v1.32 defer getting .NET Version until needed
 ⍝ 2021 01 20 MBaas: v1.33 moved assignments into dedicated Init-fn to avoid running them when UCMD is loaded
 
-    ⎕ML←1
+    ⎕io←⎕ML←1
     :Section Compatibility
 
     ∇ R←DyaVersion
@@ -100,10 +101,10 @@
     ∇ {sink}←SetupCompatibilityFns
       sink←⍬   ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
       :If 13≤DyaVersion
-          table←⍪ ⍝ CompCheck: ignore
-          ltack←⊣ ⍝ CompCheck: ignore
+          table←⍎⎕UCS 9066
+          ltack←⍎⎕UCS 8867
           rtack←⍎⎕UCS 8866
-          GetNumParam←{⍺←⊣ ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)  ⍝ CompCheck: ignore
+          GetNumParam←{⍺←ltack ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)
       :Else
           table←{r←(⍴⍵),(1≥⍴⍴⍵)/1 ⋄ r←r[1],×/1↓⍴⍵ ⋄ r⍴⍵}
           ltack←{⍺}
@@ -467,32 +468,61 @@
       :EndIf
     ∇
 
-    ∇ {res}←{options}LoadCode file_target;target;file
-    ⍝ loads code from scriptfile (NB: file points to one or more existing files, no pattern etc.)
+    ∇ {res}←{options}LoadCode file_target;target;file;whatWeHave;f1;f2;f3;fl
+    ⍝ loads code from scriptfile (NB: file points to one existing file, no pattern etc.)
     ⍝ Options defines SALT-Options
     ⍝ file_target: (filename )
+    ⍝ res: nested vector of names that were defined
       res←''
       →(0=≢file_target)/0  ⍝ gracefully treatment of empty calls
       (file target)←file_target
       :If 0=⎕NC'options' ⋄ options←'' ⋄ :EndIf
       options←((0<≢options)⍴' '),options
-      :If DyaVersion<15
-          res←⎕SE.SALT.Load file,' -target=',target,options
-          res ⎕SIGNAL(∨/'could not bring in'⍷res)/11
-      :ElseIf DyaVersion<17
-          res←⎕SE.SALT.Load file,' -target=',target,options
-          res ⎕SIGNAL('***'≡3↑⍕res)/11
-      :Else
-          :If 0=⎕NC⍕target ⋄ target←target ⎕NS'' ⋄ :EndIf
+      :If '.dyalog'≡lc 3⊃qNPARTS file
+          :If DyaVersion<15
+              res←⎕SE.SALT.Load file,' -target=',target,options
+              res ⎕SIGNAL(∨/'could not bring in'⍷res)/11
+          :ElseIf DyaVersion<17.1
+          :OrIf 3≠⎕NC'⎕SE.Link.Import'
+              res←⎕SE.SALT.Load file,' -target=',target,options
+              res ⎕SIGNAL('***'≡3↑⍕res)/11
+          :Else
+              :Trap 0
+                  res←⎕SE.Link.Import(⍎target)file
+                  ⍝ LINK does not return name of loadedf "thing" (as SALT.Load) did,
+                  ⍝ but it a .dyalog-file was loaded, we can expect it to be defined in target
+                  :If 0≠(⍎target).⎕NC 2⊃qNPARTS file    ⍝ is it really true?
+                      res←2⊃qNPARTS file                    ⍝ yes, so return its name
+                  :Else
+                      res←,⊂{(⌽∧\⌽⍵≠'.')/⍵}∊('.*:\s([^\s]*)\s'⎕S'\1')res  ⍝ no - extract name from links result (or maybe we should throw error instead?)
+                  :EndIf
+              :Else
+                  :If 0=⎕NC⍕target ⋄ target←target ⎕NS'' ⋄ :EndIf
           ⍝:If 326≠⎕DR target ⋄ target←⍎target ⋄ :EndIf ⍝ make sure it's a ref!
-          :Trap (~halt)/0
+                  :Trap halt/0
               ⍝res←2 target.⎕FIX¨(⊂'file://'),¨eis file
               ⍝ MK suggested 2⎕FIX - but some of the tests then failed - and I hesitate to add everything that SALT does to find files in its folders, so will continue to ]LOAD for the time being...
-              res←⎕SE.SALT.Load file,' -target=',(⍕target),options
+                      res←eis ⎕SE.SALT.Load file,' -target=',(⍕target),options
+                  :Else
+                      ('Error loading ',file,': ',∊⎕DM,¨⎕UCS 13)⎕SIGNAL 11
+                  :EndTrap
+                  {(⍵,⎕UCS 13)⎕SIGNAL('***'≡3↑' '~⍨⍕⍵)/11}¨eis res
+              :EndTrap
+          :EndIf
+      :ElseIf (⊂lc 3⊃qNPARTS file)∊'.apla' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
+          :If DyaVersion>17
+          :AndIf 9=⎕SE.⎕NC'Link'
+          :AndIf 3=⎕SE.Link.⎕NC'Import'
+     
+              (f1 f2 f3)←qNPARTS file
+              whatWeHave←(⍎target).⎕NL-⍳9
+              :For fl :In {2⊃qNPARTS 2⊃⍵}¨⎕SE.SALT.List f1 f2 1 0 0 0 0 1 f3
+                  {}⎕SE.Link.Import(⍎target)(f1,fl,f3)
+              :EndFor
+              res←((⍎target).⎕NL-⍳9)~whatWeHave
           :Else
-              ('Error loading ',file,': ',∊⎕DM,¨⎕UCS 13)⎕SIGNAL 11
-          :EndTrap
-          {(⍵,⎕UCS 13)⎕SIGNAL('***'≡3↑' '~⍨⍕⍵)/11}¨eis res  ⍝ CompCheck: ignore
+              ('Loading file "',file,'" requires at least version 17.1 + ]Link 2.1')⎕SIGNAL 11
+          :EndIf
       :EndIf
     ∇
 
@@ -639,7 +669,6 @@
     ∇ r←∆CSV args;z;file;encoding;coltypes;num
     ⍝ Primitive ⎕CSV for pre-v16
     ⍝ No validation, no options
-     
       :Trap 2 ⍝ Syntax Error if ⎕CSV not available
           r←⎕CSV args  ⍝ CompCheck: ignore
       :Else
@@ -702,7 +731,7 @@
     ∇
 
     ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;LoggedMessages;i;start0;nl;templ;base
-      i←quiet←0  ⍝ Clear/Log needs these
+      i←quiet←0
       ⍝ Not used here, but we define them test scripts that need to locate data:
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
       WSFOLDER←⊃qNPARTS ⎕WSID
@@ -746,14 +775,15 @@
                   :Else                          ⍝ Arg is a source file - load it
                       :If filter≢null ⋄ LogTest'Can''t run test with file-argument AND -filter-switch!' ⋄ →FAIL ltack r←LOGS ⋄ :EndIf
                       'ns'⎕NS''
-                      filter←LoadCode source(⍕ns)
+                      filter←∊LoadCode source(⍕ns)
                       f←¯1↓TESTSOURCE ⋄ type←1 ⍝ Load contents of folder
                   :EndIf
               :EndIf
      
               :If 1=type  ⍝ deal with directories in f
                   TESTSOURCE←f,(~'/\'∊⍨⊃⌽f)/⎕SE.SALTUtils.FS ⍝ use it accordingly! (and be sure it ends with dir-sep)
-                  files←('*.dyalog'ListFiles f)[;1]
+                  files←('*.dyalog'ListFiles f)[;1]  
+                  files,←('*.aplf'ListFiles f)[;1]    ⍝ .aplf-extension!
                   'ns'⎕NS''
                   :For f :In files
                       :Trap (~halt)/0
@@ -941,15 +971,17 @@
      FAIL:
       r←table r
       :If off
+          {}600⌶1
           :If 0<≢LOGS
               :If 2=⎕NC'base'
-                  qNDELETE TESTSOURCE,base,'.log'
-                  (⊂∊r,⎕UCS 13)qNPUT(TESTSOURCE,base,'.log')
+              logFile←TESTSOURCE,base,'.log'
+              :if null≢args.testlog ⋄ logFile←args.testlog ⋄ :endif
+                  qNDELETE logFile
+                  (⊂∊r,⎕UCS 13)qNPUT logFile 
               :EndIf
               ⎕OFF 21
           :EndIf
-          ⎕OFF 20
-          r←20+0<≢LOGS ⋄ ⎕OFF r
+          z←20 ⋄ ⎕OFF z
       :EndIf
     ∇
 
@@ -959,7 +991,7 @@
 
     ∇ r←expect Check got
       :If r←expect≢got
-      :AndIf halt
+      :AndIf ##.halt
           ⎕←'expect≢got:'
           :If 200≥⎕SIZE'expect' ⋄ ⎕←'expect=',,expect ⋄ :EndIf
           :If 200≥⎕SIZE'got' ⋄ ⎕←'got=',,got ⋄ :EndIf
@@ -1072,7 +1104,7 @@
 
     :Section BUILD
 
-    ∇ r←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;LoggedErrors;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;logfile;LoggedMessages;TestClassic;production;ClassicVersion
+    ∇ r←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;LoggedErrors;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;logfile;LoggedMessages;TestClassic;production;ClassicVersion;j
     ⍝ Process a .dyalogbuild file
       Init
       start←⎕AI[3]
@@ -1181,7 +1213,7 @@
                   target ⎕NS''
                   :Trap (~halt)/0
                       target⍎_defaults
-                       ⍝ Log'Created namespace ',target
+                      Log'Created namespace ',target
                   :Else
                       :If DyaVersion<13
                           LogError'Error establishing defaults in namespace ',target,': ',⊃⎕DM
@@ -1210,12 +1242,29 @@
                   :Continue
               :EndIf
      
-              wild←'*'∊source
+              wild←∨/'*?'∊source
               options←((wild∧DyaVersion>14)/' -protect'),(prod/' -nolink'),(' -source'/⍨cmd≡'data')  ⍝ protect started with Dyalog 14 (or was it 13?)
               :If DyaVersion<13
                   tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵[1,⍴⍵]≡'[]':⍵ ⋄ ⍺,⍵}source
               :Else
                   tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵,⍨⍺/⍨0∊⍴('^\[.*\]'⎕S 3)⍵}source   ⍝ CompCheck: ignore
+              :EndIf
+              :If cmd≡'lib'   ⍝ find path of library...(only if >17, so we'll be using ]LINK which needs path)
+                  :If 17<DyaVersion
+                      lib←⊃0(⎕NINFO ⎕OPT('Wildcard' 1)('Recurse' 1))(⎕←(2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'),'/Library/',source,'.dyalog')
+                  :Else
+                      lib←source
+                  :EndIf
+                  lib←eis lib
+                  :If 1=≢lib
+                      tmpPath←⊃lib
+                  :ElseIf 1<≢lib
+                      LogError'too many matches searching library "',source,'": ',⍕lib
+                      :Continue
+                  :Else
+                      LogError'Could not find library "',source,'"'
+                      :Continue
+                  :EndIf
               :EndIf
               :Trap halt/11
                   ⍝z←⎕SE.SALT.Load tmp←tmpPath,((~0∊⍴target)/' -target=',target),options
@@ -1233,9 +1282,9 @@
                       nums←'13' '10' '133' '11' '12' '8232' '8233'
                       :If DyaVersion<13
                           tmp←lc'lf'GetParam'seteol'
-                          z←chars⍳⊂tmp
-                          :If z≤⍴chars ⋄ eol←⎕UCS z⊃nums
-                          :Else ⋄ eol←⎕UCS 2⊃⎕VFI z⊃chars
+                          j←chars⍳⊂tmp
+                          :If j≤⍴chars ⋄ eol←⎕UCS j⊃nums
+                          :Else ⋄ eol←⎕UCS 2⊃⎕VFI j⊃chars
                           :EndIf
                       :Else
                           eol←⎕UCS⍎¨(chars,nums)⎕S(,⍨nums)rtack lc'lf'GetParam'seteol'   ⍝ CompCheck: ignore
@@ -1244,18 +1293,20 @@
                   tmpExt←3⊃qNPARTS tmpPath
                   tmpExt,⍨←'='/⍨0≠⍴tmpExt
                   targetNames←2⊃¨qNPARTS,eis(⎕SE.SALT.List tmpPath,' -extension',tmpExt,' -raw')[;2]
-                  :For targetName fileContent :InEach targetNames(,⊂⍣(2=≡z)rtack z)
+                  :For targetName fileContent :InEach targetNames(,⊂⍣(1=≡z)rtack z)  ⍝ was 2!
                       :Select fileType
                       :Case 'charvec'
                           fileData←(-⍴eol)↓∊fileContent,¨⊂eol
                       :Case 'charmat'
                           fileData←↑fileContent
                       :Case 'json'
-                          fileData←0 qJSON∊fileContent ⍝ CompCheck: ignore
+                          fileData←0 qJSON∊fileContent
                       :Case 'charvecs'
                           fileData←fileContent
                       :EndSelect
-                      targetName(⍎target).{⍎⍺,'←⍵'}fileData
+                      :If '.apla'≢lc 3⊃qNPARTS tmpPath  ⍝ has been brought in by LoadCode already
+                          targetName(⍎target).{⍎⍺,'←⍵'}fileData
+                      :EndIf
                   :EndFor
                   z←targetNames
                   fileType,←' '
@@ -1264,7 +1315,7 @@
               :EndIf
      
               :If 0∊⍴z     ⍝ no names
-                  LogError'Nothing found: ',tmp
+                  LogError'Nothing found: ',source
               :ElseIf (,1)≡,⍴z ⍝ exactly one name
                   Log{(uc 1↑⍵),1↓⍵}fileType,cmd,' ',source,' loaded as ',⊃z
               :Else        ⍝ many names
@@ -1429,6 +1480,7 @@
     ∇ {pre}Log msg
       →quiet⍴0
       :If 0=⎕NC'pre' ⋄ :OrIf pre=1 ⋄ msg←' ',(LineNo i),' ',msg ⋄ :EndIf
+      :If 0=⎕NC'LoggedMessages' ⋄ LoggedMessages←'' ⋄ :EndIf  ⍝ may happen during Clean...
       LoggedMessages,←⊂⎕←,msg
     ∇
 
@@ -1453,7 +1505,7 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -testclassic' '1-999 -clear[=] -tests= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init -off'
+      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -testclassic' '1-999 -clear[=] -tests= -testlog= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init -off'
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
@@ -1544,7 +1596,7 @@
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory'
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-tests=] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init] [-order=]'
+          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-setup=fn] [-suite=file] [-teardown=fn] [-testlog=] [-tests=] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init] [-order=]'
           :Select level
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more info'
@@ -1565,6 +1617,7 @@
               r,←⊂'    -setup=fn         run the function fn before any tests'
               r,←⊂'    -suite=file       run tests defined by a .dyalogtest file'
               r,←⊂'    -teardown=fn      run the function fn after all tests'
+              r,←⊂'    -testlog=         force name of logfile'
               r,←⊂'    -tests=           comma-separated list of tests to run'
               r,←⊂'    -timeout          sets a timeout. Seconds after which test(suite)s will be terminated. (Default=0 means: no timeout)'
               r,←⊂'    -ts               add timestamp (no date) to logged messages'

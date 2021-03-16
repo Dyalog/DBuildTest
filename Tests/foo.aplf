@@ -1,0 +1,4 @@
+R←foo sink;you
+⍝ dummy fn
+you←+/?10 10 
+R←you*2
