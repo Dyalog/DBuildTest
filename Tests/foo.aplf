@@ -1,4 +1,4 @@
-R←goo foo hoo;you
+R←foo sink;you
 ⍝ dummy fn
-you←goo+hoo
+you←+/?10 10 
 R←you*2
