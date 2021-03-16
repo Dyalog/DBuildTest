@@ -7,7 +7,7 @@
     "Editions": "UC",
     "Load": "./Tests/DTest.dyalogtest",
     "Params": "",
-    "EMail" [{
+    "EMail": [{
         "All": "mbaas@dyalog.com"
     }],
     "EnvVars": {},
