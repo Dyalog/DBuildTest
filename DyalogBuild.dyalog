@@ -977,11 +977,11 @@
               logFile←TESTSOURCE,base,'.log'
               :if null≢args.testlog ⋄ logFile←args.testlog ⋄ :endif
                   qNDELETE logFile
-                  (⊂∊r,⎕UCS 13)qNPUT logFile
+                  (⊂∊r,⎕UCS 13)qNPUT logFile 
               :EndIf
               ⎕OFF 21
           :EndIf
-          z←20+0<≢LOGS ⋄ ⎕OFF z
+          z←20 ⋄ ⎕OFF z
       :EndIf
     ∇
 
