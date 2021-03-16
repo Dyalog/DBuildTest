@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.4
+:Namespace DyalogBuild ⍝ V 1.41
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -54,6 +54,7 @@
 ⍝ 2021 02 04 MBaas: v1.4 ]DBuild deals with ]LINKed files;fixed various bugs in Build & Test
 ⍝ 2021 01 10 Adam: v1.32 defer getting .NET Version until needed
 ⍝ 2021 01 20 MBaas: v1.33 moved assignments into dedicated Init-fn to avoid running them when UCMD is loaded
+⍝ 2021 03 16 MBaas: v1.41 merging of various minor changes, mostly TACIT-related
 
     ⎕io←⎕ML←1
     :Section Compatibility
