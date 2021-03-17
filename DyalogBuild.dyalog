@@ -131,6 +131,7 @@
       :Else
           where←{(,⍵)/,⍳⍴⍵}
       :EndIf
+     
       :If 16≤DyaVersion
           qJSONi←qSONe←⎕JSON ⍝ CompCheck: ignore
       :ElseIf 14.1≤DyaVersion
@@ -241,6 +242,12 @@
           :Trap R←0
               R←0<1↑⍴ListFiles FileOrDir
           :EndTrap
+      :ElseIf ∨/'*?'∊FileOrDir
+          :If Classic
+              R←(⎕NEXISTS ⎕OPT'Wildcard' 1)FileOrDir ⍝ CompCheck: ignore
+          :Else
+              R←(⎕NEXISTS ⍠'Wildcard' 1)FileOrDir ⍝ CompCheck: ignore
+          :EndIf
       :Else
           R←⎕NEXISTS FileOrDir ⍝ CompCheck: ignore
       :EndIf
@@ -783,7 +790,7 @@
      
               :If 1=type  ⍝ deal with directories in f
                   TESTSOURCE←f,(~'/\'∊⍨⊃⌽f)/⎕SE.SALTUtils.FS ⍝ use it accordingly! (and be sure it ends with dir-sep)
-                  files←('*.dyalog'ListFiles f)[;1]  
+                  files←('*.dyalog'ListFiles f)[;1]
                   files,←('*.aplf'ListFiles f)[;1]    ⍝ .aplf-extension!
                   'ns'⎕NS''
                   :For f :In files
@@ -975,10 +982,10 @@
           {}600⌶1
           :If 0<≢LOGS
               :If 2=⎕NC'base'
-              logFile←TESTSOURCE,base,'.log'
-              :if null≢args.testlog ⋄ logFile←args.testlog ⋄ :endif
+                  logFile←TESTSOURCE,base,'.log'
+                  :If null≢args.testlog ⋄ logFile←args.testlog ⋄ :EndIf
                   qNDELETE logFile
-                  (⊂∊r,⎕UCS 13)qNPUT logFile 
+                  (⊂∊r,⎕UCS 13)qNPUT logFile
               :EndIf
               ⎕OFF 21
           :EndIf
