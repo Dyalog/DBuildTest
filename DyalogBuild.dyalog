@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.41
+:Namespace DyalogBuild ⍝ V 1.42
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -55,6 +55,7 @@
 ⍝ 2021 01 10 Adam: v1.32 defer getting .NET Version until needed
 ⍝ 2021 01 20 MBaas: v1.33 moved assignments into dedicated Init-fn to avoid running them when UCMD is loaded
 ⍝ 2021 03 16 MBaas: v1.41 merging of various minor changes, mostly TACIT-related
+⍝ 2021 04 19 MBaas: v1.42 modified loadlig of *.dyalog-files for compatibility with 18.0/Link2.0
 
     ⎕io←⎕ML←1
     :Section Compatibility
@@ -122,7 +123,7 @@
           ListFiles←{⍺←'' ⋄ ⍺ ListPre15 ⍵}
           GetFilesystemType←{2-(ListFiles{(-∨/'\/'=¯1↑⍵)↓⍵}⍵)[1;4]}
           qNGET←{,⊂GetVTV ⍵}              ⍝ return nested content, so that 1⊃qNGET is ≡ 1⊃⎕NGET (no other elements used here!)
-          qNPUT←{(,1)≡2⊃(eis ⍵),0:(⍺ Put⊃eis ⍵)⊣(qNDELETE⊃⍵ ⋄ ⍺ Put⊃eis ⍵}  ⍝ extra-complicated to at least handle overwrite (no append yet)
+          qNPUT←{(,1)≡2⊃(eis ⍵),0:(⍺ Put⊃eis ⍵)⊣qNDELETE⊃⍵ ⋄ ⍺ Put⊃eis ⍵}  ⍝ extra-complicated to at least handle overwrite (no append yet)
       :EndIf
      
       :If 16≤DyaVersion
@@ -133,7 +134,7 @@
       :EndIf
      
       :If 16≤DyaVersion
-          qJSONi←qSONe←⎕JSON ⍝ CompCheck: ignore
+          qJSONi←qJSONe←⎕JSON ⍝ CompCheck: ignore
       :ElseIf 14.1≤DyaVersion
           qJSONi←{0(7159⌶)⍵} ⍝ CompCheck: ignore
           qJSONe←{(7160⌶)⍵} ⍝ CompCheck: ignore
@@ -246,7 +247,7 @@
           :If Classic
               R←(⎕NEXISTS ⎕OPT'Wildcard' 1)FileOrDir ⍝ CompCheck: ignore
           :Else
-              R←(⎕NEXISTS ⍠'Wildcard' 1)FileOrDir ⍝ CompCheck: ignore
+              R←(⎕NEXISTS⍠'Wildcard' 1)FileOrDir ⍝ CompCheck: ignore
           :EndIf
       :Else
           R←⎕NEXISTS FileOrDir ⍝ CompCheck: ignore
@@ -495,37 +496,32 @@
               res←⎕SE.SALT.Load file,' -target=',target,options
               res ⎕SIGNAL('***'≡3↑⍕res)/11
           :Else
-              :Trap 0
-                  res←⎕SE.Link.Import(⍎target)file
-                  ⍝ LINK does not return name of loadedf "thing" (as SALT.Load) did,
-                  ⍝ but it a .dyalog-file was loaded, we can expect it to be defined in target
-                  :If 0≠(⍎target).⎕NC 2⊃qNPARTS file    ⍝ is it really true?
-                      res←2⊃qNPARTS file                    ⍝ yes, so return its name
-                  :Else
-                      res←,⊂{(⌽∧\⌽⍵≠'.')/⍵}∊('.*:\s([^\s]*)\s'⎕S'\1')res  ⍝ no - extract name from links result (or maybe we should throw error instead?)
-                  :EndIf
+              :If 0=⎕NC⍕target ⋄ target←target ⎕NS'' ⋄ :EndIf
+           ⍝:If 326≠⎕DR target ⋄ target←⍎target ⋄ :EndIf ⍝ make sure it's a ref!
+              :Trap halt/0
+               ⍝res←2 target.⎕FIX¨(⊂'file://'),¨eis file
+               ⍝ MK suggested 2⎕FIX - but some of the tests then failed - and I hesitate to add everything that SALT does to find files in its folders, so will continue to ]LOAD for the time being...
+                  res←eis ⎕SE.SALT.Load file,' -target=',(⍕target),options
               :Else
-                  :If 0=⎕NC⍕target ⋄ target←target ⎕NS'' ⋄ :EndIf
-          ⍝:If 326≠⎕DR target ⋄ target←⍎target ⋄ :EndIf ⍝ make sure it's a ref!
-                  :Trap halt/0
-              ⍝res←2 target.⎕FIX¨(⊂'file://'),¨eis file
-              ⍝ MK suggested 2⎕FIX - but some of the tests then failed - and I hesitate to add everything that SALT does to find files in its folders, so will continue to ]LOAD for the time being...
-                      res←eis ⎕SE.SALT.Load file,' -target=',(⍕target),options
-                  :Else
-                      ('Error loading ',file,': ',∊⎕DM,¨⎕UCS 13)⎕SIGNAL 11
-                  :EndTrap
-                  {(⍵,⎕UCS 13)⎕SIGNAL('***'≡3↑' '~⍨⍕⍵)/11}¨eis res
+                  ('Error loading ',file,': ',∊⎕DM,¨⎕UCS 13)⎕SIGNAL 11
+                  :Trap 0 ⋄ ⎕←⎕JSON ⎕DMX ⋄ :EndTrap ⍝ output error details if possibles
               :EndTrap
+              {(⍵,⎕UCS 13)⎕SIGNAL('***'≡3↑' '~⍨⍕⍵)/11}¨eis res
+            ⍝   :EndTrap
           :EndIf
       :ElseIf (⊂lc 3⊃qNPARTS file)∊'.apla' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
           :If DyaVersion>17
           :AndIf 9=⎕SE.⎕NC'Link'
           :AndIf 3=⎕SE.Link.⎕NC'Import'
-     
               (f1 f2 f3)←qNPARTS file
               whatWeHave←(⍎target).⎕NL-⍳9
+     
               :For fl :In {2⊃qNPARTS 2⊃⍵}¨⎕SE.SALT.List f1 f2 1 0 0 0 0 1 f3
-                  {}⎕SE.Link.Import(⍎target)(f1,fl,f3)
+                  :If ∨/'-nolink'⍷options
+                      {}⎕SE.Link.Import(⍎target)(f1,fl,f3)
+                  :Else
+                      {}⎕SE.Link.Add(⍎target)(f1,fl,f3)
+                  :EndIf
               :EndFor
               res←((⍎target).⎕NL-⍳9)~whatWeHave
           :Else
@@ -798,6 +794,7 @@
                           LoadCode f(⍕ns)
                       :Else
                           LogError⊃⎕DM
+                          :Trap 0 ⋄ ⎕←⎕JSON ⎕DMX ⋄ :EndTrap ⍝ output error details if possibles
                       :EndTrap
                   :EndFor
                   :If verbose ⋄ 0 Log(⍕1↑⍴files),' file',('s'/⍨1<≢files),' loaded from ',source ⋄ :EndIf
@@ -1146,7 +1143,9 @@
       _id←''
       _description←''
       _defaults←'⎕ML←⎕IO←1'
-     
+      :If ~prod
+          ⎕←'NB: Loaded files will be linked to their source - use -prod to not link'
+      :EndIf
       :If ~halt ⋄ i600←600⌶0 ⋄ :EndIf
       :For i :In ⍳⍴lines
           :If ~':'∊i⊃lines ⋄ :Continue ⋄ :EndIf ⍝ Ignore blank lines
@@ -1252,6 +1251,7 @@
      
               wild←∨/'*?'∊source
               options←((wild∧DyaVersion>14)/' -protect'),(prod/' -nolink'),(' -source'/⍨cmd≡'data')  ⍝ protect started with Dyalog 14 (or was it 13?)
+     
               :If DyaVersion<13
                   tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵[1,⍴⍵]≡'[]':⍵ ⋄ ⍺,⍵}source
               :Else
@@ -1279,6 +1279,7 @@
                   z←options LoadCode tmpPath target
               :Else
                   LogError⊃⎕DM
+                  :Trap 0 ⋄ ⎕←⎕JSON ⎕DMX ⋄ :EndTrap ⍝ output error details if possibles
                   :Continue
               :EndTrap
      
