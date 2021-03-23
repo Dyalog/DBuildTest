@@ -10,7 +10,8 @@
             "All": "mbaas@dyalog.com"
         }],
         "TacitVersion": ["commit", "latest"],
-        "SecondsTimeout": 300, // seconds 
+        "SecondsTimeout": 300, // seconds
+        "Editions":"U" 
     },
     Tests: [{
             "Test": "./Tests/DTest.dyalogtest",
