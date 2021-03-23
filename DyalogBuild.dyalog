@@ -244,11 +244,7 @@
               R←0<1↑⍴ListFiles FileOrDir
           :EndTrap
       :ElseIf ∨/'*?'∊FileOrDir
-          :If Classic
               R←(⎕NEXISTS ⎕OPT'Wildcard' 1)FileOrDir ⍝ CompCheck: ignore
-          :Else
-              R←(⎕NEXISTS⍠'Wildcard' 1)FileOrDir ⍝ CompCheck: ignore
-          :EndIf
       :Else
           R←⎕NEXISTS FileOrDir ⍝ CompCheck: ignore
       :EndIf
@@ -1043,7 +1039,12 @@
 
     ∇ res←LoadTestSuite suite;setups;lines;i;cmd;params;names;values;tmp;f;args
       :If 0=≢1⊃qNPARTS suite ⋄ suite←TESTSOURCE,suite
-      :ElseIf '.'≡1⊃1⊃qNPARTS suite ⋄ suite←∊1 qNPARTS TESTSOURCE,suite ⍝ deal with relative paths
+      :ElseIf '.'≡1⊃1⊃qNPARTS suite ⍝ deal with relative paths
+      :if '.'≡1⊃1⊃qNPARTS TESTSOURCE   ⍝ if suite and source are relative, ignore suite's relative folder and use SOURCE's...
+       suite←∊(1 qNPARTS TESTSOURCE),1↓qNPARTS suite 
+      :else 
+      suite←∊1 qNPARTS TESTSOURCE,suite 
+      :endif
       :EndIf      ⍝ default path for a suite is the TESTSOURCE-folder
       :If 0=≢3⊃qNPARTS suite ⋄ suite←suite,'.dyalogtest' ⋄ :EndIf   ⍝ default extension
      
