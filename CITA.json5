@@ -1,59 +1,19 @@
-{
-        /********************************************************************************************
+/********************************************************************************************
+
             This file is only needed by CITA - Continous Integration Testing in APL
             Not needed to use DBuild/DTest.
-        ********************************************************************************************/
 
-    Defaults: {
-        "DyalogVersions": "16+",
+ ********************************************************************************************/
+{
+    Tests: [{
+        "DyalogVersions": "12.1+",
+        "Test": "./Tests/DTest.dyalogtest",
         "EMail": [{
             "All": "mbaas@dyalog.com"
         }],
         "TacitVersion": ["commit", "latest"],
-        "SecondsTimeout": 300, // seconds
-        "Editions":"U" 
-    },
-    Tests: [{
-            "Test": "./Tests/DTest.dyalogtest",
-        },
-        {
-            "id": "Expected to fail", // sic! This tests CITA...
-            "DyalogVersions": "12.1+",
-            "Test": "./Tests",
-            "DTestModifiers": " -filter=test_retcode -verbose",
-            "Config": {
-                "ok": 0
-            },
-
-        },
-        {
-            "id": "Another failure1",
-            "Setup": "./Tests/foo.aplf",
-        },
-        {
-            "id": "Another failure2",
-            "Test": "./nonexistingFile.aplf"
-        },
-        {
-            "id": "ATrappedFailureAndNotAProblem:", // illegal filename!
-            "Test": "./Tests",
-            "DTestModifiers": " -filter=test_retcode -verbose",
-            "Config": {
-                "ok": 1
-            },
-
-        },
-        {
-            "id": "TestTimeout",
-            "Test": "./Tests/DTest.dyalogtest",
-            "SecondsTimeout": 0.00001
-
-        },
-        {
-            "id": "TestDyalogEXT",
-            "Test": "./Tests/test_ReturnCode.dyalog", // this test does not create a "result-file", so it is expected to fail, too!
-
-        },
-
-    ]
+        "Config": {
+            "ok": 0
+        }
+    }, ]
 }

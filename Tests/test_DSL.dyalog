@@ -2,7 +2,7 @@
  ⍝ some vary basic tests to make sure that the DSL works as expected
  r←''
 
- :If ⎕SE.SALTUtils.OS Check∊##.(_isMacOS,_isWin,_isLinux)/'Mac' 'Win' 'Lin'
+ :If ##._OS Check∊##.(_isMacOS,_isWin,_isLinux)/'Mac' 'Win' 'Lin'
      →0 Because'Flags for OS did not match SALT''s opinion' ⋄ :EndIf
 
  v1←⍳3
@@ -11,7 +11,7 @@
      →0 Because'1+⍳3 was found to not match 2 3 4!!!' ⋄ :EndIf
 
  :If ~32767 Check 32767 Because'updating variable R'
-     :If 0=≢r ⋄ r←'fn "Because" did not update global "r"' ⋄ →0 ⋄ :EndIf
+     :If 0=''⍴⍴r ⋄ r←'fn "Because" did not update global "r"' ⋄ →0 ⋄ :EndIf
      r←''
  :Else
      ∘∘∘∘
