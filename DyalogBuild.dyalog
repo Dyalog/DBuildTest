@@ -542,7 +542,7 @@
               (f1 f2 f3)←qNPARTS file
               whatWeHave←(⍎target).⎕NL-⍳9
      
-              :For fl :In {2⊃qNPARTS 2⊃⍵}¨⎕SE.SALT.List f1 f2 1 0 0 0 0 1 f3
+              :For fl :In {2⊃qNPARTS 2⊃⍵}¨{((⊂'Fn')≡¨1⊃¨⍵)/⍵}⎕SE.SALT.List f1 f2 1 0 0 0 0 1 f3
 ⍝                  :If ∨/'-nolink'⍷options
                   {}⎕SE.Link.Import(⍎target)(f1,fl,f3)   ⍝ do we have to differentiate LINK-Version here or has this always worked (with APL>v17)?
 ⍝                  :Else
@@ -1683,6 +1683,8 @@
               r,←⊂'    -verbose          display more status messages while running'
               r,←⊂''
               r,←⊂'More info in the wiki!  → https://github.com/Dyalog/DBuildTest/wiki/DTest'
+              :case 'GetTools4CITA'
+              r←⊂'An internal tool for testing with CITA'
           :EndSelect
       :EndSelect
     ∇
