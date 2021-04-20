@@ -58,6 +58,7 @@
 ⍝ 2021 03 19 MBaas: v1.42 modified loading of *.dyalog-files for compatibility with 18.0/Link2.0
 ⍝ 2021 03 23 MBaas: v1.43 fixes: Classic compatibility, relative paths for tests & suites
 ⍝ 2021 03 30 MBaas: v1.44 fixes: more Classic compatibility - missed a few things with 1.43, but now it should be done.
+⍝ 2021 04 20 MBaas: improved loading of code (from .dyalog + .apln,.aplc,.aplf,.apli,.aplo);various fixes & cleanups
 
     ⎕io←⎕ML←1
     :Section Compatibility
@@ -165,7 +166,7 @@
       :EndIf
      
       :If 16≤DyaVersion
-          qJSONi←qJSONe←⎕JSON              ⍝ CompCheck: ignore
+          qJSONi←qJSONe←⎕JSON                        ⍝ CompCheck: ignore
       :ElseIf 14.1≤DyaVersion
           qJSONi←{0(7159⌶)⍵} ⍝ CompCheck: ignore
           qJSONe←{(7160⌶)⍵} ⍝ CompCheck: ignore
@@ -173,8 +174,8 @@
           qJSONi←qJSONe←{'This functionality not available in versions < 14.1'⎕SIGNAL 11}
       :EndIf
       :If 18≤DyaVersion
-          lc←¯1∘⎕C                                                 ⍝ lower case ⍝ CompCheck: ignore
-          uc←1∘⎕C                                                  ⍝ upper case ⍝ CompCheck: ignore
+          lc←¯1∘⎕C                                                           ⍝ lower case ⍝ CompCheck: ignore
+          uc←1∘⎕C                                                            ⍝ upper case ⍝ CompCheck: ignore
       :ElseIf (~Classic)∧15≤DyaVersion
           lc←819⌶                                     ⍝ lower case ⍝ CompCheck: ignore
           uc←1∘(819⌶)                                 ⍝ upper case ⍝ CompCheck: ignore
@@ -503,7 +504,7 @@
       :EndIf
     ∇
 
-    ∇ {res}←{options}LoadCode file_target;target;file;whatWeHave;f1;f2;f3;fl;fls
+    ∇ {res}←{options}LoadCode file_target;target;file;whatWeHave;f1;f2;f3;fl;fls;sep;sf
     ⍝ loads code from scriptfile (NB: file points to one existing file, no pattern etc.)
     ⍝ Options defines SALT-Options
     ⍝ file_target: (filename )
@@ -512,36 +513,52 @@
       →(0=''⍴⍴,file_target)/0  ⍝ gracefully treatment of empty calls
       (file target)←file_target
       :If 0=⎕NC'options' ⋄ options←'' ⋄ :EndIf
+      :If 0<⍬⍴⍴target
+      :AndIf 0=⎕NC target
+          :Trap 0
+              target ⎕NS''
+          :Else
+              ⎕DM
+              ⎕json ⎕dmx  ⍝ CompCheck: ignore
+              ∘∘∘
+          :EndTrap
+      :EndIf
       options←((0<''⍴⍴,options)⍴' '),options
       (f1 f2 f3)←qNPARTS file
-      whatWeHave←(⍎target).⎕NL-⍳9
+      :Trap 0 ⍝ if target doesn't exist yet...
+          whatWeHave←(⍎target).⎕NL-⍳9
+      :Else
+          whatWeHave←⍬
+      :EndTrap
      
       ⍝ filenames may contain wildcards - which isn't so useable with Link.Import.
       ⍝ So we resolve them and work through the list, processing every file as good as we can
       ⍝ but List may not be the right tool to do that because it does not give us a filename with extension - so we can't recognize -.apla!
       ⍝ OTOH, a default DIR-Lister would not searcch the SALT-Libraries etc.
      
-      fls←⎕SE.SALT.List f1 f2 1 0 0 0,((DyaVersion≥14)/0),1 f3   ⍝ {((⊂'Fn')≡¨1⊃¨⍵)/⍵}  ⍝ Dyalog Version has SALT that adds -protect
-      :if 0=⍬⍴⍴fls
-      ⎕←'⎕SE.SALT.List''',f1,''' ''',f2,''' 1 0 0 0 1 ''',f3,'''' 
-      ∘∘∘
-      :endif
-      :For fl :In {2⊃qNPARTS 2⊃⍵}¨fls
-          :If (⊂lc 3⊃qNPARTS fl)∊'.dyalog' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
-              res←⎕SE.SALT.Load fl,' -target=',target,options
-              res ⎕SIGNAL('***'≡3↑⍕res)/11
-          :ElseIf (3⊃qNPARTS file)≡'.apla'
-              :If DyaVersion>17
-              :AndIf 9=⎕SE.⎕NC'Link'
-              :AndIf 3=⎕SE.Link.⎕NC'Import'
-                  {}⎕SE.Link.Import(⍎target)(f1,fl,f3)
-              :Else
-                  ∘∘∘
-                  ('*** We need at least v17.1 with ]LINK to import ',fl)⎕SIGNAL 11
-              :EndIf
-          :Else
-              ∘∘∘
-              ('*** Unable to import ',fl)⎕SIGNAL 11
+      ⍝ search the specified file in the source-folder and SALT's workdir  (emulate SALT.Load here)
+      sep←(1+isWin)⊃'∘:' ';'     ⍝ separator for those paths...
+      :For sf :In (⊂f1),sep Split ⎕SE.SALT.Settings'workdir'
+          :If ~(⊃⌽sf)∊'\/' ⋄ sf,←⎕SE.SALT.FS ⋄ :EndIf
+          :If 0<⍬⍴⍴fls←(ListFiles sf,f2,f3)[;1]
+              :For fl :In fls
+                  :If (⊂lc 3⊃qNPARTS fl)∊'.dyalog' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
+                      ⎕←'⎕SE.SALT.Load ',fl,' -target=',target,options
+                      res←⎕SE.SALT.Load fl,' -target=',target,options
+                      res ⎕SIGNAL('***'≡3↑⍕res)/11
+                  :ElseIf (3⊃qNPARTS file)≡'.apla'
+                      :If DyaVersion>17
+                      :AndIf 9=⎕SE.⎕NC'Link'
+                      :AndIf 3=⎕SE.Link.⎕NC'Import'
+                          {}⎕SE.Link.Import(⍎target)(fl)
+                      :Else
+                          ('*** We need at least v17.1 with ]LINK to import ',fl)⎕SIGNAL 11
+                      :EndIf
+                  :Else
+                      ∘∘∘
+                      ('*** Unable to import ',fl)⎕SIGNAL 11
+                  :EndIf
+              :EndFor
           :EndIf
       :EndFor
       res←((⍎target).⎕NL-⍳9)~whatWeHave
@@ -602,7 +619,7 @@
               :EndTrap
           :EndIf
           :If ~z
-              (n v d)←'DyalogBuild' '1.31' '2020-08-21'  ⍝ this happens during ]LOAD with Dyalog ≤ 15 or regular usage with v12! - it doesn't matter if this data isn't accurate (no harm during ]LOAD, need to find workaround for v12!)  ⍝ TODO: get version-#
+              (n v d)←'DyalogBuild' '1.45' '2021-04-20'  ⍝ this happens during ]LOAD with Dyalog ≤ 15 or regular usage with v12! - it doesn't matter if this data isn't accurate (no harm during ]LOAD, need to find workaround for v12!)  ⍝ TODO: get version-#
               →0
           :EndIf
       :EndIf
@@ -967,7 +984,9 @@
                   :Case 777 ⍝ Assertion failed
                       f LogTest'Assertion failed: ',⊃⎕DM
                   :Else
+                  :if DyaVersion>14.1   ⍝ Compcheck: ignore
                       f LogTest⊃⎕DM
+                      :endif
                   :EndTrap
      
               :EndFor
@@ -1136,9 +1155,14 @@
 
     :Section BUILD
 
-    ∇ r←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;LoggedErrors;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;logfile;LoggedMessages;TestClassic;production;ClassicVersion;j
+    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;LoggedErrors;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;logfile;LoggedMessages;TestClassic;production;ClassicVersion;j
     ⍝ Process a .dyalogbuild file
       Init
+      :If isChar args  ⍝ also allow the fn to be called directly (not as a UCMD) with a simple string arg that we will then parse using DBuilds Parse rules:
+          lst←List
+          lst←lst[lst.Name⍳⊂'DBuild']
+          args←(⎕NEW ⎕SE.Parser({i←⍵⍳' ' ⋄ (i↓⍵)('nargs=',i↑⍵)}lst.Parse)).Parse args
+      :EndIf
       start←⎕AI[3]
       extension←'.dyalogbuild' ⍝ default extension
      
@@ -1252,7 +1276,7 @@
                       :If DyaVersion<13
                           LogError'Error establishing defaults in namespace ',target,': ',⊃⎕DM
                       :Else
-                          LogError'Error establishing defaults in namespace ',target,': ',⊃⎕DMX .DM  ⍝ CompCheck: ignore
+                          LogError'Error establishing defaults in namespace ',target,': ',⊃{0::⎕DMX.DM ⋄ ⊂⎕json ⎕dmx}  ⍝ CompCheck: ignore
                       :EndIf
                   :EndTrap
               :EndIf

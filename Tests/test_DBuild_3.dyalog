@@ -1,8 +1,6 @@
 ﻿ r←test_DBuild_3 dummy;ucmd_flags
  r←''
  :If 17.1≤+/1 0.1 0 0×##._Version  ⍝ this test requires v17.1 or better
-     :If ##.halt ⋄ ⎕SE.UCMD'sink←UDEBUG on' ⋄ :EndIf ⍝ otherwise halt won't propagate properly into the ]DBUild-Call...
-
 
 ⍝ create some fns/vars to test if "-c" really clears them...
      #.⎕CY'dfns'
@@ -10,7 +8,7 @@
 
      ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
 ⍝ run build-script (non-prod mode)
-     ⎕SE.UCMD'DBuild ',##.TESTSOURCE,'DBuild_3.dyalogbuild -c',ucmd_flags
+     ##.Build ##.TESTSOURCE,'DBuild_3.dyalogbuild -c',ucmd_flags
 
      :If 17<##.DyaVersion
          :If 'MyNS0' 'MyNS1' 'conga' 'httpcommand'Check #.⎕NL-9
@@ -39,24 +37,27 @@
              →0 Because'EnvironmentVariable was not retrieved with correct value' ⋄ :EndIf
      :EndIf
 
-     'ic'#.⎕NS'' ⋄ #.ic ⎕SE.UCMD'sink←LOAD initconga'
+     'ic'#.⎕NS'' ⋄ ⎕SE.SALT.Load'initconga -target=#.ic'
 
      :If (¯1↓#.ic.⎕CR'InitConga')Check ¯1↓#.conga.⎕CR'InitConga'
          →0 Because'InitConga not loaded identically to ]LOAD' ⋄ :EndIf
 
+     :If (,⊂'HttpCommand')Check #.httpcommand.⎕NL ¯9
+         →0 Because'HttpCommand was not loaded into httpcommand'
 
-     :If 2 Check #.⎕ML
-         →0 Because'DEFAULTS did not correctly process ⎕ML' ⋄ :EndIf
-     :If 0 Check #.⎕IO
-         →0 Because'DEFAULTS did not correctly process ⎕IO' ⋄ :EndIf
-     :If 1E¯11 Check #.⎕CT
-         →0 Because'DEFAULTS did not correctly process ⎕CT' ⋄ :EndIf
-     :If 11 Check #.⎕PP
-         →0 Because'DEFAULTS did not correctly process ⎕PP' ⋄ :EndIf
+         :If 2 Check #.⎕ML
+             →0 Because'DEFAULTS did not correctly process ⎕ML' ⋄ :EndIf
+         :If 0 Check #.⎕IO
+             →0 Because'DEFAULTS did not correctly process ⎕IO' ⋄ :EndIf
+         :If 1E¯11 Check #.⎕CT
+             →0 Because'DEFAULTS did not correctly process ⎕CT' ⋄ :EndIf
+         :If 11 Check #.⎕PP
+             →0 Because'DEFAULTS did not correctly process ⎕PP' ⋄ :EndIf
 
 ⍝ re-run build-script (this time in production mode)
-     ⎕SE.UCMD'DBuild ',##.TESTSOURCE,'DBuild_3.dyalogbuild -c -p',ucmd_flags
+         ##.Build ##.TESTSOURCE,'DBuild_3.dyalogbuild -c -p',ucmd_flags
 
-     :If 'Production'Check #.ProdFlag
-         →0 Because'ProdFlag did not have expected value "Production", but rather "',#.ProdFlag,'"' ⋄ :EndIf
+         :If 'Production'Check #.ProdFlag
+             →0 Because'ProdFlag did not have expected value "Production", but rather "',#.ProdFlag,'"' ⋄ :EndIf
+     :EndIf
  :EndIf
