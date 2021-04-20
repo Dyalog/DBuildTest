@@ -2,9 +2,9 @@ DYALOGBUILD: 1.3
 ID: DBuild_TEST_1, Version 2 (for Dyalog 12 and better)
 
 DEFAULTS: ⎕IO←⎕ml←0
-NS: ./files/NS0.dyalog, target=MyNS0
+NS: ./files/NS0.dyalog, target=#.MyNS0
 DEFAULTS: ⎕IO←⎕ml←1
-NS: ./files/NS1.dyalog, target=MyNS1
+NS: ./files/NS1.dyalog, target=#.MyNS1
 
 DEFAULTS: ⎕IO←0 ⋄ ⎕ML←2 
 DEFAULTS: ⎕CT←1E¯11 ⋄ ⎕PP←11

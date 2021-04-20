@@ -1,4 +1,4 @@
-DYALOGBUILD: 1.3
+DYALOGBUILD: 1.44
 ID: DBuild_TEST_3, Version 2 (needs v17.1 or better)
 
 DEFAULTS: ⎕IO←⎕ml←0
