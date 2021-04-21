@@ -1,6 +1,6 @@
-﻿ r←test_DBuild_3 dummy;ucmd_flags
+﻿ r←test_DBuild_3 dummy;ucmd_flags;l
  r←''
- :If 17.1≤+/1 0.1 0 0×##._Version  ⍝ this test requires v17.1 or better
+ :If 17.1≤##.DyaVersion  ⍝ this test requires v17.1 or better
 
 ⍝ create some fns/vars to test if "-c" really clears them...
      #.⎕CY'dfns'
@@ -10,14 +10,8 @@
 ⍝ run build-script (non-prod mode)
      ##.Build ##.TESTSOURCE,'DBuild_3.dyalogbuild -c',ucmd_flags
 
-     :If 17<##.DyaVersion
-         :If 'MyNS0' 'MyNS1' 'conga' 'httpcommand'Check #.⎕NL-9
-             →0 Because'Did not find exactly four namespace in #' ⋄ :EndIf
-     :Else
-         :If 'MyNS0' 'MyNS1'Check #.⎕NL-9  ⍝  conga/httpcommand not available in earlier versions...
-             →0 Because'Did not find exactly two namespace in #' ⋄ :EndIf
-     :EndIf
-
+     :If 'MyNS0' 'MyNS1' 'conga' 'httpcommand'Check l←#.⎕NL-9
+         →0 Because'Did not find exactly four namespace in # but got ',⍕l ⋄ :EndIf
      :If 0 0 Check #.MyNS0.(⎕IO ⎕ML)
          →0 Because'New namespace MyNS0 did not have expected ⎕IO/⎕ML (according to defaults) set in script' ⋄ :EndIf
      :If 1 1 Check #.MyNS1.(⎕IO ⎕ML)

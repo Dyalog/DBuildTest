@@ -1,6 +1,6 @@
 DYALOGBUILD: 1.44
 ID: BuildTest2
-⍝ requires v17.1 or greater (because of ]LINKed files) - test_DBuild2.dyalog takes care of that
+⍝ requires v17.1 or greater (because of .apla files) - test_DBuild2.dyalog takes care of that
 APL: ./files/*.aplf
 APL: ./files/*.apln
 APL: ./files/*.aplo
