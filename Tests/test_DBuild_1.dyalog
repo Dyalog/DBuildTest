@@ -1,22 +1,19 @@
-﻿ r←test_DBuild_1 dummy;ucmd_flags
+﻿ r←test_DBuild_1 dummy;ucmd_flags;pwd;cmd
  r←''
- :If ##.halt ⋄ ⎕SE.UCMD'sink←UDEBUG on' ⋄ :EndIf ⍝ otherwise halt won't propagate properly into the ]DBUild-Call...
-
-⍝ create some fns/vars to test if "-c" really clears them...
+ ⍝ put a few things into # to be sure that "-c" clear them!
  #.⎕CY'dfns'
-#.⎕ex'foo' ⋄  #.foo←'goo'
+ #.⎕EX'foo' ⋄ #.foo←'goo'
 
-ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
+ ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
 ⍝ run build-script (non-prod mode)
- ⎕SE.UCMD'DBuild ',##.TESTSOURCE,'DBuild_1.dyalogbuild -c',ucmd_flags
+ res←##.Build ##.TESTSOURCE,'DBuild_1.dyalogbuild -c',ucmd_flags
+ :If 'MyNS0' 'MyNS1'Check #.⎕NL ¯9
+     →0 Because'Did not find exactly two namespaces in # but instead got: ',⍕#.⎕NL ¯9 ⋄ :EndIf
 
- :If 'MyNS0' 'MyNS1'  Check #.⎕NL-9  ⍝  conga/httpcommand not available in earlier versions...
-     →0 Because'Did not find exactly two namespace in #' ⋄ :EndIf
-
-:if 0 0 Check #.MyNS0.(⎕io ⎕ml)
-→0 Because'New namespace MyNS0 did not have expected ⎕IO/⎕ML (according to defaults) set in script'⋄:endif
-:if 1 1 Check #.MyNS1.(⎕io ⎕ml)
-→0 Because'New namespace MyNS1 did not have expected ⎕IO/⎕ML (according to defaults) set in script'⋄:endif
+ :If 0 0 Check #.MyNS0.(⎕IO ⎕ML)
+     →0 Because'New namespace MyNS0 did not have expected ⎕IO/⎕ML (according to defaults) set in script' ⋄ :EndIf
+ :If 1 1 Check #.MyNS1.(⎕IO ⎕ML)
+     →0 Because'New namespace MyNS1 did not have expected ⎕IO/⎕ML (according to defaults) set in script' ⋄ :EndIf
 
  :If 'Dollar' 'MyEnvVar' 'ProdFlag'Check #.⎕NL-2.1
      →0 Because'Did not find exactly 3 variables in #' ⋄ :EndIf
@@ -32,7 +29,7 @@ ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
          →0 Because'EnvironmentVariable was not retrieved with correct value' ⋄ :EndIf
  :EndIf
 
- 
+
  :If 2 Check #.⎕ML
      →0 Because'DEFAULTS did not correctly process ⎕ML' ⋄ :EndIf
  :If 0 Check #.⎕IO
@@ -43,7 +40,8 @@ ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
      →0 Because'DEFAULTS did not correctly process ⎕PP' ⋄ :EndIf
 
 ⍝ re-run build-script (this time in production mode)
- ⎕SE.UCMD'DBuild ',##.TESTSOURCE,'DBuild_1.dyalogbuild -c -p',ucmd_flags
+ ucmd_flags←(##.halt/' -h'),##.quiet/' -q'   ⍝ it's weird - but 12.1 somehow lost the variable when it got here. Quick fix to avoid wasting time...
+ {}##.Build,##.TESTSOURCE,'DBuild_1.dyalogbuild -c -p',ucmd_flags
 
-:If 'Production'Check #.ProdFlag
+ :If 'Production'Check #.ProdFlag
      →0 Because'ProdFlag did not have expected value "Production", but rather "',#.ProdFlag,'"' ⋄ :EndIf

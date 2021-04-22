@@ -1,12 +1,18 @@
-DyalogTest : 1.25
-ID         : DyalogBuild
+DyalogTest : 1.45
+ID         : DyalogBuildTest
 Description: test suite for ]DTest and ]DBuild 
-Description: We need a suite because we can't just run ALL tests - as test_failure fails expectedly (and is executed/tested by test_ReturnCode)
+Description: We need to run this suite because we can't just run ALL tests
+Description: because test_failure fails expectedly (and needs to be executed/tested by test_ReturnCode)
 
-Test: test_DSL        ⍝ basic tests of the DSL
-Test: test_DBuild_1   ⍝ some features of DBuild
-Test: test_DBuild_2   ⍝ test a build with .aplf, *.csv, .aplo
-Test: test_DBuild_3   ⍝ test if DEFAULTS produces desired ⎕IO, ⎕ML in new namespaces etc.
-Test: test_ReturnCode ⍝ testing returncode of DTest 
+Test: test_CompTools        ⍝ tests various compatibility tools...
+
+Test: test_DSL               ⍝ basic tests of the DSL
+
+Test: test_DBuild_1          ⍝ some features of DBuild
+Test: test_DBuild_2          ⍝ test a build with .aplf, *.csv, .aplo
+Test: test_DBuild_3          ⍝ test if DEFAULTS produces desired ⎕IO, ⎕ML in new namespaces etc.
+Test: test_DBuild_nameclash  ⍝ test nameclashes when importing things
+
+Test: test_ReturnCode        ⍝ testing returncode of DTest 
 
 Teardown: teardown
