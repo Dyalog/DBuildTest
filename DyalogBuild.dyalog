@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.45
+﻿:Namespace DyalogBuild ⍝ V 1.45
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -777,7 +777,7 @@
       _OS←3↑aplv1  ⍝ 12.1 does not know it...
       (_isWin _isLinux _isAIX _isMacOS _isSolaris)←'Win' 'Lin' 'AIX' 'Mac' 'Sol'∊⊂3↑_OS
       ⍝ Version has all the details (major, minor, revision, *)
-      ⍝ whereas DyaVersion is more reable with its simple numeric format
+      ⍝ whereas DyaVersion is more readable with its simple numeric format
       _Version←2⊃'.'⎕VFI 2⊃'.'⎕WG'APLVersion'
       DyaVersion←{2⊃⎕VFI(2>+\'.'=⍵)/⍵}2⊃'.'⎕WG'APLVersion'
      
@@ -1296,8 +1296,6 @@
       _description←''
       _defaults←'⎕ML←⎕IO←1'
       :If ~prod
-          ⎕←'NB: Loaded files will be linked to their source - use -prod to not link'
-      :EndIf
           ⎕←'NB: Loaded files will be linked to their source - use -prod to not link'
       :EndIf
       :If ~halt
