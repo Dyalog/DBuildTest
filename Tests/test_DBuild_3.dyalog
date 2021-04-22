@@ -31,7 +31,7 @@
              →0 Because'EnvironmentVariable was not retrieved with correct value' ⋄ :EndIf
      :EndIf
 
-     'ic'#.⎕NS'' ⋄ ⎕SE.SALT.Load'initconga -target=#.ic'
+     'ic'#.⎕NS'' ⋄ ⎕SE.SALT.Load'InitConga -target=#.ic'
 
      :If (¯1↓#.ic.⎕CR'InitConga')Check ¯1↓#.conga.⎕CR'InitConga'
          →0 Because'InitConga not loaded identically to ]LOAD' ⋄ :EndIf
