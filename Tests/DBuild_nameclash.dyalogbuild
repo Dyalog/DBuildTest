@@ -8,3 +8,6 @@ NS: ./files/NS1.dyalog, target=#.NameClash1
 
 EXEC: #.NameClash2←⍳3
 CSV: ./files/array.csv, Target=#.NameClash2
+
+CSV: ./files/array.csv, Target=#.NameClash3
+NS: ./files/NS1.dyalog, target=#.NameClash3

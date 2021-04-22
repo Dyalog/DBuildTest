@@ -57,12 +57,12 @@
 ⍝ 2021 03 16 MBaas: v1.41 merging of various minor changes, mostly TACIT-related
 ⍝ 2021 03 23 MBaas: v1.43 fixes: Classic compatibility, relative paths for tests & suites
 ⍝ 2021 03 30 MBaas: v1.44 fixes: more Classic compatibility - missed a few things with 1.43, but now it should be done.
-⍝ 2021 04 20 MBaas: v1.45: improved loading of code (from .dyalog + .apln,.aplc,.aplf,.apli,.aplo);various fixes & cleanups
-    
-    
+⍝ 2021 04 22 MBaas: v1.45: improved loading of code (from .dyalog + .apln,.aplc,.aplf,.apli,.aplo);various fixes & cleanups
+
+
     DEBUG←0   ⍝ used for testing to disable error traps
     :Section Compatibility
-    ⎕io←1
+    ⎕IO←1
     ⎕ML←1
 
     ∇ R←GetDOTNETVersion;vers;⎕IO;⎕USING
@@ -110,7 +110,7 @@
       :If 0=⎕SE.⎕NC'_cita'
           names←'SetupCompatibilityFns' 'DyaVersion' 'APLVersion' 'eis' 'isChar' 'Split' 'Init' 'GetDOTNETVersion'
           names,←'qNPARTS' 'qMKDIR' 'qNEXISTS' 'qNDELETE' '_Filetime_to_TS' 'Nopen'
-          names,←'isWin' 'GetCurrentDirectory' 'unixfix' 'eis' 'NL'⍝ needed by these tools etc.
+          names,←'isWin' 'GetCurrentDirectory' 'unixfix' ⍝ needed by these tools etc.
           :If DyaVersion≤15
               names,←'ListPre15' 'GetVTV' 'Put' '_FindDefine' '_FindFirstFile' '_FindNextFile' '_FindTrim' 'GetText'
           :Else
@@ -122,7 +122,7 @@
           args←'#'
       :EndIf
       :Trap DEBUG↓0
-          args ⎕NS'Because' 'Fail' 'Check' 'IsNotElement'
+          args ⎕NS'Because' 'Fail' 'Check' 'IsNotElement' 'eis'
       :EndTrap
       ⎕SE._cita.Init
       R←'Loaded tools into namespace ⎕se._cita'
@@ -648,6 +648,7 @@
     ∇
 
     ∇ (n v d)←Version;f;s;z
+    ⍝ Version of DBuildTest (3 elems: name version date)
       :If DyaVersion≥16
           s←⎕SRC ⎕THIS                  ⍝ appearently this only works in V16+
       :Else
@@ -693,6 +694,7 @@
 
 
     ∇ R←dVersion
+      ⍝ numeric version (maj.min) of DBuildTest (for comparison against the min. version given in the Dyalogtest-element of a .dyalogtest)
       R←2⊃⎕VFI{(2>+\⍵='.')/⍵}2⊃Version
     ∇
 
@@ -775,7 +777,7 @@
       _OS←3↑aplv1  ⍝ 12.1 does not know it...
       (_isWin _isLinux _isAIX _isMacOS _isSolaris)←'Win' 'Lin' 'AIX' 'Mac' 'Sol'∊⊂3↑_OS
       ⍝ Version has all the details (major, minor, revision, *)
-      ⍝ whereas DyaVersion is more reable ;)
+      ⍝ whereas DyaVersion is more reable with its simple numeric format
       _Version←2⊃'.'⎕VFI 2⊃'.'⎕WG'APLVersion'
       DyaVersion←{2⊃⎕VFI(2>+\'.'=⍵)/⍵}2⊃'.'⎕WG'APLVersion'
      
@@ -906,7 +908,7 @@
                                   Log'No -suite nor -setup selected - running all tests in "',f,'" against all setups!'
                               :EndIf
                           :EndIf
-                          :If 0<tally v←({⊃'teardown_'⍷⍵}¨ns.⎕NL-3)/ns.⎕NL-3
+                          :If 0<tally v←('teardown_'⍷↑nl)[;1]/nl←ns.⎕NL-3
                               args.teardown←¯1↓∊v,¨' '
                           :EndIf
      
