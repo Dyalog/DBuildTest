@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.45
+﻿:Namespace DyalogBuild ⍝ V 1.45
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -109,14 +109,15 @@
       Init
       :If 0=⎕SE.⎕NC'_cita'
           names←'SetupCompatibilityFns' 'DyaVersion' 'APLVersion' 'eis' 'isChar' 'Split' 'Init' 'GetDOTNETVersion'
-          names,←'qNPARTS' 'qMKDIR' 'qNEXISTS' 'qNDELETE' '_Filetime_to_TS' 'Nopen'
-          names,←'isWin' 'GetCurrentDirectory' 'unixfix' ⍝ needed by these tools etc.
+          names,←'qNPARTS' 'qMKDIR' 'qNEXISTS' 'qNDELETE' 'qNPUT' '_Filetime_to_TS' 'Nopen'
+          names,←'isWin' 'isChar' 'GetCurrentDirectory' 'unixfix' ⍝ needed by these tools etc.
           :If DyaVersion≤15
               names,←'ListPre15' 'GetVTV' 'Put' '_FindDefine' '_FindFirstFile' '_FindNextFile' '_FindTrim' 'GetText'
           :Else
               names,←⊂'ListPost15'
           :EndIf
           '⎕se._cita'⎕NS names
+          _cita.('⎕se._cita'⎕NS ⎕nl-3)
       :EndIf
       :If args≡''
           args←'#'
@@ -1828,6 +1829,62 @@
           :EndSelect
       :EndSelect
     ∇
+
+:namespace _cita
+
+    ∇ Write2Log txt;file
+      ⍝ needs name of test
+      file←GetCITA_Log
+      :If ~qNEXISTS file
+          txt qNPUT file
+      :Else ⍝ q&d "append":
+          old←qNGET file
+          (old,⊂txt)qNPUT file 1
+      :EndIf
+    ∇
+
+    ∇ R←GetCITA_Log
+      :If 0=≢R←'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
+          ⎕←2 ⎕NQ'.' 'GetCommandLine'   ⍝ spit out commandline into the session - maybe it help diagnosing the problem...
+          'Found no CITA_Log in Environment - this dws is supposed to be called from CITA which should have passed the right commandline'⎕SIGNAL 11
+      :EndIf
+    ∇
+
+    ∇ {msg}_LogStatus status;file
+⍝ A step (setup|test|teardown) is finished, report its status to the engine.
+⍝ msg allows inject of a message into the file, otherwise an empty file will be created.
+⍝ options:
+⍝ fail  | ok
+⍝ err   | success
+⍝ no    | yes
+⍝ 0     | 1
+      :If 0=⎕NC'msg' ⋄ msg←'' ⋄ :EndIf
+      file←∊2↑qNPARTS GetCITA_Log
+      :If isChar status  ⍝ decode status from character-string
+          :If ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'failure' 'error' 'no'
+              status←0
+          :ElseIf ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'success' 'ok' 'yes'
+              status←1
+          :Else
+          :EndIf
+      :Else
+          status←1∊status
+      :EndIf
+      status←(1+status)⊃'err' 'ok'
+    ⍝ uses qNPUT (which is brought in with GetToolsForCITA to write a file on all APL-Versions)
+    ⍝ we're intentionally not passing ⍵[2]as 1 to force overwrite - because this is supposed to be called once only!
+    ⍝ So if it crashes...that is well deserved...
+      msg qNPUT file,'.',status
+      ⎕off
+    ∇
+
+⍝ Define Success'blablabla' and Failure'blabla' as shortcuts to 'blabla'_LogStatus 1|0
+    Success←_LogStatus∘1
+    Failure←_LogStatus∘0
+
+:endnamespace
+
+
 
     :EndSection ────────────────────────────────────────────────────────────────────────────────────
 
