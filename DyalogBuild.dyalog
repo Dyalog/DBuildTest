@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.45
+:Namespace DyalogBuild ⍝ V 1.45
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -559,7 +559,6 @@
      
       ⍝ search the specified file in the source-folder and SALT's workdir  (emulate SALT.Load here)
       sep←'∘',(1+isWin)⊃':' ';'     ⍝ separator for those paths...
-      ⍝ sep{1↓⍵⊂⍨⍵∊⍺}⎕SE.…
      
       :For sf :In (⊂f1),sep Split ⎕SE.SALT.Settings'workdir'
           :If ~(⊃⌽sf)∊'\/'
