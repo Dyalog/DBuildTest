@@ -1419,7 +1419,7 @@
               :EndIf
               :If cmd≡'lib'   ⍝ find path of library...(only if >17, so we'll be using ]LINK which needs path)
                   :If 17<DyaVersion
-                      lib←⊃0(⎕NINFO ⎕OPT('Wildcard' 1)('Recurse' 1))(⎕←(2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'),'/Library/',source,'.dyalog')  ⍝ CompCheck: ignore
+                      lib←⊃0(⎕NINFO ⎕OPT('Wildcard' 1)('Recurse' 1))((2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'),'/Library/',source,'.dyalog')  ⍝ CompCheck: ignore
                   :Else
                       lib←source
                   :EndIf
@@ -1603,7 +1603,7 @@
           ⍝⎕OFF 13×~0∊⍴,LoggedErrors  ⍝ requires DyaVers ≥ 14.0
           {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨')OFF',⊂'ER'  ⍝ as long as 18008 isn't fixed (and for all older versions) we can't use ⎕OFF but have to ⎕NQ'KeyPress'
       :ElseIf 2=⎕SE.⎕NC'DBuild_postSave'
-          ⍎⎕←⎕SE.DBuild_postSave
+          ⍎⎕SE.DBuild_postSave
       :EndIf  ⍝ we exit with 1 if there were errors, 0 if everything's fine.
     ∇
 
@@ -1845,7 +1845,7 @@
 
     ∇ R←GetCITA_Log
       :If 0=≢R←'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
-          ⎕←2 ⎕NQ'.' 'GetCommandLine'   ⍝ spit out commandline into the session - maybe it help diagnosing the problem...
+        ⍝   ⎕←2 ⎕NQ'.' 'GetCommandLine'   ⍝ spit out commandline into the session - maybe it help diagnosing the problem...
           'Found no CITA_Log in Environment - this dws is supposed to be called from CITA which should have passed the right commandline'⎕SIGNAL 11
       :EndIf
     ∇
