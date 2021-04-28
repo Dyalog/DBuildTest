@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.45
+:Namespace DyalogBuild ⍝ V 1.45
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -117,7 +117,7 @@
               names,←⊂'ListPost15'
           :EndIf
           '⎕se._cita'⎕NS names
-          _cita.('⎕se._cita'⎕NS ⎕nl-3)
+          _cita.('⎕se._cita'⎕NS ⎕NL-3)
       :EndIf
       :If args≡''
           args←'#'
@@ -590,6 +590,9 @@
                       :EndIf
                   :EndIf
               :EndFor
+          :EndIf
+          :If 0<tally names      ⍝ if we found any names
+              :Leave            ⍝ do not bother searching SALT's workdirs!
           :EndIf
       :EndFor
     ∇
@@ -1178,11 +1181,11 @@
       :If 0=tally 1⊃qNPARTS suite
           suite←TESTSOURCE,suite
       :ElseIf '.'≡1⊃1⊃qNPARTS suite ⍝ deal with relative paths
-      :if '.'≡1⊃1⊃qNPARTS TESTSOURCE   ⍝ if suite and source are relative, ignore suite's relative folder and use SOURCE's...
-       suite←∊(1 qNPARTS TESTSOURCE),1↓qNPARTS suite 
-      :else 
-      suite←∊1 qNPARTS TESTSOURCE,suite 
-      :endif
+          :If '.'≡1⊃1⊃qNPARTS TESTSOURCE   ⍝ if suite and source are relative, ignore suite's relative folder and use SOURCE's...
+              suite←∊(1 qNPARTS TESTSOURCE),1↓qNPARTS suite
+          :Else
+              suite←∊1 qNPARTS TESTSOURCE,suite
+          :EndIf
       :EndIf      ⍝ default path for a suite is the TESTSOURCE-folder
       :If ''≡3⊃qNPARTS suite
           suite←suite,'.dyalogtest'
@@ -1830,27 +1833,27 @@
       :EndSelect
     ∇
 
-:namespace _cita
+    :namespace _cita
 
-    ∇ Write2Log txt;file
+        ∇ Write2Log txt;file
       ⍝ needs name of test
-      file←GetCITA_Log
-      :If ~qNEXISTS file
-          txt qNPUT file
-      :Else ⍝ q&d "append":
-          old←qNGET file
-          (old,⊂txt)qNPUT file 1
-      :EndIf
-    ∇
+          file←GetCITA_Log
+          :If ~qNEXISTS file
+              txt qNPUT file
+          :Else ⍝ q&d "append":
+              old←qNGET file
+              (old,⊂txt)qNPUT file 1
+          :EndIf
+        ∇
 
-    ∇ R←GetCITA_Log
-      :If 0=≢R←'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
+        ∇ R←GetCITA_Log
+          :If 0=≢R←'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
         ⍝   ⎕←2 ⎕NQ'.' 'GetCommandLine'   ⍝ spit out commandline into the session - maybe it help diagnosing the problem...
-          'Found no CITA_Log in Environment - this dws is supposed to be called from CITA which should have passed the right commandline'⎕SIGNAL 11
-      :EndIf
-    ∇
+              'Found no CITA_Log in Environment - this dws is supposed to be called from CITA which should have passed the right commandline'⎕SIGNAL 11
+          :EndIf
+        ∇
 
-    ∇ {msg}_LogStatus status;file
+        ∇ {msg}_LogStatus status;file
 ⍝ A step (setup|test|teardown) is finished, report its status to the engine.
 ⍝ msg allows inject of a message into the file, otherwise an empty file will be created.
 ⍝ options:
@@ -1858,31 +1861,31 @@
 ⍝ err   | success
 ⍝ no    | yes
 ⍝ 0     | 1
-      :If 0=⎕NC'msg' ⋄ msg←'' ⋄ :EndIf
-      file←∊2↑qNPARTS GetCITA_Log
-      :If isChar status  ⍝ decode status from character-string
-          :If ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'failure' 'error' 'no'
-              status←0
-          :ElseIf ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'success' 'ok' 'yes'
-              status←1
+          :If 0=⎕NC'msg' ⋄ msg←'' ⋄ :EndIf
+          file←∊2↑qNPARTS GetCITA_Log
+          :If isChar status  ⍝ decode status from character-string
+              :If ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'failure' 'error' 'no'
+                  status←0
+              :ElseIf ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'success' 'ok' 'yes'
+                  status←1
+              :Else
+              :EndIf
           :Else
+              status←1∊status
           :EndIf
-      :Else
-          status←1∊status
-      :EndIf
-      status←(1+status)⊃'err' 'ok'
+          status←(1+status)⊃'err' 'ok'
     ⍝ uses qNPUT (which is brought in with GetToolsForCITA to write a file on all APL-Versions)
     ⍝ we're intentionally not passing ⍵[2]as 1 to force overwrite - because this is supposed to be called once only!
     ⍝ So if it crashes...that is well deserved...
-      msg qNPUT file,'.',status
-      ⎕off
-    ∇
+          msg qNPUT file,'.',status
+          ⎕OFF
+        ∇
 
 ⍝ Define Success'blablabla' and Failure'blabla' as shortcuts to 'blabla'_LogStatus 1|0
-    Success←_LogStatus∘1
-    Failure←_LogStatus∘0
+        Success←_LogStatus∘1
+        Failure←_LogStatus∘0
 
-:endnamespace
+    :endnamespace
 
 
 
