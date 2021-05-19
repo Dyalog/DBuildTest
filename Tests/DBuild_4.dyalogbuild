@@ -1,0 +1,23 @@
+DYALOGBUILD: 1.44
+ID: DBuild_TEST_4
+
+DEFAULTS: ⎕IO←⎕ml←0
+NS: ./files/NS0.dyalog, target=MyNS0
+DEFAULTS: ⎕IO←⎕ml←1
+NS: ./files/NS1.dyalog, target=MyNS1
+
+DEFAULTS: ⎕IO←0 ⋄ ⎕ML←2 
+DEFAULTS: ⎕CT←1E¯11 ⋄ ⎕PP←11
+
+LIB: InitConga, Target=#.conga
+LIB: HttpCommand, Target=#.httpcommand
+
+EXEC: #.ProdFlag←'Test'
+EXEC: #.MyEnvVar←'$DB_EnvVar'
+EXEC: #.Dollar←'$$foo'
+
+LX: '⎕←''Hello World!'''
+
+⍝TARGET: DBuild_TEST_4.exe,type=NativeExe,details=CompanyName:Dyalog Ltd.;Comments: This is a sample build;FileVersion:3.14;FileDescription:just a sample;InternalName:MyTest;ProductName:DyalogBuild 
+TARGET: DBuild_TEST_4,save=1
+TARGET: c:\tmp\DBuild_TEST_4,save=1

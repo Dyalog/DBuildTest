@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.45
+﻿:Namespace DyalogBuild ⍝ V 1.45
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -58,9 +58,11 @@
 ⍝ 2021 03 23 MBaas: v1.43 fixes: Classic compatibility, relative paths for tests & suites
 ⍝ 2021 03 30 MBaas: v1.44 fixes: more Classic compatibility - missed a few things with 1.43, but now it should be done.
 ⍝ 2021 04 22 MBaas: v1.45: improved loading of code (from .dyalog + .apln,.aplc,.aplf,.apli,.aplo);various fixes & cleanups
+⍝ 2021 04 30 MBaas: v1.46 has a better workaround for saving (no need to go into the session);-save=0 can overwrite the option set with TARGET
+⍝ 2021 05 19 MBaas: v1.50 special handling of WS FULL in DTest and DBuild; allows specifying TARGET with .exe or .dll extension;handle multiple TARGET-Entries per file
 
 
-    DEBUG←0   ⍝ used for testing to disable error traps
+    DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being ⎕se even after Edit > Reformat.
     :Section Compatibility
     ⎕IO←1
     ⎕ML←1
@@ -111,6 +113,7 @@
           names←'SetupCompatibilityFns' 'DyaVersion' 'APLVersion' 'eis' 'isChar' 'Split' 'Init' 'GetDOTNETVersion'
           names,←'qNPARTS' 'qMKDIR' 'qNEXISTS' 'qNDELETE' 'qNPUT' '_Filetime_to_TS' 'Nopen'
           names,←'isWin' 'isChar' 'GetCurrentDirectory' 'unixfix' ⍝ needed by these tools etc.
+          names,←'swise' 'refs'   ⍝ useful to deal with WS FULL
           :If DyaVersion≤15
               names,←'ListPre15' 'GetVTV' 'Put' '_FindDefine' '_FindFirstFile' '_FindNextFile' '_FindTrim' 'GetText'
           :Else
@@ -155,8 +158,7 @@
           GetFilesystemType←{⊃1 ⎕NINFO ⍵} ⍝ 1=Directory, 2=Regular file  ⍝ CompCheck: ignore
           ListFiles←{⍺←'' ⋄ ⍺ ListPost15 ⍵}
           qNGET←{⎕NGET ⍵ 1}   ⍝ CompCheck: ignore
-          qNPUT←{⍺ ⎕NPUT ⍵}    ⍝ CompCheck: ignore
-          i_Beam600←{600⌶⍵}   ⍝ CompCheck: ignore
+          qNPUT←{(⊂⍺)⎕NPUT ⍵}    ⍝ CompCheck: ignore
       :Else
           ListFiles←{⍺←'' ⋄ ⍺ ListPre15 ⍵}
           GetFilesystemType←{2-(ListFiles{(-∨/'\/'=¯1↑⍵)↓⍵}⍵)[1;4]}
@@ -167,7 +169,6 @@
               (,1)≡2⊃(eis ⍵),0:(⍺ Put⊃eis ⍵)ltack(qNDELETE⊃⍵)
               ⍺ Put⊃eis ⍵
           }
-          i_Beam600←{⍵}  ⍝ don't emulate
       :EndIf
      
       :If 16≤DyaVersion
@@ -178,7 +179,7 @@
       :EndIf
      
       :If 16≤DyaVersion
-          qJSONi←qJSONe←⎕JSON ⍝ CompCheck: ignore
+          qJSONi←qJSONe←⎕JSON                 ⍝ CompCheck: ignore
       :ElseIf 14.1≤DyaVersion
           qJSONi←{0(7159⌶)⍵} ⍝ CompCheck: ignore
           qJSONe←{(7160⌶)⍵} ⍝ CompCheck: ignore
@@ -186,15 +187,15 @@
           qJSONi←qJSONe←{'This functionality not available in versions < 14.1'⎕SIGNAL 11}
       :EndIf
       :If 18≤DyaVersion
-          lc←¯1∘⎕C                                                            ⍝ lower case ⍝ CompCheck: ignore
-          uc←1∘⎕C                                                             ⍝ upper case ⍝ CompCheck: ignore
+          lc←¯1∘⎕C                                    ⍝ lower case ⍝ CompCheck: ignore
+          uc←1∘⎕C                                     ⍝ upper case ⍝ CompCheck: ignore
       :ElseIf 15≤DyaVersion
           lc←819⌶                                     ⍝ lower case ⍝ CompCheck: ignore
           uc←1∘(819⌶)                                 ⍝ upper case ⍝ CompCheck: ignore
       :Else
           lowerAlphabet←'abcdefghijklmnopqrstuvwxyzáâãçèêëìíîïðòóôõùúûýàäåæéñöøü'
           upperAlphabet←'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÂÃÇÈÊËÌÍÎÏÐÒÓÔÕÙÚÛÝÀÄÅÆÉÑÖØÜ'
-          fromto←{n←⍴1⊃(t f)←⍺ ⋄ ~∨/b←n≥i←f⍳s←,⍵:s ⋄ (b/s)←t[b/i] ⋄ (⍴⍵)⍴s} ⍝ from-to casing fn
+          fromto←{1<|≡⍵:(⊂⍺)∇¨⍵ ⋄ n←⍴1⊃(t f)←⍺ ⋄ ~∨/b←n≥i←f⍳s←,⍵:s ⋄ (b/s)←t[b/i] ⋄ (⍴⍵)⍴s} ⍝ from-to casing fn
           lc←lowerAlphabet upperAlphabet∘fromto ⍝ :Includable Lower-casification of simple array
           uc←upperAlphabet lowerAlphabet∘fromto ⍝ Ditto Upper-casification
       :EndIf
@@ -571,7 +572,12 @@
                       :Trap DEBUG↓0
                           res←⎕SE.SALT.Load fl,' -target=',target,options
                       :Else
-                          res←'*** Error executing ⎕SE.SALT.Load ',fl,' -target=',target,options,': ',⍕⊃⎕DM
+                          res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',target,options,'": ',NL
+                          :If DyaVersion<13.1
+                              res,←⍕⎕DM,¨⊂NL
+                          :Else
+                              res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')
+                          :EndIf
                       :EndTrap
                       res ⎕SIGNAL('***'≡3↑⍕res)/11
                       names,←⊂res
@@ -582,16 +588,18 @@
                           :Trap DEBUG↓0
                               {}⎕SE.Link.Import(⍎target)(fl)
                           :Else
-                              ('*** ',⊃⎕DM)⎕SIGNAL 11
+                              res←'*** Error executing Link.Import (',target,') ',fl,':'
+                              res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')
+                              res ⎕SIGNAL 11
                           :EndTrap
-                          names,←⊂⎕SE.Link.U.StripCaseCodePart 2⊃⎕NPARTS fl
+                          names,←⊂{2 6::{2 6::⍵ ⋄ ⎕SE.Link.StripCaseCode 2⊃⎕NPARTS ⍵}⍵ ⋄ ⎕SE.Link.U.StripCaseCodePart ⍵}2⊃⎕NPARTS fl
                       :Else
                           ('*** We need at least v17.1 with ]LINK to import ',fl)⎕SIGNAL 11
                       :EndIf
                   :EndIf
               :EndFor
           :EndIf
-          :If 0<tally names      ⍝ if we found any names
+          :If ~0∊⍴names      ⍝ if we found any names
               :Leave            ⍝ do not bother searching SALT's workdirs!
           :EndIf
       :EndFor
@@ -642,6 +650,20 @@
           R←∪(~(⎕UCS,string)∊avu)/,string
       :EndIf
     ∇
+
+    ⍝ useful for CITA or DTest when dealing with WS FULL (from dfns):
+      refs←{                              ⍝ Vector of sub-space references for ⍵.
+          ⍺←⍬ ⋄ (⍴,⍺)↓⍺{                  ⍝ default exclusion list.
+              ⍵∊⍺:⍺                       ⍝ already been here: quit.
+              ⍵.(↑∇∘⍎⍨/⌽(⊂⍺∪⍵),↓⎕NL 9)    ⍝ recursively traverse any sub-spaces.
+          }⍵                              ⍝ for given starting ref.
+      }
+
+      swise←{         ⍝ Space wise
+          ⍺⍺¨refs ⍵   ⍝ Apply to each space
+      }
+
+
     :endSection Compatibility
 
     :Section ADOC
@@ -820,7 +842,7 @@
       :EndIf
     ∇
 
-    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;LoggedMessages;i;start0;nl;templ;base
+    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;LoggedMessages;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp
       i←quiet←0
       ⍝ Not used here, but we define them test scripts that need to locate data:
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
@@ -871,11 +893,16 @@
                           →FAIL
                       :EndIf
                       'ns'⎕NS''
-                      :Trap DEBUG↓0
+                      :Trap (DEBUG∨halt)↓0
                           filter←∊LoadCode source(⍕ns)
                           f←¯1↓TESTSOURCE ⋄ type←1 ⍝ Load contents of folder
                       :Else
-                          LogError⊃⎕DM
+                          msg←'Error loading test from folder "',source,'"',NL
+                          :If DyaVersion<13.1
+                              LogError msg,∊⎕DM,¨⊂NL
+                          :Else
+                              LogError msg,⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')
+                          :EndIf
                           →endPrep1
                       :EndTrap
                   :EndIf
@@ -887,11 +914,15 @@
                   files,←('*.aplf'ListFiles f)[;1]    ⍝ .aplf-extension!
                   'ns'⎕NS''
                   :For f :In files
-                      :Trap (DEBUG∨~halt)/0
+                      :Trap (DEBUG∨halt)↓0
                           LoadCode f(⍕ns)
                       :Else
-                          LogError⊃⎕DM
-                          :Trap 0 ⋄ ⎕←⎕JSON ⎕DMX ⋄ :EndTrap ⍝ output error details if possibles
+                          msg←'Error loading code from file "',f,'"'
+                          :If DyaVersion<13.1
+                              LogError msg,∊⍕⎕DM,¨⊂NL
+                          :Else
+                              LogError msg,⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')
+                          :EndIf
                       :EndTrap
                   :EndFor
                   ⍝:if null≡args.tests
@@ -903,7 +934,7 @@
                   :If null≡args.suite  ⍝ if no suite is given
                       :If null≡args.setup
                           v←('setup_'⍷↑nl)[;1]/nl←ns.⎕NL-3
-                          :If 0<tally v
+                          :If ~0∊⍴v
                               args.setup←¯1↓∊v,¨' '
                               :If 2=GetFilesystemType f   ⍝ single file given
                                   Log'No -suite nor -setup selected - running test against all setups!'
@@ -911,7 +942,7 @@
                                   Log'No -suite nor -setup selected - running all tests in "',f,'" against all setups!'
                               :EndIf
                           :EndIf
-                          :If 0<tally v←('teardown_'⍷↑nl)[;1]/nl←ns.⎕NL-3
+                          :If ~0∊⍴v←('teardown_'⍷↑nl)[;1]/nl←ns.⎕NL-3
                               args.teardown←¯1↓∊v,¨' '
                           :EndIf
      
@@ -934,7 +965,8 @@
                   →0
               :EndIf
               LogTest'"',source,'" is neither a namespace nor a folder or a .dyalogtest-file.'
-              →FAIL ltack r←LOGS
+              r←LOGS
+              →FAIL
           :EndIf
       :EndIf
      endPrep1:
@@ -943,7 +975,7 @@
           overwritten←⍬
           v←LoadTestSuite suite
           :If ~1⊃v
-              0 Log'*** error loading suite "',suite,'": ',2⊃v
+              LogError'*** error loading suite "',suite,'": ',2⊃v
           :Else
               sargs←2⊃v
               :For v :In (sargs.⎕NL-2)∩args.⎕NL-2 ⍝ overlap?
@@ -977,11 +1009,11 @@
               fns←1⌽¨'$^'∘,¨fns ⍝ note ^ is shift-6, not the APL function ∧
               t←1
               :If 0∊⍴matches←↑fns ⎕S{⍵.(Block PatternNum)}ns.⎕NL ¯3   ⍝ CompCheck: ignore
-                  0 Log'*** function(s) not found: ',,⍕t/orig
+                  LogError'*** function(s) not found: ',,⍕t/orig
                   fns←⍬
               :Else
                   :If ∨/t←~(⍳⍴fns)∊1+∪matches[;2]
-                      0 Log'*** function(s) not found: ',,⍕t/orig
+                      LogError'*** function(s) not found: ',,⍕t/orig
                   :EndIf
                   fns←∪matches[⍋matches[;2];1]
               :EndIf
@@ -990,7 +1022,7 @@
               :For f :In orig
                   nl∆←nl
                   s←where f='*'
-                  :If 0<tally s
+                  :If ~0∊⍴s
                       nl∆←(s-1)↑¨nl∆
                       f←(s-1)↑f
                   :EndIf
@@ -1003,8 +1035,9 @@
       :EndIf
       :If null≢filter
       :AndIf 0∊⍴fns←(1∊¨filter∘⍷¨fns)/fns
-          0 Log'*** no functions match filter "',filter,'"'
-          →FAIL ltack r←LOGS
+          LogError'*** no functions match filter "',filter,'"'
+          r←LOGS
+          →FAIL
       :EndIf
      
       :If null≢setups←args.setup
@@ -1023,6 +1056,7 @@
       :EndSelect
      
       :For run :In ⍳repeat
+          WSFULL←0  ⍝ indicates if we were hit by WS FULL
           :If verbose∧repeat>1
               0 Log'run #',(⍕run),' of ',⍕repeat
           :EndIf
@@ -1039,9 +1073,23 @@
                       :If verbose
                           0 Log'running setup: ',f
                       :EndIf
-                      f LogTest z←(ns⍎f)⍬
-                      setupok←0=1↑⍴z
-                  :Else ⋄ LogTest'-setup function not found: ',f
+                      :Trap halt↓0
+                          f LogTest z←(ns⍎f)⍬
+                          setupok←0=1↑⍴z
+                      :Else
+     
+                          msg←'Error executing setup "',f,'": '
+                          :If DyaVersion<13.1
+                              msg,←NL,⍕⎕DM,¨⊂NL
+                          :Else
+                              msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')
+                          :EndIf
+                          LogError msg
+                          setupok←0
+                      :EndTrap
+                  :Else
+                      LogTest'-setup function not found: ',f
+                      setupok←0
                   :EndIf
               :EndIf
      
@@ -1060,9 +1108,32 @@
                   :Trap (~halt∨trace)/0 777
                       f LogTest(ns⍎f)⍬
                   :Case 777 ⍝ Assertion failed
-                      f LogTest'Assertion failed: ',⊃⎕DM
+                      f LogTest'Assertion failed: ',,⍕⎕DM,¨⊂NL
                   :Else
-                      f LogTest⊃⎕DM
+                      en←⎕EN  ⍝ save error-no before it gets overwritten
+                      msg←'Error executing test "',f,'": '
+                      :If DyaVersion<13.1
+                          msg,←,⍕⎕DM,¨⊂NL
+                      :Else
+                          msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂''),NL
+                          msg,←,⍕⎕DM,¨⊂NL
+                          :If 16≤DyaVersion
+                              msg,←⎕JSON ⎕DMX
+                          :EndIf
+                      :EndIf
+                      :If WSFULL←en=1   ⍝ special handling for WS FULL
+                          msg,←NL,'⎕WA=',(⍕⎕WA)
+                          msg,←NL,'The 20 largets objects found in the workspace:',NL
+                          :Trap 1
+                              res←⊃⍪/{((⊂⍕⍵),¨'.',¨↓nl),[1.5]⍵.⎕SIZE nl←⍵.⎕NL⍳9}swise ns
+                              res←res[(20⌊1↑⍴res)↑⍒res[;2];]
+                              msg←msg,,((↑res[;1]),'CI18'⎕FMT res[;,2]),⊂NL
+                          :Else
+                              msg,←'Error while generating that report: ',NL,,↑⎕DM,⊂NL
+                          :EndTrap
+     
+                      :EndIf
+                      LogError msg
                   :EndTrap
      
               :EndFor
@@ -1072,14 +1143,27 @@
                       :If verbose
                           0 Log'running teardown: ',f
                       :EndIf
-                      f LogTest(ns⍎f)⍬
+                      :Trap (~halt∨trace)/0 777
+                          f LogTest(ns⍎f)⍬
+                      :Else
+                          msg←'Error executing teardown "',f,'" :'
+                          :If DyaVersion<13.1
+                              msg,←,⍕⎕DM,¨⊂NL
+                          :Else
+                              msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')
+                              :If DyaVersion<16
+                                  msg,←⎕JSON ⎕DMX
+                              :EndIf
+                          :EndIf
+                          LogError msg
+                      :EndTrap
                   :Else
-                      LogTest'-teardown function not found: ',f
+                      LogError'-teardown function not found: ',f
                   :EndIf
               :EndIf
      
      END:
-              :If 0∊⍴LOGS
+              :If 0∊⍴LoggedErrors
                   r,←(quiet≡null)/⊂'   ',(((setup≢null)∧1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' passed in ',(1⍕0.001×⎕AI[3]-start),'s'
                   1 qNDELETE TESTSOURCE,'*.rng.txt' ⍝ delete memorized random-numbers when tests succeeded
               :Else
@@ -1089,23 +1173,26 @@
           :EndFor ⍝ Setup
       :EndFor ⍝ repeat
       r,←(((1<tally setups)∨1<tally fns)∧quiet≡null)/⊂' Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
-      :If 0<tally LOGS
-      :AndIf 1<tally order
+      :If ~0∊⍴LOGS
+      :AndIf ~0∊⍴order
           r,←⊂'-order="',(⍕order),'"'
       :EndIf
      FAIL:
       r←table r
       :If off
-          {}i_Beam600 1
-          :If 0<tally LOGS
-              :If 2=⎕NC'base'
+          :If ~0∊⍴LoggedErrors,LOGS
+              :If 0≢args.testlog
+              :AndIf ''≢args.testlog~' '
+                  logFile←args.testlog
+              :Else
                   logFile←TESTSOURCE,base,'.log'
-                  :If 0<tally args.testlog
-                      logFile←args.testlog
-                  :EndIf
-                  qNDELETE logFile
-                  (⊂∊r,⎕UCS 10)qNPUT logFile
               :EndIf
+              :If WSFULL
+                  logFile←(∊2↑qNPARTS logFile),'.wsfull'
+              :EndIf
+              qNDELETE logFile
+              ⎕←'logFile=',logFile
+              (⊂∊(LOGS,¨⊂NL),LoggedErrors,¨⊂NL)qNPUT logFile
               ⎕OFF 21
           :EndIf
           ⎕OFF 20
@@ -1257,7 +1344,7 @@
 
     :Section BUILD
 
-    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;LoggedErrors;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;logfile;LoggedMessages;TestClassic;production;ClassicVersion;j;synt
+    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;LoggedErrors;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;logfile;LoggedMessages;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d
     ⍝ Process a .dyalogbuild file
       Init
       :If isChar args  ⍝ also allow the fn to be called directly (not as a UCMD) with a simple string arg that we will then parse using DBuilds Parse rules:
@@ -1269,7 +1356,7 @@
       :EndIf
       start←⎕AI[3]
       extension←'.dyalogbuild' ⍝ default extension
-     
+      TargetList←0 5⍴''    ⍝ List of Targets we have to build ([;1]=lineno, [;2]=params names values)
       LoggedErrors←0⍴⊂''
       LoggedMessages←''
       i←0 ⍝ we are on "line zero" if any logging happens
@@ -1285,12 +1372,16 @@
       (prod quiet save halt TestClassic)←args.(production quiet save halt testclassic)
       (TestClassic prod)←2⊃⎕VFI⍕TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
       off←2 args.Switch'off'
-      halt←~halt  ⍝ invert it, so that we can use it directly for :trap halt/
+     
+      :If halt
+          ⎕TRAP←0 'S'
+      :EndIf ⍝ Defeat UCMD trapping
+     
       Clear args.clear
       (exists file)←OpenFile file
       (path name extn)←qNPARTS file
      
-      ('File not found: ',file)⎕SIGNAL exists↓22
+      ('Build-File not found: ',file)⎕SIGNAL exists↓22
      
       lines←1⊃qNGET file
      
@@ -1299,16 +1390,16 @@
       _description←''
       _defaults←'⎕ML←⎕IO←1'
       :If ~prod
+      :AndIf ~quiet
           ⎕←'NB: Loaded files will be linked to their source - use -prod to not link'
       :EndIf
-      :If ~halt
-          i600←i_Beam600 1
-      :EndIf
       :For i :In ⍳⍴lines
-          :If ~':'∊i⊃lines
-              :Continue
+          :If ~':'∊line←i⊃lines                    ⍝ if the line does not have a name-value setting
+          :OrIf '⍝'=⊃{(⍵≠' ')/⍵}line     ⍝ or if it's a comment
+              :Continue                       ⍝ skip it!
           :EndIf ⍝ Ignore blank lines
-          (cmd params)←':'SplitFirst whiteout i⊃lines
+          line←{(∧\(~2|+\⍵='''')⍲⍵='⍝')/⍵}line
+          (cmd params)←':'SplitFirst whiteout line
           params←ExpandEnvVars params
           (names values)←↓[1]↑¯2↑¨(⊂⊂''),¨'='Split¨','Split params
           cmd←lc cmd~' ' ⋄ names←lc names
@@ -1376,10 +1467,9 @@
               :If 0∊⍴source←GetParam'source' ''
                   'Source is required'Signal 11
               :EndIf
-     
               :If (cmd≡'ns')∧0=⎕NC target
                   target ⎕NS''
-                  :Trap (~halt)/0
+                  :Trap halt↓0
                       target⍎_defaults
                       Log'Created namespace ',target
                   :Else
@@ -1398,15 +1488,15 @@
                   :If ~0=tmp←#.⎕NC target
                       LogError'Not a free variable name: ',target,', current name class = ',⍕tmp ⋄ :Continue
                   :EndIf
-                  :Trap halt/999
+                  :Trap halt↓999
                       tmp←∆CSV(path,source)'',(0≠⍴types)/⊂types
                       ⍎target,'←tmp'
                       Log target,' defined from CSV file "',source,'"'
                   :Else
-                      :If DyaVersion<13
+                      :If DyaVersion<13.1
                           LogError⊃⎕DM
                       :Else
-                          LogError⊃⎕DMX.DM  ⍝ CompCheck: ignore
+                          LogError ⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')
                       :EndIf
                   :EndTrap
                   :Continue
@@ -1437,12 +1527,15 @@
                       :Continue
                   :EndIf
               :EndIf
-              :Trap halt/11
+              :Trap halt↓11
                   ⍝z←⎕SE.SALT.Load tmp←tmpPath,((~0∊⍴target)/' -target=',target),options
                   z←options LoadCode tmpPath target
               :Else
-                  LogError⊃⎕DM
-                  :Trap 0 ⋄ ⎕←⎕JSON ⎕DMX ⋄ :EndTrap ⍝ output error details if possibles
+                  :If DyaVersion<13.1
+                      LogError⊃⎕DM
+                  :Else
+                      LogError ⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')
+                  :EndIf
                   :Continue
               :EndTrap
      
@@ -1491,7 +1584,7 @@
               :If 0∊⍴z     ⍝ no names
                   LogError'Nothing found: ',source
               :ElseIf (,1)≡,⍴z ⍝ exactly one name
-                  Log{(uc 1↑⍵),1↓⍵}fileType,cmd,' ',source,' loaded as ',⊃z
+                  Log{(uc 1↑⍵),1↓⍵}fileType,cmd,' ',source,' loaded as ',⍕⊃z
               :Else        ⍝ many names
                   Log(⍕⍴,z),' ',fileType,('namesfiles'↑⍨5×¯1*cmd≡'file'),' loaded from ',source,' into ',target
               :EndIf
@@ -1505,14 +1598,10 @@
                       #.⎕LX←tmp
                       Log'Latent Expression set'
                   :ElseIf prod∨cmd≢'prod' ⍝ only execute PROD command if -production specified
-                      :Trap halt/0
+                      :Trap halt↓0
                           #⍎tmp
                       :Else
-                          :If DyaVersion<13
-                              LogError⊃⎕DM
-                          :Else
-                              LogError⊃⎕DMX.DM  ⍝ CompCheck: ignore
-                          :EndIf
+                          LogError,⍕⎕DM,¨⊂NL
                       :EndTrap
                       :If cmd≡'defaults'
                           _defaults←_defaults,'⋄',tmp ⋄ Log'Set defaults ',tmp
@@ -1521,20 +1610,12 @@
               :EndIf
      
           :Case 'target'
-              :If 0∊⍴tmp←GetParam'wsid' ''
-                  LogError'wsid missing'
+              :If save=0
+              :AndIf 0='2'GetNumParam'save'
+                  Log'Found TARGET-Entry, but save=0 - TARGET with save=0 does not have any effect!'
               :Else
-                  ⎕WSID←∊1 qNPARTS path,tmp
-                  Log'WSID set to ',⎕WSID
+                  TargetList⍪←i line params names values
               :EndIf
-              save←0
-              :If 99≠⊃tmp←2⍴'99'GetNumParam'save'  ⍝ can be set as an option in build-file
-              :OrIf 1⊃tmp←⎕VFI⍕args.save          ⍝ or a switch when calling UCMD (which actually overrides the settings from the buildfile)
-                  save←(,1)≡,2⊃tmp
-              :EndIf
-              :If off=2
-                  off←1=GetNumParam'off' 0
-              :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default-value of 2)
           :Else
               :If '⍝'≠⊃cmd ⍝ ignore commented lines
                   LogError'Invalid keyword: ',cmd
@@ -1546,9 +1627,6 @@
       :If prod
           ⎕EX'#.SALT_Var_Data'
       :EndIf
-      :If ~halt
-          {}i_Beam600 i600
-      :EndIf ⍝ reset
      
       :If TestClassic>0
           z←TestClassic{
@@ -1563,32 +1641,138 @@
           :EndIf
       :EndIf
       n←tally LoggedErrors
-      :If save≢0
-          :If 0=n
-              :If save≡1
-                  save←⎕WSID
-              :EndIf
-              :Trap 0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
-                  0 #.⎕SAVE save ⍝→ Mantis 18008
-                  :Trap 0  ⍝ paranoid, but want to avoid any bugs here to trigger the save again...
-                      tmp←⍕{0::0 ⋄ (ListFiles ⍵)[1;2]}save
-                      Log'Saved as ',save,' (',tmp,' bytes)'
-                  :EndTrap
-              :Else
-                  Log'Cant 0 ⎕SAVE ws because:'
-                  Log ⎕DM
-                  :If qNEXISTS ⎕WSID,'.dws'
-                      qNDELETE ⎕WSID,'.dws'  ⍝ avoid prompts during )SAVE
-                  :EndIf
-                  {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨')SAVE',⊂'ER'
-                  Log'Enqueued keypresses to save upon exit'
-              :EndTrap
-          :Else
-              LogError'DBuild found errors during process, workspace will not be saved!'
+      ⍝:If save≢0
+      :If 0=n
+          :If 0=1↑⍴TargetList   ⍝ save switch was set, but no target-instruction given
+                                    ⍝ pretend we had one which save under name of build-file
+              TargetList←1 5⍴0('target: ',name)('wsid=',name)(,⊂'wsid')(,⊂name)
           :EndIf
-      :EndIf
+          :For (i line params names values) :In ↓TargetList
+              :If 0∊⍴tmp←GetParam'wsid' ''
+                  LogError'wsid missing'
+              :Else
+                  d←1⊃qNPARTS tmp  ⍝ directory given?
+                  :If {{~'/\'∊⍨(⎕IO+2×isWin∧':'∊⍵)⊃⍵}3↑⍵}d   ⍝ if that dir is an relative path
+                      wsid←∊1 qNPARTS path,tmp                  ⍝ prefix path of buildfile
+                  :Else
+                      wsid←tmp
+                  :EndIf
+                  :If (⊂lc 3⊃qNPARTS wsid)∊'' '.dws'
+                  :OrIf 0=tally GetParam'type'    ⍝ if type is not set, we're building a workspace
+                      ⎕WSID←wsid
+                  :EndIf
+                  Log'WSID set to ',wsid
+              :EndIf
+              save←⍬⍴99~⍨(99 args.Switch'save'),bld←1,⍨'99'GetNumParam'save'
+              :If save<1= ⊃bld~99
+                  Log'Target not saved because of switch -save=0'
+              :EndIf
+              :If off=2
+                  off←1=GetNumParam'off' 0
+              :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default-value of 2)
+              :If ~save
+                  :Continue
+              :EndIf
+                     ⍝ Apr 21-research found these vars referencing # (or elements of it) - get them out of the way temporarily
+              rfs←0 2⍴''
+              ⎕EX¨'⎕SE.'∘,¨'SALTUtils.spc.z' 'SALTUtils.spc.res'
+              :For nam :In '⎕SE.'∘,¨'THIS' 'SALTUtils.cs' 'SALTUtils.c.THIS'
+                  :If 326=⎕DR⍎nam
+                      str←⍕⍎nam
+                      :If 1=⍴⍴⍎nam
+                          str←',',str
+                      :EndIf
+                      :If (⍎nam)≢⍎str
+                          Log'⎕SAVE workaround failed because of ',nam
+                          :Leave
+                      :EndIf
+                      rfs⍪←(nam)(str)  ⍝ remember refs stringified...
+                      ⎕EX nam         ⍝ and delete them
+                  :EndIf
+              :EndFor
      
-      :If quiet∧0=n
+              :If DyaVersion≥16
+                  ⎕SIGNAL 0  ⍝ reset ⎕DM, ⎕DMX to avoid problems with refs when saving
+              :EndIf
+              :Trap DEBUG↓0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
+                  :If ~0∊⍴type←GetParam'type'
+                      ⍝ This uses an undocumented function. It won't be documented because it is due to be changed soon - so we don't want
+                      ⍝ to be bound by any published behaviour ;)
+                      ⍝ So THIS documentation is purely informal and only describes CURRENT behaviour:
+                      ⍝ <type>     is one of 'ActiveXControl' 'InProcessServer' 'Library' 'NativeExe' 'OutOfProcessServer' 'StandaloneNativeExe'
+                      ⍝ <flags>    is the sum of zero or more of the following:
+                      ⍝
+                      ⍝
+                      ⍝
+                      ⍝
+                      ⍝ <resource> is a filename the contents of which will be inserted as a resource in the bound file (used by ASP.NET)
+                      ⍝ <icon>     is the name of an icon file, the contents of which are used as the main icon for the bound file
+                      ⍝ <cmdline>  is the command line that is bound in the find and passed to dyalog.dll when the dll is started
+                      ⍝ <details>  is a 2 column matrix of character vectors which allow the APL programmer to add an RT_VERSION resource to the executable.
+                      ⍝            This allows the program to populate the Properties the "Details" tab in the Properties dialog which can be opened by right clicking
+                      ⍝            on an executable in Windows Explorer. The first column is the Property, the second the Value. Note that the properties are not
+                      ⍝            limited to those displayed in the dialog, nor are any of the names or values validated. Note also that the name of the property
+                      ⍝            that appears in the dialog is not necessarily the name that the program must use ..
+                      ⍝            search for "string-name" in https://msdn.microsoft.com/en-us/library/windows/desktop/aa381058(v=vs.85).aspx for more details for executables.
+                      ⍝            For .NET assemblies, look at https://msdn.microsoft.com/en-us/library/system.reflection(v=vs.110).aspx;
+                      ⍝            any of the classes listed which has a constructor which takes a single string value as its argument should be definable.
+                      det←⊃,/':'Split¨';'Split GetParam'details'
+                      det←(⌽2,0.5×⍴det)⍴det
+                      pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(GetParam'icon')(GetParam'cmdline')(det)
+                      command←'2 ⎕NQ ',∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨¯1↓pars
+                      command←command,' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
+                      2 #.⎕NQ pars ⍝*** this is not a problem IF the ⎕NQed keypresses execute successfully! ***
+                  :Else
+                      :If save≡1
+                          save←wsid
+                      :EndIf
+                      command←')SAVE ',save
+                      0 #.⎕SAVE save ⍝*** this is not a problem IF the ⎕NQed keypresses execute successfully! ***
+                  :EndIf
+                  :Trap DEBUG↓0  ⍝ paranoid, but want to avoid any bugs here to trigger the save again...
+                      :If qNEXISTS save←wsid{''≡3⊃qNPARTS ⍺:⍺,⍵ ⋄ ⍺}'.dws'
+                          tmp←⍕DEBUG{(~⍺)/~⍺::'???' ⋄ (ListFiles ⍵)[1;2]}save
+                          Log'Saved as ',save,' (',tmp,' bytes)'
+                      :EndIf
+                  :EndTrap
+                  command←''
+              :Case 11   ⍝ DOMAIN ERROR
+                  :If 0<102⌶#
+                      Log'Problem creating ',wsid,':',,⊃⎕DM
+                      Log'There might still be references from "somewhere in ⎕SE" to "something in #".'
+                      Log'Please contact support@dyalog.com to discuss & resolve this.'
+                  :Else
+                      Log'Problem creating ',wsid,':',,(↑⎕DM),⎕UCS 13
+                  :EndIf
+                  :If halt ⋄ (⎕LC[1]+2)⎕STOP 1⊃⎕SI
+                      ⎕←'Function halted.'  
+                      ⍝ stop here
+                  :EndIf
+              :Else
+                  Log'Problem creating ',wsid,':',,(↑⎕DM),⎕UCS 13
+              :EndTrap
+              :If 0<⍴command
+                  :If qNEXISTS wsid,'.dws'
+                  :AndIf ~'.exe'≡3⊃qNPARTS wsid
+                      qNDELETE wsid,'.dws'  ⍝ avoid prompts during )SAVE
+                  :EndIf
+                  {sink←2 ⎕NQ'⎕SE' 'keypress'⍵}¨command,⊂'ER'
+                  Log'Enqueued keypresses to automatically save after UCMD has completed'
+              :EndIf
+              :If ~0∊⍴rfs      ⍝ and created some refs
+                  :For (nam str) :In ↓rfs   ⍝ then restore them...
+                      ⍎nam,'←',str
+                  :EndFor
+              :EndIf
+          :EndFor
+      :Else
+          LogError'DBuild found errors during process, workspace was not saved!'
+          n←1  ⍝ need error-count
+      :EndIf
+      ⍝:EndIf
+ ⍝     :endif
+     endSave:
+      :If quiet∧0=tally LoggedErrors
           r←0 0⍴0
       :Else
           r←'DyalogBuild: ',(⍕⍴lines),' lines processed in ',(1⍕0.001×⎕AI[3]-start),' seconds.'
@@ -1600,7 +1784,7 @@
           logfile←∊(2↑qNPARTS file),'.log'
           qNDELETE logfile
           :If 2=⎕NC'LoggedMessages'
-          :AndIf 0<tally LoggedMessages
+          :AndIf ~0∊⍴LoggedMessages
               (∊LoggedMessages,¨⊂NL)Put logfile
           :EndIf
           ⍝⎕OFF 13×~0∊⍴,LoggedErrors  ⍝ requires DyaVers ≥ 14.0
@@ -1663,8 +1847,9 @@
       :AndIf timestamp=1
           f←(⍕3↓⎕TS),' ',f
       :EndIf
-      msg←(f,(0<tally f)/': ')∘,¨eis msg
+      msg←(f,(~0∊⍴f)/': ')∘,¨eis msg
       :If verbose
+      :AndIf ~quiet
           ⎕←msg
       :EndIf
       msg←eis msg
@@ -1673,7 +1858,6 @@
     ∇
 
     ∇ {pre}Log msg
-      →quiet⍴0
       :If 0=⎕NC'pre'
       :OrIf pre=1
           msg←' ',(LineNo i),' ',msg
@@ -1681,7 +1865,10 @@
       :If 0=⎕NC'LoggedMessages'
           LoggedMessages←''
       :EndIf  ⍝ may happen during Clean...
-      LoggedMessages,←⊂⎕←,msg
+      LoggedMessages,←⊂msg
+      :If ~quiet
+          ⎕←,msg
+      :EndIf
     ∇
 
     ∇ dm Signal en
@@ -1693,6 +1880,9 @@
      ⍝ subroutine of Build: uses globals i and file
       r←'***** ERROR ***** ',msg
       Log r
+      :If quiet
+          ⎕←msg
+      :EndIf
       LoggedErrors,←⊂r
     ∇
 
@@ -1701,11 +1891,16 @@
     :Section UCMD
 
     ∇ r←List
+      Init   ⍝ make sure _Version is available...
       r←⎕NS¨3⍴⊂''
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest' 'GetTools4CITA'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory' 'Load tools to run CITA-tests'
-      r.Parse←'1S -production -quiet -halt -save=0 1 -off=0 1 -clear[=] -testclassic' '999s -clear[=] -tests= -testlog= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init -off' ''
+      :If 14>1⊃_Version
+          r.Parse←'1S -production -quiet -halt -save[∊]01 -off=0 1 -clear[=] -testclassic' '1 -clear[=] -tests= -testlog= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init -off' ''
+      :Else
+          r.Parse←'1S -production -quiet -halt -save[∊]01 -off=0 1 -clear[=] -testclassic' '999s -clear[=] -tests= -testlog= -filter= -setup= -teardown= -suite= -verbose -quiet -halt -trace -ts -timeout= -repeat= -order= -init -off' ''
+      :EndIf
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
@@ -1847,43 +2042,51 @@
         ∇
 
         ∇ R←GetCITA_Log
-          :If 0=≢R←'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
+          :If 4=⍴R←'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
         ⍝   ⎕←2 ⎕NQ'.' 'GetCommandLine'   ⍝ spit out commandline into the session - maybe it help diagnosing the problem...
               'Found no CITA_Log in Environment - this dws is supposed to be called from CITA which should have passed the right commandline'⎕SIGNAL 11
           :EndIf
         ∇
 
-        ∇ {msg}_LogStatus status;file
+        ∇ {file}←{msg}_LogStatus status;file;⎕ML
 ⍝ A step (setup|test|teardown) is finished, report its status to the engine.
 ⍝ msg allows inject of a message into the file, otherwise an empty file will be created.
 ⍝ options:
-⍝ fail  | ok
-⍝ err   | success
-⍝ no    | yes
-⍝ 0     | 1
+⍝ fail  | ok       | error     <------ these are the extensions of the status file
+⍝ no    | yes      |           {for ⍵
+⍝       | success  |           {alternative values
+⍝ 0     | 1        |¯1         numeric codes for ⍵
+⍝ bonus option: any other text passed as status will be used as file extension...
+          ⎕ML←1
           :If 0=⎕NC'msg' ⋄ msg←'' ⋄ :EndIf
           file←∊2↑qNPARTS GetCITA_Log
           :If isChar status  ⍝ decode status from character-string
-              :If ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'failure' 'error' 'no'
-                  status←0
+            ⍝ translate known status into "standardized" extensions (that have a certain meaning in CITA)
+              :If ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'failure' 'no'
+                  status←'fail'
               :ElseIf ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'success' 'ok' 'yes'
-                  status←1
-              :Else
+                  status←'ok'
+              :ElseIf ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨⊂'error'
+                  status←'err'
+              :Else  ⍝ otherwise just use the value given...
               :EndIf
           :Else
-              status←1∊status
+              status←status×status∊¯1 1
+              status←(2+status)⊃'err' 'fail' 'ok'
           :EndIf
-          status←(1+status)⊃'err' 'ok'
     ⍝ uses qNPUT (which is brought in with GetToolsForCITA to write a file on all APL-Versions)
     ⍝ we're intentionally not passing ⍵[2]as 1 to force overwrite - because this is supposed to be called once only!
     ⍝ So if it crashes...that is well deserved...
-          msg qNPUT file,'.',status
-          ⎕OFF
+          file←file,'.',status
+          msg qNPUT file
+          ⍝⎕←'Saved msg "',(,msg),'" into status file "',file,'"'
+          ⍝ ⎕OFF ⍝ don't off - in CITA we need to catch the session log before ⎕OFFing...
         ∇
 
-⍝ Define Success'blablabla' and Failure'blabla' as shortcuts to 'blabla'_LogStatus 1|0
+⍝ Define Success'blablabla' and Failure'blabla' and Error'blasbla'as shortcuts to 'blabla'_LogStatus 1|0|¯1
         Success←_LogStatus∘1
         Failure←_LogStatus∘0
+        Error←_LogStatus∘¯1
 
     :endnamespace
 

@@ -1,0 +1,26 @@
+﻿ R←secsTimeout sub_RunAPLProcess arg;apl
+⍝ arg = APLProcess argument(s)
+⍝ R=¯1: timeout
+⍝ other values: returncode of APLProcess (Windows only)
+ :If 0=⎕NC'APLProcess'
+     ⎕SE.SALT.Load ##.TESTSOURCE,'APLProcess.aplc -target=#'
+ :EndIf
+ exited←¯1
+ ai3←⎕AI[3] ⋄ proc←⎕NEW #.APLProcess arg
+ :While ~proc.IsRunning proc.Proc.Id ⋄ ai3←⎕AI[3] ⋄ :EndWhile   ⍝ wait until process has started
+ :Repeat
+     ⎕DL 1⌊secsTimeout×1000  ⍝ delay one second by default, but allow smaller (if someone challenges our timeouts...)
+ :Until (ai31←⎕AI[3])≥⌊ai3+secsTimeout×1000
+ :OrIf exited←proc.HasExited
+
+ :If 0=⎕NC'exited'
+ :OrIf exited∊0 ¯1   ⍝ TIMEOUT
+     log←'Process did not complete within ',(1⍕0.001×⎕AI[3]-ai3),' seconds and was killed (SecondsTimeout=',(⍕specs.secondstimeout),((specs.secondstimeout=Timeout)/' default value'),')'
+     {}proc.Kill
+     R←¯1 ⋄ →End
+ :EndIf
+
+ R←proc.GetExitCode
+
+
+End:

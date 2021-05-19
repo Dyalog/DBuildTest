@@ -1,7 +1,7 @@
 ﻿ r←test_DBuild_3 dummy;ucmd_flags;l
  r←''
  :If 17.1≤##.DyaVersion  ⍝ this test requires v17.1 or better
-
+sort←{⍵[⍋⍵]}
 ⍝ create some fns/vars to test if "-c" really clears them...
      #.⎕CY'dfns'
      #.foo←'goo'
@@ -10,7 +10,7 @@
 ⍝ run build-script (non-prod mode)
      ##.Build ##.TESTSOURCE,'DBuild_3.dyalogbuild -c',ucmd_flags
 
-     :If 'MyNS0' 'MyNS1' 'conga' 'httpcommand'Check l←#.⎕NL-9
+     :If (sort'MyNS0' 'MyNS1' 'conga' 'httpcommand')Check l←sort #.⎕NL-9
          →0 Because'Did not find exactly four namespace in # but got ',⍕l ⋄ :EndIf
      :If 0 0 Check #.MyNS0.(⎕IO ⎕ML)
          →0 Because'New namespace MyNS0 did not have expected ⎕IO/⎕ML (according to defaults) set in script' ⋄ :EndIf

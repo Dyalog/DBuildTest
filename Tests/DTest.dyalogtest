@@ -11,8 +11,9 @@ Test: test_DSL               ⍝ basic tests of the DSL
 Test: test_DBuild_1          ⍝ some features of DBuild
 Test: test_DBuild_2          ⍝ test a build with .aplf, *.csv, .aplo
 Test: test_DBuild_3          ⍝ test if DEFAULTS produces desired ⎕IO, ⎕ML in new namespaces etc.
-Test: test_DBuild_nameclash  ⍝ test nameclashes when importing things
 
 Test: test_ReturnCode        ⍝ testing returncode of DTest 
+
+Test: test_WSFULL            ⍝ how do DTest & DBuild deal with WS FULL?
 
 Teardown: teardown

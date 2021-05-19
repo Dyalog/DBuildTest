@@ -14,3 +14,6 @@ EXEC: #.MyEnvVar←'$DB_EnvVar'
 EXEC: #.Dollar←'$$foo'
 
 PROD: #.ProdFlag←'Production'
+
+
+TARGET: /tmp/foo,save=1

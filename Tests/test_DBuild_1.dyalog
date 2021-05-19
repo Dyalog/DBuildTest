@@ -1,12 +1,16 @@
-﻿ r←test_DBuild_1 dummy;ucmd_flags;pwd;cmd
+﻿ r←test_DBuild_1 dummy;ucmd_flags;pwd;cmd;args
  r←''
  ⍝ put a few things into # to be sure that "-c" clear them!
  #.⎕CY'dfns'
  #.⎕EX'foo' ⋄ #.foo←'goo'
-
+ 
  ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
 ⍝ run build-script (non-prod mode)
- res←##.Build ##.TESTSOURCE,'DBuild_1.dyalogbuild -c',ucmd_flags
+ res←##.Build args←##.TESTSOURCE,'DBuild_1.dyalogbuild -c',ucmd_flags
+
+ :If 0 Check∨/' errors encountered.'⍷∊res
+     →0 Because('DBuild did not succeed but reported: ',res),(⎕UCS 13),']DBuild ',args,' ⍝ to execute it...' ⋄ :EndIf
+
  :If 'MyNS0' 'MyNS1'Check #.⎕NL ¯9
      →0 Because'Did not find exactly two namespaces in # but instead got: ',⍕#.⎕NL ¯9 ⋄ :EndIf
 
@@ -45,3 +49,10 @@
 
  :If 'Production'Check #.ProdFlag
      →0 Because'ProdFlag did not have expected value "Production", but rather "',#.ProdFlag,'"' ⋄ :EndIf
+
+
+res←##.Build args←##.TESTSOURCE,'DBuild_nameclash.dyalogbuild -c',ucmd_flags
+
+ :If 1 Check∨/'3 errors encountered.'⍷∊res
+     →0 Because'DBuild did not complain about 3 nameclashes while executing...',(⎕ucs 13),']DBuild ',args ⋄ :endif
+     
