@@ -1340,7 +1340,7 @@
       res←1,args
     ∇
 
-    :EndSection ────────────────────────────────────────────────────────────────────────────────────
+    :EndSection
 
     :Section BUILD
 
@@ -1664,7 +1664,7 @@
                   Log'WSID set to ',wsid
               :EndIf
               save←⍬⍴99~⍨(99 args.Switch'save'),bld←1,⍨'99'GetNumParam'save'
-              :If save<1= ⊃bld~99
+              :If save<1=⊃bld~99
                   Log'Target not saved because of switch -save=0'
               :EndIf
               :If off=2
@@ -1745,7 +1745,7 @@
                       Log'Problem creating ',wsid,':',,(↑⎕DM),⎕UCS 13
                   :EndIf
                   :If halt ⋄ (⎕LC[1]+2)⎕STOP 1⊃⎕SI
-                      ⎕←'Function halted.'  
+                      ⎕←'Function halted.'
                       ⍝ stop here
                   :EndIf
               :Else
@@ -2032,7 +2032,7 @@
 
         ∇ Write2Log txt;file
       ⍝ needs name of test
-          file←GetCITA_Log
+          file←GetCITA_Log 1
           :If ~qNEXISTS file
               txt qNPUT file
           :Else ⍝ q&d "append":
@@ -2041,10 +2041,17 @@
           :EndIf
         ∇
 
-        ∇ R←GetCITA_Log
+        ∇ R←GetCITA_Log signal;z
+        ⍝ signal: should we ⎕SIGNAL an error if no config file is found? (default=1)
           :If 4=⍴R←'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
         ⍝   ⎕←2 ⎕NQ'.' 'GetCommandLine'   ⍝ spit out commandline into the session - maybe it help diagnosing the problem...
-              'Found no CITA_Log in Environment - this dws is supposed to be called from CITA which should have passed the right commandline'⎕SIGNAL 11
+              :If 2∊z←⎕RSI.⎕NC⊂'CITA_Log'    ⍝ search calling environment for variable CITA_Log
+                  R←((z⍳2)⊃⎕RSI).CITA_Log
+              :Else
+                  :If signal
+                      'Found no CITA_Log in Environment - this dws is supposed to be called from CITA which should have passed the right commandline'⎕SIGNAL 11
+                  :EndIf
+              :EndIf
           :EndIf
         ∇
 
@@ -2059,7 +2066,7 @@
 ⍝ bonus option: any other text passed as status will be used as file extension...
           ⎕ML←1
           :If 0=⎕NC'msg' ⋄ msg←'' ⋄ :EndIf
-          file←∊2↑qNPARTS GetCITA_Log
+          file←∊2↑qNPARTS GetCITA_Log 1
           :If isChar status  ⍝ decode status from character-string
             ⍝ translate known status into "standardized" extensions (that have a certain meaning in CITA)
               :If ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'failure' 'no'
@@ -2092,6 +2099,6 @@
 
 
 
-    :EndSection ────────────────────────────────────────────────────────────────────────────────────
+    :EndSection
 
 :Endnamespace ⍝ DyalogBuild  $Revision$
