@@ -129,7 +129,12 @@
           args ⎕NS'Because' 'Fail' 'Check' 'IsNotElement' 'eis'
       :EndTrap
       ⎕SE._cita.Init
-      R←'Loaded tools into namespace ⎕se._cita'
+      :If ⎕SE._cita.DyaVersion≥15
+          ⎕RL←⍬ 2
+      :EndIf
+      ⎕SE._cita.randomstring←(⎕A,⎕D)[?32⍴36]
+     
+      R←⎕SE._cita.randomstring,'⍝     ───  Loaded tools into namespace ⎕se._cita ─── (WA=',(,'CI15'⎕FMT ⎕WA),' bytes) ───'
     ∇
 
     ∇ {sink}←SetupCompatibilityFns
@@ -158,7 +163,11 @@
           GetFilesystemType←{⊃1 ⎕NINFO ⍵} ⍝ 1=Directory, 2=Regular file  ⍝ CompCheck: ignore
           ListFiles←{⍺←'' ⋄ ⍺ ListPost15 ⍵}
           qNGET←{⎕NGET ⍵ 1}   ⍝ CompCheck: ignore
-          qNPUT←{(⊂⍺)⎕NPUT ⍵}    ⍝ CompCheck: ignore
+          ⍝qNPUT←{(⊂⍺)⎕NPUT ⍵}    ⍝ CompCheck: ignore
+          qNPUT←{
+             ⍝ 0::∘∘∘,⎕←(⎕JSON ⎕DMX),⎕trap←0'S'
+              (eis ⍺)⎕NPUT ⍵
+          }    ⍝ CompCheck: ignore
       :Else
           ListFiles←{⍺←'' ⋄ ⍺ ListPre15 ⍵}
           GetFilesystemType←{2-(ListFiles{(-∨/'\/'=¯1↑⍵)↓⍵}⍵)[1;4]}
@@ -178,6 +187,7 @@
           where←{(,⍵)/,⍳⍴⍵}
       :EndIf
      
+    eis←{1=≡⍵:⊂⍵ ⋄ ⍵}                         ⍝ enclose if simple (can't use left-shoe underbar because of classic compatibility )
       :If 16≤DyaVersion
           qJSONi←qJSONe←⎕JSON                 ⍝ CompCheck: ignore
       :ElseIf 14.1≤DyaVersion
@@ -723,7 +733,6 @@
       R←2⊃⎕VFI{(2>+\⍵='.')/⍵}2⊃Version
     ∇
 
-    eis←{1=≡⍵:⊂⍵ ⋄ ⍵}                                ⍝ enclose if simple (can't use left-shoe underbasr because of classic compatibility )
     Split←{dlb¨1↓¨(1,⍵∊⍺)⊂(⊃⍺),⍵}                       ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
     SplitFirst←{dlb¨1↓¨(1,<\⍵=⍺)⊂⍺,⍵}                ⍝ Split ⍵ on first occurence of ⍺, and remove leading blanks from each segment
     GetParam←{⍺←'' ⋄ (⌊/names⍳eis ⍵)⊃values,⊂⍺}      ⍝ Get value of parameter
@@ -1228,7 +1237,7 @@
     ∇
 
     ∇ z←A IsNotElement B
-      z←~A{(eis ⍺)∊⍵}B
+     z←~A{a←⍺ ⋄ 1<''⍴⍴,a:∧/(⊂a)∊⍵ ⋄ ∧/a∊⍵}B
       :If z
       :AndIf ##.halt
           ⎕←'A IsNotElement B!'
@@ -2045,7 +2054,7 @@
         ⍝ signal: should we ⎕SIGNAL an error if no config file is found? (default=1)
           :If 4=⍴R←'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
         ⍝   ⎕←2 ⎕NQ'.' 'GetCommandLine'   ⍝ spit out commandline into the session - maybe it help diagnosing the problem...
-              :If 2∊z←⎕RSI.⎕NC⊂'CITA_Log'    ⍝ search calling environment for variable CITA_Log
+              :If 2∊z←∊⎕RSI.⎕NC⊂'CITA_Log'    ⍝ search calling environment for variable CITA_Log
                   R←((z⍳2)⊃⎕RSI).CITA_Log
               :Else
                   :If signal
@@ -2064,30 +2073,57 @@
 ⍝       | success  |           {alternative values
 ⍝ 0     | 1        |¯1         numeric codes for ⍵
 ⍝ bonus option: any other text passed as status will be used as file extension...
+⍝
+⍝ logging a status will save the session-log AND ⎕OFF (returncode as given in status[2] OR 31=success, 32=failure, 33=error)
           ⎕ML←1
           :If 0=⎕NC'msg' ⋄ msg←'' ⋄ :EndIf
           file←∊2↑qNPARTS GetCITA_Log 1
+          :If 1<⍴,status
+          :AndIf 0={⎕ML←0 ⋄ ∊⍵}2⊃status
+              (status MYrc)←status
+          :EndIf
           :If isChar status  ⍝ decode status from character-string
             ⍝ translate known status into "standardized" extensions (that have a certain meaning in CITA)
               :If ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'failure' 'no'
-                  status←'fail'
+                  status←'fail' ⋄ rc←32
               :ElseIf ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'success' 'ok' 'yes'
-                  status←'ok'
+                  status←'ok' ⋄ rc←31
               :ElseIf ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨⊂'error'
-                  status←'err'
+                  status←'err' ⋄ rc←33
               :Else  ⍝ otherwise just use the value given...
               :EndIf
           :Else
               status←status×status∊¯1 1
+              rc←(2+status)⊃33 32 31
               status←(2+status)⊃'err' 'fail' 'ok'
+          :EndIf
+          :If 2=⎕NC'MYrc'
+              rc←MYrc
           :EndIf
     ⍝ uses qNPUT (which is brought in with GetToolsForCITA to write a file on all APL-Versions)
     ⍝ we're intentionally not passing ⍵[2]as 1 to force overwrite - because this is supposed to be called once only!
     ⍝ So if it crashes...that is well deserved...
           file←file,'.',status
           msg qNPUT file
-          ⍝⎕←'Saved msg "',(,msg),'" into status file "',file,'"'
-          ⍝ ⎕OFF ⍝ don't off - in CITA we need to catch the session log before ⎕OFFing...
+         
+          :If 2=⎕NC'randomstring'
+          :AndIf 0<⍴randomstring
+              :Trap 0
+                  log←⎕SE ⎕WG'Log'
+                  log←∊log,¨⊂NL
+                  :If 1∊y←randomstring⍷log
+                      log←(y⍳1)↓log
+                      log←((NL⍷log)⍳1)↓log
+                  :EndIf
+                  log qNPUT file,'.sessionlog.txt'
+              :Else
+                  ⎕←'*** Error while attempting to write sessionlog to a file:'
+                  ⎕←⎕DM
+                  off←0
+              :EndTrap
+          :EndIf
+         
+          ⎕OFF rc
         ∇
 
 ⍝ Define Success'blablabla' and Failure'blabla' and Error'blasbla'as shortcuts to 'blabla'_LogStatus 1|0|¯1
