@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.45
+﻿:Namespace DyalogBuild ⍝ V 1.51
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -60,6 +60,7 @@
 ⍝ 2021 04 22 MBaas: v1.45: improved loading of code (from .dyalog + .apln,.aplc,.aplf,.apli,.aplo);various fixes & cleanups
 ⍝ 2021 04 30 MBaas: v1.46 has a better workaround for saving (no need to go into the session);-save=0 can overwrite the option set with TARGET
 ⍝ 2021 05 19 MBaas: v1.50 special handling of WS FULL in DTest and DBuild; allows specifying TARGET with .exe or .dll extension;handle multiple TARGET-Entries per file
+⍝ 2021 06 02 MBaas: v1.51: v1.50 did not report ALL errors
 
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being ⎕se even after Edit > Reformat.
@@ -1142,7 +1143,8 @@
                           :EndTrap
      
                       :EndIf
-                      LogError msg
+                      ⍝ LogError msg
+                      f LogTest msg
                   :EndTrap
      
               :EndFor
@@ -1172,17 +1174,17 @@
               :EndIf
      
      END:
-              :If 0∊⍴LoggedErrors
+              :If 0∊⍴LOGS,LoggedErrors
                   r,←(quiet≡null)/⊂'   ',(((setup≢null)∧1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' passed in ',(1⍕0.001×⎕AI[3]-start),'s'
                   1 qNDELETE TESTSOURCE,'*.rng.txt' ⍝ delete memorized random-numbers when tests succeeded
               :Else
-                  r,←(⊂'Errors encountered',(setup≢null)/' with setup "',setup,'":'),'   '∘,¨LOGS
+                  r,←(⊂'Errors encountered',(setup≢null)/' with setup "',setup,'":'),'   '∘,¨LOGS,LoggedErrors                  
                   r,←⊂' Time spent: ',(1⍕0.001×⎕AI[3]-start),'s'
               :EndIf
           :EndFor ⍝ Setup
       :EndFor ⍝ repeat
       r,←(((1<tally setups)∨1<tally fns)∧quiet≡null)/⊂' Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
-      :If ~0∊⍴LOGS
+      :If ~0∊⍴LoggedErrors,LOGS
       :AndIf ~0∊⍴order
           r,←⊂'-order="',(⍕order),'"'
       :EndIf

@@ -2,7 +2,7 @@
 ⍝ arg = APLProcess argument(s)
 ⍝ R=¯1: timeout
 ⍝ other values: returncode of APLProcess (Windows only)
- :If 0=⎕NC'APLProcess'
+ :If 0=#.⎕NC'APLProcess'
      ⎕SE.SALT.Load ##.TESTSOURCE,'APLProcess.aplc -target=#'
  :EndIf
  exited←¯1

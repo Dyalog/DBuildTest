@@ -25,7 +25,7 @@
     eis←{2>|≡⍵:,⊂⍵ ⋄ ⍵} ⍝ enclose if simple
 
     ∇ r←IsWin
-      :Access public shared
+      :Access public ⍝shared
       r←'Win'≡Platform
     ∇
 
