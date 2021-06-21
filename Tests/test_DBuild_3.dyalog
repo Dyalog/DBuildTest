@@ -4,6 +4,7 @@
 sort←{⍵[⍋⍵]}
 ⍝ create some fns/vars to test if "-c" really clears them...
      #.⎕CY'dfns'
+     ⎕ex'#.foo'
      #.foo←'goo'
 
      ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
