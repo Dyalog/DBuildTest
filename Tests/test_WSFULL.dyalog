@@ -1,4 +1,4 @@
- r←test_WSFULL dummy;myapl;res;ret
+﻿ r←test_WSFULL dummy;myapl;res;ret
 ⍝ test that DBuild and DTest behave as expected when dealing with a WS FULL in a test/build
 ⍝ We test this by launching another interpreter to run the test
 ⍝ and we then examine the log-file.
@@ -9,7 +9,7 @@
  :AndIf 15<##.DyaVersion  ⍝ APLProcess was introduced with v16
      logfile←##.TESTSOURCE,'testWSFULL'
 
-     ret←300 sub_RunAPLProcess(##.TESTSOURCE,'RunCITA')('RunUCMD="DTest ',##.TESTSOURCE,'test_wsfull1.dyalog -off',(##.halt/' -halt'),(##.verbose/' -verbose'),' -testlog=',logfile,'"  CITA_Log="',logfile,'"')
+     ret←300 sub_RunAPLProcess(##.TESTSOURCE,'RunCITA')('RunUCMD="DTest ',##.TESTSOURCE,'test_wsfull1.dyalog -off',(##.verbose/' -verbose'),' -testlog=',logfile,'"  CITA_Log="',logfile,'"')
      :If 21 Check ret
          →0 Because'Failing test did not end with code 21 (returned ',(⍕ret),')' ⋄ :EndIf
 
@@ -24,13 +24,14 @@
 
      logfile←##.TESTSOURCE,'DBuildWSFULL'
      ret←300 sub_RunAPLProcess(##.TESTSOURCE,'RunCITA')('RunUCMD="DBuild ',##.TESTSOURCE,'DBuild_WSFULL.dyalogbuild -off=1" CITA_Log="',logfile,'"')
-     :If 0 Check ret
-         →0 Because'DBuilded ended with non-zero returncode.' ⋄ :EndIf
-     
+
+     :If ##.isWin
+     :AndIf 33 Check ret
+         →0 Because'DBuild WSFULL did not end with returncode 33 (indicating WS FULL).' ⋄ :EndIf
+
      :If 1 Check ⎕NEXISTS ##.TESTSOURCE,'DBuild_WSFULL.log'  ⍝ was a log-file written?
          →0 Because'Failing build not produce log-file.' ⋄ :EndIf
 
      1 ⎕NDELETE'testWSFULL.wsfull'
      1 ⎕NDELETE'DBuild_WSFULL.log'
  :EndIf
-

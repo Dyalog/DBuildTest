@@ -1,0 +1,63 @@
+ R←{opts}Run ref;s;z;minVers;critical;c;l;sf;V;f;features;v;v∆;NL;i;Features∆;nq;uncmnt
+ ⍝ opts: select tests,
+ ⍝ 1: will it run on Classic?
+ ⍝ and/or: minimum-version for it to run:
+ ⍝ 12.1, 13, 13.1, 14. 14.1, 15, 16, 17, 18
+ ⍝ ref points to a namespace or is a filename
+ ⍝ use "⍝ CompCheck: ignore" to exclude lines with that commet
+ NL←⎕UCS 13
+ ⎕ML←⎕IO←R←1  ⍝ result R=1: all is well
+ V←⍳0  ⍝ remember the versions we saw being used (and their features)
+
+ features←↓1↓Features∆←Features ⍝ just the data of this table (no headers)
+ Features∆[;2]←{('\\h\*'⎕R'')⍵}¨Features∆[;2]
+ Features∆[;2]←{('\[\^\\w\]'⎕R'')⍵}¨Features∆[;2]
+ f←(≢features)⍴0
+ :If 9=⎕NC'ref'
+     s←⎕SRC ref
+ :ElseIf ⎕NEXISTS ref
+     s←⊃⎕NGET ref
+ :Else
+     ⎕←'What''s in ref? Expecting ns or filespec'
+     ∘∘∘
+ :EndIf
+
+ :If 1∊opts
+     sf←∊s
+     z←~(⎕UCS sf)∊avuClassic
+     :If ∨/z
+         ⎕←(⍕≢∪z/sf),' Non-classic characters found in ',(⍕ref),': ',∪z/sf
+         R←0
+     :EndIf
+ :EndIf
+
+ :If 0<minVers←⊃((opts>11)/opts),0
+     s←('^.*⍝ CompCheck: ignore.*$'⎕R'')s
+     s←{1↓¨(⍵=⎕UCS 10)⊂⍵}(⎕UCS 10),s  ⍝ nested lines
+     nq←{0=≠\⍵=''''}¨s                ⍝ not quoted (leaves one quote, but that is no problem for this purpose)
+     uncmnt←nq{~(∨\⍺∧⍵='⍝')}¨s        ⍝ not commented
+     s←∊((nq∧uncmnt)/¨s),¨⎕UCS 10     ⍝ back into simple string
+
+     :For i :In ⍸(1↓Features∆)[;1]>minVers
+         c←i⊃features
+         :If 0<≢l←(('(?:\W|^)',(2⊃c),'(?:\W|$)')⎕S'%'⍠'Mode' 'L')s
+             R←0
+             ⎕←NL,'Found uses of ',(2⊃Features∆[1+i;]),' (introduced with V',(⍕1⊃c),') in these statements:'
+             :If 1=3⊃c
+                 ⎕←'NB: this applies to monadic syntax only, which unfortunately we can''t reliably detect!'
+             :EndIf
+             ⎕←↑l
+             V,←1⊃c
+             f[features⍳⊂c]←≢l
+         :EndIf
+     :EndFor
+ :EndIf
+
+
+ :If 0<≢V
+     v∆←∪1↓Features∆[;1]
+     ⎕←NL,'*** Features∆ of later versions found in ',(⍕ref),':'
+     :For v :In v∆∩V
+         ⎕←(,'F4.1,< : >'⎕FMT v),((f>0)∧(1↓Features∆[;1])=v)/1↓Features∆[;2]
+     :EndFor
+ :EndIf
