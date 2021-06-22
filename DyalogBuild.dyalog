@@ -1203,7 +1203,6 @@
                   logFile←(∊2↑qNPARTS logFile),'.wsfull'
               :EndIf
               qNDELETE logFile
-              ⎕←'logFile=',logFile
               (⊂∊(LOGS,¨⊂NL),LoggedErrors,¨⊂NL)qNPUT logFile
               ⎕OFF 21
           :EndIf
@@ -1356,7 +1355,7 @@
 
     :Section BUILD
 
-    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;LoggedErrors;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;logfile;LoggedMessages;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d
+    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;LoggedErrors;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;LOGS;logfile;LoggedMessages;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d;order
     ⍝ Process a .dyalogbuild file
       Init
       oFFIssue←0    ⍝ set to 1 to repo MB's Keypress issue...
@@ -1903,7 +1902,7 @@
       :EndIf
       r←decor,' ERROR ',decor,' ',msg
       Log r
-      :If quiet
+      :If quiet    ⍝  make sure that errors are shown!
           ⎕←msg
       :EndIf
       LoggedErrors,←⊂r
@@ -2092,7 +2091,6 @@
           ⎕ML←1
           :If 0=⎕NC'msg' ⋄ msg←'' ⋄ :EndIf
           file←∊2↑qNPARTS GetCITA_Log 1
-          ⎕←'status=',status
           :If 1<⍴,status
           :AndIf 0={⎕ML←0 ⋄ ∊⍵}2⊃status
               (status MYrc)←status
@@ -2108,12 +2106,10 @@
               :Else  ⍝ otherwise just use the value given...
               :EndIf
           :Else
-          ⎕←'status=',status
 
               status←status×status∊¯1 1
               rc←(2+status)⊃33 32 31
               status←(2+status)⊃'err' 'fail' 'ok'
-          ⎕←'status=',status
 
           :EndIf
           :If 2=⎕NC'MYrc'

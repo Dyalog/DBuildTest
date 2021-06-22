@@ -7,13 +7,13 @@
 
      ##.Build ##.TESTSOURCE,'DBuild_4.dyalogbuild -save=1 -p -c',ucmd_flags
 
-     :If ~##.qNEXISTS'/tmp/DBuild_Test_4.dws'
-         →0 Because'DBuild 4.dyalogbuild did not create /tmp/DBuild_Test_4.dws'
+     :If ~##.qNEXISTS'/tmp/DBuild_TEST_4.dws'
+         →0 Because'DBuild 4.dyalogbuild did not create /tmp/DBuild_TEST_4.dws'
      :EndIf
 
      :If ##.isWin
          :If ~##.qNEXISTS'/tmp/DBuild_TEST_4.exe'
-             →0 Because'DBuild 4.dyalogbuild did not create /tmp/DBuild_Test_4.exe'
+             →0 Because'DBuild 4.dyalogbuild did not create /tmp/DBuild_TEST_4.exe'
          :EndIf
      :EndIf
  :EndIf

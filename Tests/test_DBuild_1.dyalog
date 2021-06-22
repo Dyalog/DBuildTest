@@ -6,7 +6,7 @@
 
  ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
 ⍝ run build-script (non-prod mode)
- res←##.Build ⎕←args←##.TESTSOURCE,'DBuild_1.dyalogbuild -c',ucmd_flags
+ res←##.Build args←##.TESTSOURCE,'DBuild_1.dyalogbuild -c',ucmd_flags
 
  :If 0 Check∨/' errors encountered.'⍷∊res
      →0 Because('DBuild did not succeed but reported: ',res),(⎕UCS 13),']DBuild ',args,' ⍝ to execute it...' ⋄ :EndIf
@@ -50,6 +50,6 @@
  :If 'Production'Check #.ProdFlag
      →0 Because'ProdFlag did not have expected value "Production", but rather "',#.ProdFlag,'"' ⋄ :EndIf
 
- res←##.Build ⎕←args←##.TESTSOURCE,'DBuild_nameclash.dyalogbuild -c',ucmd_flags
+ res←##.Build args←##.TESTSOURCE,'DBuild_nameclash.dyalogbuild -c',ucmd_flags
  :If 1 Check∨/'4 errors encountered.'⍷∊res
      →0 Because'DBuild did not fail with 4 errors (3 nameclashes + final msg) while executing...',(⎕UCS 13),']DBuild ',args ⋄ :EndIf
