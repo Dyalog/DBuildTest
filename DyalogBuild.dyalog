@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.52
+﻿:Namespace DyalogBuild ⍝ V 1.53
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -61,7 +61,8 @@
 ⍝ 2021 04 30 MBaas: v1.46 has a better workaround for saving (no need to go into the session);-save=0 can overwrite the option set with TARGET
 ⍝ 2021 05 19 MBaas: v1.50 special handling of WS FULL in DTest and DBuild; allows specifying TARGET with .exe or .dll extension;handle multiple TARGET-Entries per file
 ⍝ 2021 06 02 MBaas: v1.51: v1.50 did not report ALL errors
-⍝ 2021 06 24 MBaas: v1.52: minor details 
+⍝ 2021 06 24 MBaas: v1.52: minor details
+⍝ 2021 07 26 MBaas: v1.53: fixed VALUE ERROR in ]DBuild 
 
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being ⎕se even after Edit > Reformat.
@@ -162,7 +163,7 @@
       :EndIf
      
       :If 15≤DyaVersion
-          GetFilesystemType←{⊃1 ⎕NINFO ⍵} ⍝ 1=Directory, 2=Regular file  ⍝ CompCheck: ignore
+          GetFilesystemType←{⊃1⎕NINFO ⍵} ⍝ 1=Directory, 2=Regular file  ⍝ CompCheck: ignore
           ListFiles←{⍺←'' ⋄ ⍺ ListPost15 ⍵}
           qNGET←{⎕NGET ⍵ 1}   ⍝ CompCheck: ignore
           ⍝qNPUT←{(⊂⍺)⎕NPUT ⍵}    ⍝ CompCheck: ignore
@@ -191,7 +192,7 @@
      
       eis←{1=≡⍵:⊂⍵ ⋄ ⍵}                         ⍝ enclose if simple (can't use left-shoe underbar because of classic compatibility )
       :If 16≤DyaVersion
-          qJSONi←qJSONe←⎕JSON                  ⍝ CompCheck: ignore
+          qJSONi←qJSONe←⎕JSON                      ⍝ CompCheck: ignore
       :ElseIf 14.1≤DyaVersion
           qJSONi←{0(7159⌶)⍵} ⍝ CompCheck: ignore
           qJSONe←{(7160⌶)⍵} ⍝ CompCheck: ignore
@@ -199,8 +200,8 @@
           qJSONi←qJSONe←{'This functionality not available in versions < 14.1'⎕SIGNAL 11}
       :EndIf
       :If 18≤DyaVersion
-          lc←¯1∘⎕C                                     ⍝ lower case ⍝ CompCheck: ignore
-          uc←1∘⎕C                                      ⍝ upper case ⍝ CompCheck: ignore
+          lc←¯1∘⎕C                                         ⍝ lower case ⍝ CompCheck: ignore
+          uc←1∘⎕C                                          ⍝ upper case ⍝ CompCheck: ignore
       :ElseIf 15≤DyaVersion
           lc←819⌶                                     ⍝ lower case ⍝ CompCheck: ignore
           uc←1∘(819⌶)                                 ⍝ upper case ⍝ CompCheck: ignore
@@ -219,7 +220,7 @@
           normalize←0
       :EndIf
       :If 15≤DyaVersion
-          r←normalize ⎕NPARTS filename ⍝ CompCheck: ignore
+          r←normalize⎕NPARTS filename ⍝ CompCheck: ignore
       :Else
           filesep←(~isWin)↓'\/'
           mask←⌽∨\⌽filename∊filesep
@@ -300,7 +301,7 @@
           :If 0=⎕NC'larg'
               ⎕MKDIR path ⍝ CompCheck: ignore
           :Else
-              larg ⎕MKDIR path ⍝ CompCheck: ignore
+              larg⎕MKDIR path ⍝ CompCheck: ignore
           :EndIf
       :EndIf
     ∇
@@ -313,7 +314,7 @@
               R←0<1↑⍴ListFiles FileOrDir
           :EndTrap
       :ElseIf ∨/'*?'∊FileOrDir
-          R←(⎕NEXISTS ⎕OPT'Wildcard' 1)FileOrDir ⍝ CompCheck: ignore
+          R←(⎕NEXISTS ⎕OPT  'Wildcard' 1)FileOrDir ⍝ CompCheck: ignore
       :Else
           R←⎕NEXISTS FileOrDir ⍝ CompCheck: ignore
       :EndIf
@@ -361,9 +362,9 @@
               :EndIf
           :EndSelect
       :ElseIf wild
-          1(⎕NDELETE ⎕OPT 1)name   ⍝ CompCheck: ignore
+          1(⎕NDELETE ⎕OPT  1)name   ⍝ CompCheck: ignore
       :Else
-          1 ⎕NDELETE name   ⍝ CompCheck: ignore
+          1⎕NDELETE name   ⍝ CompCheck: ignore
       :EndIf
     ∇
 
@@ -376,7 +377,7 @@
       :Else
           path,←(~path[tally path]∊'\/')/'/'
       :EndIf
-      r←⍉↑0 2 9 1(⎕NINFO ⎕OPT 1)(path,pattern) ⍝ CompCheck: ignore
+      r←⍉↑0 2 9 1(⎕NINFO ⎕OPT  1)(path,pattern) ⍝ CompCheck: ignore
       r[;4]←r[;4]=1
     ∇
 
@@ -589,7 +590,7 @@
                           :If DyaVersion<13.1
                               res,←⍕⎕DM,¨⊂NL
                           :Else
-                              res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')   ⍝ CompCheck: ignore
+                              res,←⎕DMX .(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')   ⍝ CompCheck: ignore
                           :EndIf
                       :EndTrap
                       res ⎕SIGNAL('***'≡3↑⍕res)/11
@@ -602,7 +603,7 @@
                               {}⎕SE.Link.Import(⍎target)(fl)
                           :Else
                               res←'*** Error executing Link.Import (',target,') ',fl,':'
-                              res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')      ⍝ CompCheck: ignore
+                              res,←⎕DMX .(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')      ⍝ CompCheck: ignore
                               res ⎕SIGNAL 11
                           :EndTrap
                           names,←⊂{2 6::{2 6::⍵ ⋄ ⎕SE.Link.StripCaseCode 2⊃⎕NPARTS ⍵}⍵ ⋄ ⎕SE.Link.U.StripCaseCodePart ⍵}2⊃⎕NPARTS fl     ⍝ CompCheck: ignore
@@ -879,6 +880,7 @@
           r←'An argument is required - see ]dtest -? for more information.' ⋄ →0
       :ElseIf 9=#.⎕NC source←1⊃args.Arguments ⍝ It's a namespace
           ns←#⍎source
+          {}(⍕ns.##)⎕NS'verbose' 'filter' 'halt' 'quiet' 'trace' 'timestamp' 'order' 'off'
           TESTSOURCE←⊃1 qNPARTS''
           base←source
       :Else                               ⍝ Not a namespace
@@ -913,7 +915,7 @@
                           :If DyaVersion<13.1
                               LogError msg,∊⎕DM,¨⊂NL
                           :Else
-                              LogError msg,⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
+                              LogError msg,⎕DMX .(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
                           :EndIf
                           →endPrep1
                       :EndTrap
@@ -933,7 +935,7 @@
                           :If DyaVersion<13.1
                               LogError msg,∊⍕⎕DM,¨⊂NL
                           :Else
-                              LogError msg,⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
+                              LogError msg,⎕DMX .(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
                           :EndIf
                       :EndTrap
                   :EndFor
@@ -1020,7 +1022,7 @@
               fns←{w←⍵ ⋄ ((w='?')/w)←'.' ⋄ ((w='*')/w)←⊂'.*' ⋄ ∊⍵}¨fns   ⍝ replace bare * wildcard with .* to and ? with . make it valid regex
               fns←1⌽¨'$^'∘,¨fns ⍝ note ^ is shift-6, not the APL function ∧
               t←1
-              :If 0∊⍴matches←↑fns ⎕S{⍵.(Block PatternNum)}ns.⎕NL ¯3   ⍝ CompCheck: ignore
+              :If 0∊⍴matches←↑fns⎕S {⍵.(Block PatternNum)}ns.⎕NL ¯3   ⍝ CompCheck: ignore
                   LogError'*** function(s) not found: ',,⍕t/orig
                   fns←⍬
               :Else
@@ -1094,7 +1096,7 @@
                           :If DyaVersion<13.1
                               msg,←NL,⍕⎕DM,¨⊂NL
                           :Else
-                              msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
+                              msg,←⎕DMX .(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
                           :EndIf
                           LogError msg
                           setupok←0
@@ -1127,10 +1129,10 @@
                       :If DyaVersion<13.1
                           msg,←,⍕⎕DM,¨⊂NL
                       :Else
-                          msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂''),NL     ⍝ CompCheck: ignore
+                          msg,←⎕DMX .(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂''),NL     ⍝ CompCheck: ignore
                           msg,←,⍕⎕DM,¨⊂NL
                           :If 16≤DyaVersion
-                              msg,←⎕JSON ⎕DMX    ⍝ CompCheck: ignore
+                              msg,←⎕JSON ⎕DMX        ⍝ CompCheck: ignore
                           :EndIf
                       :EndIf
                       :If WSFULL←en=1   ⍝ special handling for WS FULL
@@ -1163,9 +1165,9 @@
                           :If DyaVersion<13.1
                               msg,←,⍕⎕DM,¨⊂NL
                           :Else
-                              msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')   ⍝ CompCheck: ignore
+                              msg,←⎕DMX .(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')   ⍝ CompCheck: ignore
                               :If DyaVersion<16
-                                  msg,←⎕JSON ⎕DMX                                                                       ⍝ CompCheck: ignore
+                                  msg,←⎕JSON ⎕DMX                                                                           ⍝ CompCheck: ignore
                               :EndIf
                           :EndIf
                           LogError msg
@@ -1489,9 +1491,9 @@
                       :If DyaVersion<13
                           LogError'Error establishing defaults in namespace ',target,': ',⊃⎕DM
                       :ElseIf DyaVersion<16
-                          LogError'Error establishing defaults in namespace ',target,': ',⎕DMX.(DM,': ',Message)    ⍝ CompCheck: ignore
+                          LogError'Error establishing defaults in namespace ',target,': ',⎕DMX .(DM,': ',Message)    ⍝ CompCheck: ignore
                       :Else
-                          LogError'Error establishing defaults in namespace ',target,': ',⎕JSON ⎕DMX                 ⍝ CompCheck: ignore
+                          LogError'Error establishing defaults in namespace ',target,': ',⎕JSON ⎕DMX                     ⍝ CompCheck: ignore
                       :EndIf
                   :EndTrap
               :EndIf
@@ -1509,7 +1511,7 @@
                       :If DyaVersion<13.1
                           LogError⊃⎕DM
                       :Else
-                          LogError ⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
+                          LogError⎕DMX .(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
                       :EndIf
                   :EndTrap
                   :Continue
@@ -1521,11 +1523,11 @@
               :If DyaVersion<13
                   tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵[1,⍴⍵]≡'[]':⍵ ⋄ ⍺,⍵}source
               :Else
-                  tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵,⍨⍺/⍨0∊⍴('^\[.*\]'⎕S 3)⍵}source   ⍝ CompCheck: ignore
+                  tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵,⍨⍺/⍨0∊⍴('^\[.*\]'⎕S  3)⍵}source   ⍝ CompCheck: ignore
               :EndIf
               :If cmd≡'lib'   ⍝ find path of library...(only if >17, so we'll be using ]LINK which needs path)
                   :If 17<DyaVersion
-                      lib←⊃0(⎕NINFO ⎕OPT('Wildcard' 1)('Recurse' 1))((2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'),'/Library/',source,'.dyalog')  ⍝ CompCheck: ignore
+                      lib←⊃0(⎕NINFO ⎕OPT ('Wildcard' 1)('Recurse' 1))((2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'),'/Library/',source,'.dyalog')  ⍝ CompCheck: ignore
                   :Else
                       lib←source
                   :EndIf
@@ -1547,7 +1549,7 @@
                   :If DyaVersion<13.1
                       LogError⊃⎕DM
                   :Else
-                      LogError ⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
+                      LogError⎕DMX .(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
                   :EndIf
                   :Continue
               :EndTrap
@@ -1567,7 +1569,7 @@
                               eol←⎕UCS 2⊃⎕VFI j⊃chars
                           :EndIf
                       :Else
-                          eol←⎕UCS⍎¨(chars,nums)⎕S(,⍨nums)rtack lc'lf'GetParam'seteol'   ⍝ CompCheck: ignore
+                          eol←⎕UCS⍎¨(chars,nums)⎕S (,⍨nums)rtack lc'lf'GetParam'seteol'   ⍝ CompCheck: ignore
                       :EndIf
                   :EndIf
                   tmpExt←3⊃qNPARTS tmpPath
@@ -1690,7 +1692,8 @@
               rfs←0 2⍴''
               ⎕EX¨'⎕SE.'∘,¨'SALTUtils.spc.z' 'SALTUtils.spc.res'
               :For nam :In '⎕SE.'∘,¨'THIS' 'SALTUtils.cs' 'SALTUtils.c.THIS'
-                  :If 326=⎕DR⍎nam
+                  :If 0<⎕NC nam
+                  :AndIf 326=⎕DR⍎nam
                       str←⍕⍎nam
                       :If 1=⍴⍴⍎nam
                           str←',',str
@@ -1769,7 +1772,7 @@
                   :AndIf ~'.exe'≡3⊃qNPARTS wsid
                       qNDELETE wsid,'.dws'  ⍝ avoid prompts during )SAVE
                   :EndIf
-                  :If ##.isWin
+                  :If isWin
                       {sink←2 ⎕NQ ⎕SE'keypress'⍵}¨'  ',command,⊂'ER'
                       Log'Enqueued keypresses to automatically save after UCMD has completed'
                   :Else
@@ -1781,43 +1784,44 @@
                           ⍎nam,'←',str
                       :EndFor
                   :EndIf
-              :EndFor
-          :Else
-              ''LogError'DBuild found errors during process',save/', workspace was not saved!'
-              n←1  ⍝ need error-count
-          :EndIf
+              :EndIf
+          :EndFor
+      :Else
+          ''LogError'DBuild found errors during process',save/', workspace was not saved!'
+          n←1  ⍝ need error-count
+      :EndIf
       ⍝:EndIf
  ⍝     :endif
      endSave:
-          :If quiet∧0=n←tally LoggedErrors
-              r←0 0⍴0
-          :Else
-              r←'DyalogBuild: ',(⍕⍴lines),' lines processed in ',(1⍕0.001×⎕AI[3]-start),' seconds.'
-              r,←(0≠n)/' ',(⍕n),' error',((n>1)/'s'),' encountered.'
-              LoggedMessages,←⊂r
-          :EndIf
+      :If quiet∧0=n←tally LoggedErrors
+          r←0 0⍴0
+      :Else
+          r←'DyalogBuild: ',(⍕⍴lines),' lines processed in ',(1⍕0.001×⎕AI[3]-start),' seconds.'
+          r,←(0≠n)/' ',(⍕n),' error',((n>1)/'s'),' encountered.'
+          LoggedMessages,←⊂r
+      :EndIf
      
-          :If off=1  ⍝ careful: off∊0 1 2!
-              logfile←∊(2↑qNPARTS file),'.log'
-              qNDELETE logfile
-              :If 2=⎕NC'LoggedMessages'
-              :AndIf ~0∊⍴LoggedMessages
-                  (∊LoggedMessages,¨⊂NL)Put logfile
-              :EndIf
-              :If ##.isWin
+      :If off=1  ⍝ careful: off∊0 1 2!
+          logfile←∊(2↑qNPARTS file),'.log'
+          qNDELETE logfile
+          :If 2=⎕NC'LoggedMessages'
+          :AndIf ~0∊⍴LoggedMessages
+              (∊LoggedMessages,¨⊂NL)Put logfile
+          :EndIf
+          :If ##.isWin
                 ⍝ June 2021, m19713: need to leading blanks to avoid an issue with 171c64, 180c32, 180c64, 181c32, 181c64 where ')OFF' would result in "oFF".
                 ⍝ (No simple repro and not a problem on (121c64, 140c64, 141c64, 150c32)
-                  {sink←2 ⎕NQ ⎕SE'keypress'⍵}¨((~oFFIssue)0 '  '),')OFF',⊂'ER'  ⍝ as long as 18008 isn't fixed (and for all older versions) we can't use ⎕OFF but have to ⎕NQ'KeyPress'
-              :Else
-                  :If 0=n                                                                 ⍝ if we found no errors
-                      ⎕OFF                                                               ⍝ it is save to exit
-                  :Else                                                                   ⍝ otherwise
-                      ⎕←'      )OFF     ⍝ errors in DBuild prevent automic OFFing...'    ⍝ tell the user
-                  :EndIf
+              {sink←2 ⎕NQ ⎕SE'keypress'⍵}¨((~oFFIssue)0 '  '),')OFF',⊂'ER'  ⍝ as long as 18008 isn't fixed (and for all older versions) we can't use ⎕OFF but have to ⎕NQ'KeyPress'
+          :Else
+              :If 0=n                                                                 ⍝ if we found no errors
+                  ⎕OFF                                                               ⍝ it is save to exit
+              :Else                                                                   ⍝ otherwise
+                  ⎕←'      )OFF     ⍝ errors in DBuild prevent automic OFFing...'    ⍝ tell the user
               :EndIf
-          :ElseIf 2=⎕SE.⎕NC'DBuild_postSave'
-              ⍎⎕SE.DBuild_postSave
-          :EndIf  ⍝ we exit with 1 if there were errors, 0 if everything's fine.
+          :EndIf
+      :ElseIf 2=⎕SE.⎕NC'DBuild_postSave'
+          ⍎⎕SE.DBuild_postSave
+      :EndIf  ⍝ we exit with 1 if there were errors, 0 if everything's fine.
     ∇
 
     ∇ r←FindBuildFile path;found;file;ext
@@ -2074,8 +2078,8 @@
         ⍝ signal: should we ⎕SIGNAL an error if no config file is found? (default=1)
           :If 4=⍴R←'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
         ⍝   ⎕←2 ⎕NQ'.' 'GetCommandLine'   ⍝ spit out commandline into the session - maybe it help diagnosing the problem...
-              :If 1∊z←∊⎕RSI{0::0 ⋄ 2=⍺.⎕NC ⍵:0<⍺⍎⍵ ⋄ 0}¨⊂'CITA_Log'    ⍝ CompCheck: ignore   / search calling environment for variable CITA_Log
-                  R←((z⍳2)⊃⎕RSI).CITA_Log                                ⍝ CompCheck: ignore
+              :If 1∊z←∊⎕RSI {0::0 ⋄ 2=⍺.⎕NC ⍵:0<⍺⍎⍵ ⋄ 0}¨⊂'CITA_Log'    ⍝ CompCheck: ignore   / search calling environment for variable CITA_Log
+                  R←((z⍳2)⊃⎕RSI ).CITA_Log                                ⍝ CompCheck: ignore
               :Else
                   :If signal
                       'Found no CITA_Log in Environment - this dws is supposed to be called from CITA which should have passed the right commandline'⎕SIGNAL 11
