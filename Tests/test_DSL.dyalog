@@ -25,8 +25,5 @@
      →0 Because'"IsNotElement" failed on vtv' ⋄ :EndIf
   halt∆←##.halt ⋄ ##.halt←0  ⍝ disable halt because the following is expected to fail!
  :If ~0 IsNotElement v1
-     :If ##.halt←halt∆ ⍝ reset it
-         (⎕LC[1]+1)⎕STOP 1⊃⎕SI ⋄ ⎕←'Interrupting in an usual way because IsNotElement failed in a surprising way!'
-     :EndIf
      →0 Because'"IsNotElement" reported incorrect result' ⋄ :EndIf
  ##.halt←halt∆ ⍝ reset it

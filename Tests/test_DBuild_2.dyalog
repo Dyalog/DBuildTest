@@ -1,9 +1,8 @@
-﻿ r←test_DBuild_2 dummy;ucmd_flags
+﻿ r←test_DBuild_2 dummy;sink
  r←''
 
  :If ##.DyaVersion>17    ⍝ this test deals with ]LINKed variables - so it will work on 17.1 or greater
-     ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
-     ##.Build ##.TESTSOURCE,'DBuild_2.dyalogbuild -c',ucmd_flags
+     sink←##.Build ##.TESTSOURCE,'DBuild_2.dyalogbuild -c -q=2'
 
      :If (,⊂'NonParametric')Check #.⎕NL-9
          →0 Because'Did not find exactly one namespace in #' ⋄ :EndIf
