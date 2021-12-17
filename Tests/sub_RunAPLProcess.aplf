@@ -15,12 +15,11 @@
 
  :If 0=⎕NC'exited'
  :OrIf exited∊0 ¯1   ⍝ TIMEOUT
-     log←'Process did not complete within ',(1⍕0.001×⎕AI[3]-ai3),' seconds and was killed (SecondsTimeout=',(⍕specs.secondstimeout),((specs.secondstimeout=Timeout)/' default value'),')'
+     log←'Process did not complete within ',(1⍕0.001×⎕AI[3]-ai3),' seconds and was killed (SecondsTimeout=',(⍕secsTimeout),')'
      {}proc.Kill
      R←¯1 ⋄ →End
  :EndIf
 
  R←proc.GetExitCode
-
 
 End:

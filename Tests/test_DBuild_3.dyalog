@@ -1,14 +1,14 @@
-﻿ r←test_DBuild_3 dummy;ucmd_flags;l
+﻿ r←test_DBuild_3 dummy;l
  r←''
  :If 17.1≤##.DyaVersion  ⍝ this test requires v17.1 or better
 sort←{⍵[⍋⍵]}
 ⍝ create some fns/vars to test if "-c" really clears them...
      #.⎕CY'dfns'
+     #.⎕ex'foo'
      #.foo←'goo'
 
-     ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
 ⍝ run build-script (non-prod mode)
-     ##.Build ##.TESTSOURCE,'DBuild_3.dyalogbuild -c',ucmd_flags
+     sink←##.Build ##.TESTSOURCE,'DBuild_3.dyalogbuild -c -q=2'
 
      :If (sort'MyNS0' 'MyNS1' 'conga' 'httpcommand')Check l←sort #.⎕NL-9
          →0 Because'Did not find exactly four namespace in # but got ',⍕l ⋄ :EndIf
@@ -49,7 +49,7 @@ sort←{⍵[⍋⍵]}
              →0 Because'DEFAULTS did not correctly process ⎕PP' ⋄ :EndIf
 
 ⍝ re-run build-script (this time in production mode)
-         ##.Build ##.TESTSOURCE,'DBuild_3.dyalogbuild -c -p',ucmd_flags
+         sink←##.Build ##.TESTSOURCE,'DBuild_3.dyalogbuild -c -p -q=2'
 
          :If 'Production'Check #.ProdFlag
              →0 Because'ProdFlag did not have expected value "Production", but rather "',#.ProdFlag,'"' ⋄ :EndIf

@@ -1,12 +1,11 @@
-﻿ r←test_DBuild_1 dummy;ucmd_flags;pwd;cmd;args
+﻿ r←test_DBuild_1 dummy;pwd;cmd;args
  r←''
  ⍝ put a few things into # to be sure that "-c" clear them!
  #.⎕CY'dfns'
  #.⎕EX'foo' ⋄ #.foo←'goo'
- 
- ucmd_flags←(##.halt/' -h'),##.quiet/' -q'
+
 ⍝ run build-script (non-prod mode)
- res←##.Build args←##.TESTSOURCE,'DBuild_1.dyalogbuild -c',ucmd_flags
+ res←##.Build args←##.TESTSOURCE,'DBuild_1.dyalogbuild -c -q=2 -s=0'
 
  :If 0 Check∨/' errors encountered.'⍷∊res
      →0 Because('DBuild did not succeed but reported: ',res),(⎕UCS 13),']DBuild ',args,' ⍝ to execute it...' ⋄ :EndIf
@@ -44,15 +43,11 @@
      →0 Because'DEFAULTS did not correctly process ⎕PP' ⋄ :EndIf
 
 ⍝ re-run build-script (this time in production mode)
- ucmd_flags←(##.halt/' -h'),##.quiet/' -q'   ⍝ it's weird - but 12.1 somehow lost the variable when it got here. Quick fix to avoid wasting time...
- {}##.Build,##.TESTSOURCE,'DBuild_1.dyalogbuild -c -p',ucmd_flags
+ {}##.Build,##.TESTSOURCE,'DBuild_1.dyalogbuild -c -p -q=2'
 
  :If 'Production'Check #.ProdFlag
      →0 Because'ProdFlag did not have expected value "Production", but rather "',#.ProdFlag,'"' ⋄ :EndIf
 
-
-res←##.Build args←##.TESTSOURCE,'DBuild_nameclash.dyalogbuild -c',ucmd_flags
-
- :If 1 Check∨/'3 errors encountered.'⍷∊res
-     →0 Because'DBuild did not complain about 3 nameclashes while executing...',(⎕ucs 13),']DBuild ',args ⋄ :endif
-     
+ res←##.Build args←##.TESTSOURCE,'DBuild_nameclash.dyalogbuild -c -q=2 -s=0'
+ :If 1 Check∨/'4 errors encountered.'⍷∊res
+     →0 Because'DBuild did not fail with 4 errors (3 nameclashes + final msg) while executing...',(⎕UCS 13),']DBuild ',args ⋄ :EndIf

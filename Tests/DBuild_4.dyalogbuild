@@ -18,6 +18,5 @@ EXEC: #.Dollar←'$$foo'
 
 LX: '⎕←''Hello World!'''
 
-⍝TARGET: DBuild_TEST_4.exe,type=NativeExe,details=CompanyName:Dyalog Ltd.;Comments: This is a sample build;FileVersion:3.14;FileDescription:just a sample;InternalName:MyTest;ProductName:DyalogBuild 
-TARGET: DBuild_TEST_4,save=1
-TARGET: c:\tmp\DBuild_TEST_4,save=1
+TARGET: /tmp/DBuild_TEST_4.exe,type=NativeExe,details=CompanyName:Dyalog Ltd.;Comments: This is a sample build;FileVersion:3.14;FileDescription:just a sample;InternalName:MyTest;ProductName:DyalogBuild 
+TARGET: /tmp/DBuild_TEST_4,save=1
