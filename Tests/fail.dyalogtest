@@ -1,0 +1,6 @@
+DyalogTest : 1.30
+ID         : fail
+Description: This is a simple failing test
+
+
+Test    : fail

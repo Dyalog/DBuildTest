@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.62
+:Namespace DyalogBuild ⍝ V 1.62
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -2252,6 +2252,7 @@
               r,←⊂'                        8={base}.session.log'
               r,←⊂'                       16={base}.session.log ONLY if test failed'
               r,←⊂'                       32={base}.log.json: machine-readable results'
+              r,←⊂'                          Creating such a log is the ONLY way to get data on performance and memory usage of tests!'
               r,←⊂'    -order=0|1|"NumVec" control sequence of tests (default 0: random; 1:sequential;"NumVec":order)'
               r,←⊂'    -off[=0|1|2]      )off after running the tests'
               r,←⊂'                        0=do not )OFF after test'

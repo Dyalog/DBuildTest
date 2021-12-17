@@ -1,6 +1,7 @@
 ﻿ r←test_DBuild_nameclash dummy;l;args
  r←''
  :If 17.1≤##.DyaVersion  ⍝ this test requires v17.1 or better
+ :andif 0   ⍝ disabled, because we need to improve that test: "-c" wipes out everything :(
 
      res←##.Build args←##.TESTSOURCE,'DBuild_nameclash.dyalogbuild -c -q=2'
 

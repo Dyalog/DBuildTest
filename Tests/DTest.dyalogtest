@@ -4,15 +4,18 @@ Description: test suite for ]DTest and ]DBuild
 Description: We need to run this suite because we can't just run ALL tests
 Description: because test_failure fails expectedly (and needs to be executed/tested by test_ReturnCode)
 
+AlertIfCoverageBelow: 80     ⍝ expect at least 80% 
+
 Test: test_CompTools         ⍝ tests various compatibility tools...
 Test: test_Compatibility     ⍝ ensure that it is compatible with v12 & Classic interpreters (this test needs the CompCheck-folder!)
 
 Test: test_DSL               ⍝ basic tests of the DSL
 
-Test: test_DBuild_1          ⍝ some features of DBuild
-Test: test_DBuild_2          ⍝ test a build with .aplf, *.csv, .aplo
-Test: test_DBuild_3          ⍝ test if DEFAULTS produces desired ⎕IO, ⎕ML in new namespaces etc.
+⍝Test: test_DBuild_1          ⍝ some features of DBuild   -- disabled because of "-c" (which clears #)
+⍝Test: test_DBuild_2          ⍝ test a build with .aplf, *.csv, .aplo
+⍝Test: test_DBuild_3          ⍝ test if DEFAULTS produces desired ⎕IO, ⎕ML in new namespaces etc.
 Test: test_DBuild_4          ⍝ trying to build & save (also .exe!)
+⍝Test: test_DBuild_nameclash  ⍝ do we handle nameclashes correctly?
 
 Test: test_ReturnCode        ⍝ testing returncode of DTest 
 
