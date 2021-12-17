@@ -2383,7 +2383,7 @@
           :AndIf 0<⍴randomstring
               :Trap 0
                   log←⎕SE ⎕WG'Log'
-                  :Trap 0
+                  :Trap 1
                       log←∊log,¨⊂NL
                   :Else
                       :Trap 0
