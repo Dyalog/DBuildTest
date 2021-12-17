@@ -5,15 +5,25 @@
 
  ********************************************************************************************/
 {
-    Tests: [{
+    tests: [{
         "DyalogVersions": "12.1+",
         "Test": "./Tests/DTest.dyalogtest",
         "EMail": [{
             "All": "mbaas@dyalog.com"
         }],
-        "TacitVersion": ["commit", "latest"],
         "Config": {
             "ok": 0
-        }
-    }, ]
+        },
+        id:"All"
+
+    },
+    {
+        //id: "Failing",
+        Test: "./Tests/fail.dyalogtest",
+    },
+    {
+        "id":"Fail180",
+        Test: "./Tests/failsOn180.dyalogtest"
+    }
+     ]
 }
