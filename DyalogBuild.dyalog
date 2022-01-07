@@ -1871,6 +1871,7 @@
               :EndIf
               :Trap DEBUG↓0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
                   :If ~0∊⍴type←GetParam'type'
+                  :if isWin
                       ⍝ This uses an undocumented function. It won't be documented because it is due to be changed soon - so we don't want
                       ⍝ to be bound by any published behaviour ;)
                       ⍝ So THIS documentation is purely informal and only describes CURRENT behaviour:
@@ -1896,13 +1897,16 @@
                       pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(GetParam'icon')(GetParam'cmdline')(det)
                       command←'2 ⎕NQ ',∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨¯1↓pars
                       command←command,' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
-                      2 #.⎕NQ pars ⍝*** this is not a problem IF the ⎕NQed keypresses execute successfully! ***
+                      2 #.⎕NQ pars 
+                      :else 
+                      Log'Builds using "type" (to create something else than a DWS) are only supported on Windows!'
+                      :endif
                   :Else
                       :If save≡1
                           save←wsid
                       :EndIf
                       command←')SAVE ',save
-                      0 #.⎕SAVE save ⍝*** this is not a problem IF the ⎕NQed keypresses execute successfully! ***
+                      0 #.⎕SAVE save 
                   :EndIf
                   :Trap DEBUG↓0  ⍝ paranoid, but want to avoid any bugs here to trigger the save again...
                       :If qNEXISTS save←wsid{''≡3⊃qNPARTS ⍺:⍺,⍵ ⋄ ⍺}'.dws'
@@ -1913,6 +1917,7 @@
                   command←''
               :Case 11   ⍝ DOMAIN ERROR
                   :If 0<102⌶#   ⍝ check most likely cause: links from ⎕SE to #
+                  :andif isWin
                       ('Type' 'E')Log'Problem creating ',wsid,':',NL,(∊⎕DM,¨⊂NL),'There might still be references from "somewhere in ⎕SE" to "something in #".',NL,'Please contact support@dyalog.com to discuss & resolve this if the enqueued keystrokes did not create the desired result.'
                   :Else
                       ('Type' 'E')Log'Problem creating ',wsid,':',NL,(↑⎕DM),⊂NL
