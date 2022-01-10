@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.62
+﻿:Namespace DyalogBuild ⍝ V 1.62
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -71,7 +71,7 @@
 ⍝ 2021 12 17 MBaas, v1.62: new internal variable (available to tests): _isCITA - is set to 1 if running under control of CITA (Continous Integration Tool for APL)
 ⍝                   v1.62: streamlined logging and creation of logfiles (reporting errors and optionally info and warnings, too)
 ⍝                   v1.62: it is also possible to get test results in a .json file (see loglvl): this file also has performance stats and collects various memory-related data
-
+⍝ 2022 01 10 MBaas, v1.63: DBuild: ⎕WSID will not be set if save=0 (use save=2 to not save, but set ⎕WSID). "-q" modifier suppresses ALL logging (only logs errors)
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being ⎕se even after Edit > Reformat.
     :Section Compatibility
@@ -1830,9 +1830,11 @@
                   :EndIf
                   :If (⊂lc 3⊃qNPARTS wsid)∊'' '.dws'
                   :OrIf 0=tally GetParam'type'    ⍝ if type is not set, we're building a workspace
-                      ⎕WSID←wsid
+                      :If save∊⍳2
+                          ⎕WSID←wsid
+                          Log'WSID set to ',wsid
+                      :EndIf
                   :EndIf
-                  Log'WSID set to ',wsid
               :EndIf
               save←⍬⍴99~⍨(99 args.Switch'save'),bld←1,⍨'99'GetNumParam'save'
               :If save<1=⊃bld~99
@@ -1841,7 +1843,7 @@
               :If off=2
                   off←1=GetNumParam'off' 0
               :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default-value of 2)
-              :If ~save
+              :If save∊0 2
                   :Continue
               :EndIf
                      ⍝ Apr 21-research found these vars referencing # (or elements of it) - get them out of the way temporarily
@@ -1871,7 +1873,7 @@
               :EndIf
               :Trap DEBUG↓0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
                   :If ~0∊⍴type←GetParam'type'
-                  :if isWin
+                      :If isWin
                       ⍝ This uses an undocumented function. It won't be documented because it is due to be changed soon - so we don't want
                       ⍝ to be bound by any published behaviour ;)
                       ⍝ So THIS documentation is purely informal and only describes CURRENT behaviour:
@@ -1892,21 +1894,21 @@
                       ⍝            search for "string-name" in https://msdn.microsoft.com/en-us/library/windows/desktop/aa381058(v=vs.85).aspx for more details for executables.
                       ⍝            For .NET assemblies, look at https://msdn.microsoft.com/en-us/library/system.reflection(v=vs.110).aspx;
                       ⍝            any of the classes listed which has a constructor which takes a single string value as its argument should be definable.
-                      det←⊃,/':'Split¨';'Split GetParam'details'
-                      det←(⌽2,0.5×⍴det)⍴det
-                      pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(GetParam'icon')(GetParam'cmdline')(det)
-                      command←'2 ⎕NQ ',∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨¯1↓pars
-                      command←command,' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
-                      2 #.⎕NQ pars 
-                      :else 
-                      Log'Builds using "type" (to create something else than a DWS) are only supported on Windows!'
-                      :endif
+                          det←⊃,/':'Split¨';'Split GetParam'details'
+                          det←(⌽2,0.5×⍴det)⍴det
+                          pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(GetParam'icon')(GetParam'cmdline')(det)
+                          command←'2 ⎕NQ ',∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨¯1↓pars
+                          command←command,' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
+                          2 #.⎕NQ pars
+                      :Else
+                          Log'Builds using "type" (to create something else than a DWS) are only supported on Windows!'
+                      :EndIf
                   :Else
                       :If save≡1
                           save←wsid
                       :EndIf
                       command←')SAVE ',save
-                      0 #.⎕SAVE save 
+                      0 #.⎕SAVE save
                   :EndIf
                   :Trap DEBUG↓0  ⍝ paranoid, but want to avoid any bugs here to trigger the save again...
                       :If qNEXISTS save←wsid{''≡3⊃qNPARTS ⍺:⍺,⍵ ⋄ ⍺}'.dws'
@@ -1917,7 +1919,7 @@
                   command←''
               :Case 11   ⍝ DOMAIN ERROR
                   :If 0<102⌶#   ⍝ check most likely cause: links from ⎕SE to #
-                  :andif isWin
+                  :AndIf isWin
                       ('Type' 'E')Log'Problem creating ',wsid,':',NL,(∊⎕DM,¨⊂NL),'There might still be references from "somewhere in ⎕SE" to "something in #".',NL,'Please contact support@dyalog.com to discuss & resolve this if the enqueued keystrokes did not create the desired result.'
                   :Else
                       ('Type' 'E')Log'Problem creating ',wsid,':',NL,(↑⎕DM),⊂NL
@@ -2102,7 +2104,10 @@
       :If 0=⎕NC'LOGS'
           LOGS←3⍴⊂''
       :EndIf  ⍝ may happen during Clean...
-      LOGS[type],←⊂eis pre,msg
+      :If quiet≠1
+      :OrIf type=3
+          LOGS[type],←⊂eis pre,msg
+      :EndIf
       :If quiet=0
           ⎕←pre,,msg
       :ElseIf quiet=1
@@ -2139,9 +2144,9 @@
       r.Name←'DBuild' 'DTest' 'GetTools4CITA'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory' 'Load tools to run CITA-tests'
       :If 14>1⊃_Version
-          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 -off[=]0 1 -clear[=] -testclassic' '1 -clear[=] -tests= -testlog[=] -filter= -setup= -teardown= -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2' ''
+          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -testclassic' '1 -clear[=] -tests= -testlog[=] -filter= -setup= -teardown= -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2' ''
       :Else
-          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 -off[=]0 1 -clear[=] -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup= -teardown= -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coco[=]' ''
+          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup= -teardown= -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coco[=]' ''
       :EndIf
     ∇
 
@@ -2162,7 +2167,7 @@
       :Select Cmd
       :Case 'DBuild'
           r←⊂'Run one or more DyalogBuild script files (.dyalogbuild) | Version ',2⊃Version
-          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet] [-halt] [-save=0|1] [-off=0|1] [-TestClassic]'
+          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet] [-halt] [-save=0|1|2] [-off=0|1] [-TestClassic]'
           :Select level
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more information'
@@ -2174,7 +2179,8 @@
               r,←⊂'    -halt                     halt on error rather than log and continue'
               r,←⊂'    -production               remove links to source files'
               r,←⊂'    -quiet                    only output actual errors (quiet=2 only writes them to log, not into session)'
-              r,←⊂'    -save=0|1                 save the build workspace (overwrites TARGET''s save-option). NB: we only save if no errors were logged during Build-process!'
+              r,←⊂'    -save=0|1|2               save the build workspace (overwrites TARGET''s save-option). NB: we only save if no errors were logged during Build-process!'
+              r,←⊂'                              save=2: do NOT save, but set ⎕WSID (according to TARGET-Instruction in buildfile)'
               r,←⊂'    -off=0|1                  )OFF after completion (if errors were logged, logfile will be created)'
               r,←⊂'    -TestClassic              check imported code for compatibility with classic editions (charset, not language-features!)'
               r,←⊂''
