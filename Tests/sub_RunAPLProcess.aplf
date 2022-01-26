@@ -1,10 +1,13 @@
-﻿ R←secsTimeout sub_RunAPLProcess arg;apl
+﻿ R←secsTimeout sub_RunAPLProcess arg;apl;exited;ai3
 ⍝ arg = APLProcess argument(s)
 ⍝ R=¯1: timeout
 ⍝ other values: returncode of APLProcess (Windows only)
  :If 0=#.⎕NC'APLProcess'
-     ⎕SE.SALT.Load ##.TESTSOURCE,'APLProcess.aplc -target=#'
+⍝     ⎕SE.SALT.Load ##.TESTSOURCE,'APLProcess.aplc -target=#'
+     ⎕SE.SALT.Load'APLProcess -target=#'
  :EndIf
+ arg←2↑eis arg
+ arg[2]←⊂(2⊃arg),' DYALOG_NETCORE='{0=≢⍵:⍵ ⋄ ⍺,⍵}2 ⎕NQ'.' 'GetEnvironment' 'DYALOG_NETCORE'  ⍝ if our process had DYALOG_NETCORE explicitely set, pass it on...
  exited←¯1
  ai3←⎕AI[3] ⋄ proc←⎕NEW #.APLProcess arg
  :While ~proc.IsRunning proc.Proc.Id ⋄ ai3←⎕AI[3] ⋄ :EndWhile   ⍝ wait until process has started

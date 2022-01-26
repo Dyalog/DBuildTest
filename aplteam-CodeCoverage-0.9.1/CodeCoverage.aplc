@@ -503,7 +503,6 @@
       r←⍬
       buff←(⎕PROFILE'data')[;1 2]
       ⎕PROFILE'clear'
-      ∘∘∘
       buff←(buff[;2]≢¨⊂⍬)⌿buff                                 ⍝ Fns as such are not of any interest, only lines
       _data⍪←(⊃∨/watch{((1+≢¨⍺)↑¨¨⊂⍵)∊¨⊂¨⍺,¨'.'}buff[;1])⌿buff ⍝ Drop everthing that's not watched
     ∇
