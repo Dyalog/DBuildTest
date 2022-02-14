@@ -1,6 +1,6 @@
 DYALOGBUILD: 1.3
 ID: DBuild_WSFULL_1, Version=1 (for Dyalog 12 and better)
-EXEC: ⎕ex∊' big',¨'1234'
+EXEC: ⎕ex¨'big'∘,¨'1234'
 EXEC:  wa←⎕wa
 EXEC:  big1 ←(⌈.1×wa)⍴3.11
 EXEC:  big2 ←(⌈.2×wa)⍴3.12

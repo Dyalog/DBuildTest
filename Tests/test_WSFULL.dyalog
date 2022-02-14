@@ -2,7 +2,7 @@
 ⍝ test that DBuild and DTest behave as expected when dealing with a WS FULL in a test/build
 ⍝ We test this by launching another interpreter to run the test
 ⍝ and we then examine the log-file.
-⍝ Requires Windows & Version 16+
+⍝ Requires Windows & Version 18+
 ⍝ Windows is needed because as of May 2021 we don't get a returncode from APLProcess on the other platforms.
  ⎕SE.SALT.Load ##.TESTSOURCE,'sub_RunAPLProcess.aplf'
  r←''
@@ -27,12 +27,12 @@
 
  res←##.Build ##.TESTSOURCE,'DBuild_WSFULL.dyalogbuild -quiet=2'
  :If 1 Check∨/'WS FULL'⍷∊res
-     →0 Because∊(⊂'Log of DBuild_WSFULL did not indicate errors:'),##.NL,'  > '∘,¨res,¨⊂##.NL ⋄ :EndIf
+     →0 Because∊(⊂'Log of DBuild_WSFULL did not indicate errors:'),##.NL,,(⊂'  > ')∘,¨res,¨⊂##.NL ⋄ :EndIf
 
  logfile←##.TESTSOURCE,'DBuildWSFULL'
  ret←300 sub_RunAPLProcess(##.TESTSOURCE,'RunCITA')('RunUCMD="DBuild ',##.TESTSOURCE,'DBuild_WSFULL.dyalogbuild -q" CITA_Log="',logfile,'" CITAnqOFF=1')
 
- :If 1 Check ⎕NEXISTS f←logfile,'.UCMD.sessionlog.txt'  ⍝ was a log-file written?
+ :If 1 Check ⎕NEXISTS f←logfile,'.RunUCMD.log'  ⍝ was a log-file written?
      →0 Because'Failing build not produce log-file "',f,'"' ⋄ :EndIf
 
  t←1⊃⎕NGET f
@@ -40,4 +40,7 @@
      →0 Because'Log-file "',f,'" does not seem to contain error msgs related to ← assignment of "big" variables' ⋄ :EndIf
 
  1(⎕NDELETE ⎕OPT'Wildcard' 1)logfile,'.*'  ⍝ can do because LogFile has no "_", so we won't delete production files
+ 1 ⎕NDELETE ##.TESTSOURCE,'testWSFULL.log'
+ 1 ⎕NDELETE ##.TESTSOURCE,'DBuildWSFULL.RunUCMD.log'
  1 ⎕NDELETE ##.TESTSOURCE,'testWSFULL.log.json'
+ 1 ⎕NDELETE ##.TESTSOURCE,'MemRep.dcf'
