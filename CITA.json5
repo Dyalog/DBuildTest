@@ -1,12 +1,12 @@
 /********************************************************************************************
 
             This file is only needed by CITA - Continous Integration Testing in APL
-            Not needed to use DBuild/DTest.
+            It's not needed to USE DBuild/DTest - just to TEST it with CITA.
 
  ********************************************************************************************/
 {
     tests: [{
-        "DyalogVersions": "12.1+",
+        "DyalogVersions": "18+",
         "Test": "./Tests/DTest.dyalogtest",
         "EMail": [{
             "All": "mbaas@dyalog.com"
@@ -15,10 +15,9 @@
             "ok": 0
         },
         id:"All"
-
     },
     {
-        //id: "Failing",
+        id: "Failing",
         Test: "./Tests/fail.dyalogtest",
     },
     {
