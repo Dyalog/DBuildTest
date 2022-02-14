@@ -76,6 +76,7 @@
 ⍝                          also incompatible change: to import *.APLA use the APL directive! DATA used to support this, but it now strictly reads file content and assigns it.
 ⍝                          Removed code for compatibility with old versions. DBuild/DTest 1.7 requires at least Dyalog v18.0.
 ⍝                          Various little tweaks in DBuild & DTest and its tools (for example, if -halt is used, Check will produce more verbose output & explanation).
+⍝                          Renamed switch "-coco" to "-coverage" (can be shortened to -co and changed name of "CodeCoverage_Subject" in .dyalogtest file to "Coverage" per #9)
 
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
@@ -144,9 +145,8 @@
           args ⎕NS'Because' 'Fail' 'Check' 'IsNotElement' 'eis'
       :EndTrap
       ⎕RL←⍬ 2  ⍝ CompCheck: ignore
-      ⎕SE._cita.randomstring←(⎕A,⎕D)[?32⍴36]
      
-      R←⎕SE._cita.randomstring,'⍝     ───  Loaded tools into namespace ⎕se._cita ─── (WA=',(,'CI15'⎕FMT ⎕WA),' bytes) ───'
+      R←'───  Loaded tools into namespace ⎕se._cita ─── (WA=',(,'CI15'⎕FMT ⎕WA),' bytes) ───'
     ∇
 
     ∇ {sink}←SetupCompatibilityFns
@@ -296,15 +296,16 @@
           :If 0<⍬⍴⍴fls←(ListFiles sf,f2,f3)[;1]
               :For fl :In fls
                   :If 'data'≡lc mode
-                    ⍝  res←⎕SE.SALT.Load fl,' -source -target=',target,options
-                      res←1⊃⎕NGET fl 1
+                      res←⎕SE.SALT.Load fl,' -source=no'
+                      ⍝res←1⊃⎕NGET fl 1
                       names,←⊂fl res
                   :Else  ⍝ mode≡pl
                       :Select lc 3⊃⎕NPARTS fl
                       :CaseList '.dyalog' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
                           :Trap DEBUG↓0
                               res←⎕SE.SALT.Load fl,' -target=',target,options
-                              source←1⊃⎕NGET fl
+                              source←⎕SE.SALT.Load fl,' -source=no'  ⍝ unfortunately need two calls to establish fn & get source
+                              ⍝source←1⊃⎕NGET fl
                           :Else
                               res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',target,options,'": ',NL
                               res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')   ⍝ CompCheck: ignore
@@ -558,9 +559,10 @@
       :EndIf
     ∇
 
-    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log
+    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog
       i←quiet←0
       ⍝ Not used here, but we define them test scripts that need to locate data:
+      ∆OldLog←⎕SE ⎕WG'Log'
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
       WSFOLDER←⊃⎕NPARTS ⎕WSID
       ThisTestID←(,'ZI4,<->,ZI2,<->,ZI2,<->,ZI2,<:>,ZI2,<:>,ZI3'⎕FMT 1 6⍴⎕TS),' *** DTest ',2⊃Version
@@ -579,8 +581,8 @@
      
       repeat←1⌈repeat
       file←''
-      args.coco_subj←null
-      args.coco_ignore←⍕⎕THIS
+      args.coverage_subj←null
+      args.coverage_ignore←⍕⎕THIS
      
      
       :If 0∊⍴args.Arguments
@@ -793,12 +795,12 @@
               →setupok↓END
      
 ⍝ after setup, make sure to start CodeCoverage (if modifier is set) - once only...
-              :If null≢args.coco  ⍝ if switch is set
-              :AndIf (1↑1⊃⎕VFI⍕args.coco)∨1<tally args.coco  ⍝ and we have either numeric value for switch or a longer string
+              :If null≢args.coverage ⍝ if switch is set
+              :AndIf (1↑1⊃⎕VFI⍕args.coverage)∨1<tally args.coverage  ⍝ and we have either numeric value for switch or a longer string
               :AndIf 0=⎕NC'CoCo'   ⍝ only neccessary if we don't have an instance yet...
                   home←1⊃⎕NPARTS SALT_Data.SourceFile  ⍝ CompCheck: ignore
                   LoadCode(home,'aplteam-CodeCoverage-0.9.1/CodeCoverage.aplc')(⍕⎕THIS)  ⍝ we should use some other to bring this in ideally...()
-                  :If 0=≢subj←args.coco_subj
+                  :If 0=≢subj←args.coverage_subj
                       :If 0<≢subj←#.⎕NL ¯9
                           subj←∊(⊂'#.'),¨subj,¨','
                       :EndIf
@@ -807,18 +809,18 @@
                   CoCo←⎕NEW CodeCoverage(,⊂subj)
                   ⎕SE.Dyalog.Utils.disp ¯5↑⎕SE.Input
                   CoCo.Info←'Report created by DTest ',(2⊃Version),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
-                  :If 1<≢args.coco
-                  :AndIf (⎕DR' ')=⎕DR args.coco
-                      :If ∨/'\/'∊args.coco  ⍝ if the argument looks like a filename (superficial test)
-                          CoCo.filename←args.coco
+                  :If 1<≢args.coverage
+                  :AndIf (⎕DR' ')=⎕DR args.coverage
+                      :If ∨/'\/'∊args.coverage  ⍝ if the argument looks like a filename (superficial test)
+                          CoCo.filename←args.coverage
                       :Else                  ⍝ otherwise we assume it is the name of the instance of an already running coverag-analysis
-                          CoCo.filename←(⍎args.coco).filename
+                          CoCo.filename←(⍎args.coverage).filename
                           CoCo.NoStop←1
                       :EndIf
                   :Else
                       CoCo.filename←(739⌶0),,'</CoCoDTest_>,ZI4,ZI2,ZI2,ZI2,ZI2,ZI3'⎕FMT 1 6⍴⎕TS
                   :EndIf
-                  :If 0=≢ignore←args.coco_ignore
+                  :If 0=≢ignore←args.coverage_ignore
                           ⍝ignore←∊(⊂⍕⎕THIS),¨'.',¨(⎕THIS.⎕NL ¯3 4),¨','
                       ignore←∊{(⊂⍕⍵),¨'.',¨(⍵.⎕NL ¯3 4),¨','}⎕SE.input.c
                   :EndIf
@@ -904,7 +906,7 @@
       :AndIf ~0∊⍴order
           r,←⊂'-order="',(⍕order),'"'
       :EndIf
-      :If args.coco≢null
+      :If args.coverage≢null
           :If 9=⎕NC'CoCo'
               :If 0=CoCo.⎕NC'NoStop'
               :OrIf CoCo.NoStop=0
@@ -937,7 +939,6 @@
       :If off>0
       :OrIf loglvl>0
           :If 0≢args.testlog
-              ⎕←'args.testlog=',args.testlog
               :If (⎕DR' ')=⎕DR args.testlog
               :AndIf 0<≢args.testlog
                   logFile←args.testlog
@@ -959,10 +960,15 @@
           :If (loglvl _hasBitSet 16)∧0<⍴3⊃LOGS
           :OrIf loglvl _hasBitSet 8
               log←⎕SE ⎕WG'Log'
+              ⍝ use progressive iota to find new log in old log and remove the common parts (simple ∊ is not good enough...)
+            ⍝   z←+/∧\{⍵=⍵[1]+0,⍳¯1+≢⍵}∆OldLog{((≢⍺)⍴⍋⍋⍺⍳⍺⍪⍵)⍳(≢⍵)⍴⍋⍋⍺⍳⍵⍪⍺}log
+              z←∆OldLog _cita.NrOfCommonLines log
+              log←z↓log
               log←∊log,¨⊂NL
-              :If 0<≢i←{⍵/⍳tally ⍵}ThisTestID⍷log
-                  log←(i-1)↓log
-              :EndIf
+     
+            ⍝   :If 0<≢i←{⍵/⍳tally ⍵}ThisTestID⍷log
+            ⍝       log←(i-1)↓log
+            ⍝   :EndIf
               (⊂log)⎕NPUT(logBase,'session.log')1
           :EndIf
      
@@ -1140,9 +1146,9 @@
               :Case 'order'
                   args.order←2⊃⎕VFI params
               :Case 'codecoverage_subject'   ⍝ ,-separated list of namespaces to watch while running test (must be present in ws after setup)
-                  args.coco_subj←params
+                  args.coverage_subj←params
               :Case 'codecoverage_ignore'
-                  args.coco_ignore←params
+                  args.coverage_ignore←params
               :Case 'alertifcoveragebelow'
                   args.alertifcoveragebelow←2⊃⎕VFI params
      
@@ -1497,7 +1503,7 @@
               :If save∊0 2
                   :Continue
               :EndIf
-                     ⍝ Apr 21-research found these vars referencing # (or elements of it) - get them out of the way temporarily
+             ⍝ Apr 21-research found these vars referencing # (or elements of it) - get them out of the way temporarily
               rfs←0 2⍴''
               ⎕EX¨'⎕SE.'∘,¨'SALTUtils.spc.z' 'SALTUtils.spc.res'
               :Trap 0
@@ -1587,7 +1593,7 @@
                   :If isWin
                       {sink←2 ⎕NQ ⎕SE'keypress'⍵}¨'  ',command,⊂'ER'
                       NQed←1
-                      Log'Enqueued keypresses to automatically save after UCMD has completed'
+                      Log'Enqueued keypresses to automatically save after UCMD has completed: "',command,'"'
                   :Else
                       Log'Please execute the following command when the UCMD has finished:'
                       Log command
@@ -1803,7 +1809,7 @@
       :If 14>1⊃_Version
           r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '1 -clear[=] -tests= -testlog[=] -filter= -setup= -teardown= -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2' ''
       :Else
-          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup= -teardown= -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coco[=]' ''
+          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup= -teardown= -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coverage[=]' ''
       :EndIf
     ∇
 
@@ -2036,9 +2042,7 @@
     ⍝ we're intentionally not passing ⍵[2]as 1 to force overwrite - because this is supposed to be called once only!
     ⍝ So if it crashes...that is well deserved...
           file←file,'.',status
-          600⌶1
           (⊂msg)⎕NPUT file
-          600⌶0
           :If 2=⎕NC'⎕se._cita._memStats'
               t←{0::⍵ ⎕FCREATE 0 ⋄ ⍵ ⎕FSTIE 0}(1⊃⎕NPARTS file),'MemRep'
               ⎕SE._cita._memStats ⎕FAPPEND t
@@ -2046,12 +2050,15 @@
               ⎕FUNTIE t
           :EndIf
          
-          :If 2=⎕NC'randomstring'
-          :AndIf 0<⍴randomstring
               :Trap 0
                   log←⎕SE ⎕WG'Log'
                   :Trap 1
+                  :if 2=⎕nc'RunCITA∆OldLog'
+              z←RunCITA∆OldLog NrOfCommonLines log
+              :endif
+                      log←z↓log  
                       log←∊log,¨⊂NL
+         
                   :Else
                       :Trap 0
                           ⎕←'trapped WSFULL! EN=',⎕EN
@@ -2069,18 +2076,13 @@
                           →0
                       :EndTrap
                   :EndTrap
-                  :If 1∊y←randomstring⍷log
-                      log←(y⍳1)↓log
-                      log←((NL⍷log)⍳1)↓log
-                  :EndIf
                   log,←'TS.End=',⍕⎕TS
-                  (⊂log)⎕NPUT(file←({(2>+\⍵='.')/⍵}file),'.sessionlog.txt')1
+                  (⊂log)⎕NPUT(file←({(2>+\⍵='.')/⍵}file),'.CITA_log.txt')1
                   ⎕←'Wrote log to ',file
               :Else
                   ⎕←'*** Error while attempting to write sessionlog to a file:'
                   ⎕←⎕DM
               :EndTrap
-          :EndIf
           :If rc≠¯42
               ⎕←'Wrote the log, now we will call ⎕OFF'
               ⎕←'⎕tnums=',⎕TNUMS
@@ -2125,6 +2127,10 @@
               ⎕SE._cita._memStats,←R
           :EndIf
         ∇
+
+    
+NrOfCommonLines←{+/∧\{⍵=⍵[1]+¯1+⍳≢⍵}⍺{((≢⍺)⍴⍋⍋⍺⍳⍺⍪⍵)⍳(≢⍵)⍴⍋⍋⍺⍳⍵⍪⍺}⍵}
+
 
     :EndNamespace
 
