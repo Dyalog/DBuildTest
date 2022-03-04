@@ -873,6 +873,7 @@
                       :If verbose
                           0 Log'running teardown: ',f
                       :EndIf
+                  (trace/1)ns.⎕STOP f
                       :Trap (~halt∨trace)/0 777
                           f LogTest(ns⍎f)⍬
                       :Else
