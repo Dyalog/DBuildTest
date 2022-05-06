@@ -11,18 +11,17 @@
         "EMail": [{
             "All": "mbaas@dyalog.com"
         }],
-        "Config": {
-            "ok": 0
-        },
         id:"All"
     },
     {
         id: "Failing",
         Test: "./Tests/fail.dyalogtest",
+        disabled: true
     },
     {
         "id":"Fail180",
-        Test: "./Tests/failsOn180.dyalogtest"
+        Test: "./Tests/failsOn180.dyalogtest",
+        disabled: true
     }
      ]
 }

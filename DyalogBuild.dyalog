@@ -72,14 +72,19 @@
 ⍝                   v1.62: streamlined logging and creation of logfiles (reporting errors and optionally info and warnings, too)
 ⍝                   v1.62: it is also possible to get test results in a .json file (see loglvl): this file also has performance stats and collects various memory-related data
 ⍝ 2022 01 10 MBaas, v1.63: DBuild: ⎕WSID will not be set if save=0 (use save=2 to not save, but set ⎕WSID). "-q" modifier suppresses ALL logging (only logs errors)
-⍝ 2022 01 25 MBaas, v1.70: DBuild: DATA: support for .TXT files was mistakenly removed with 1.4 - fixed that. Also: DEFAULTS were never applied to # - now they are. New modifier -target to override TARGET.
+⍝ 2022 05 06 MBaas, v1.70: DBuild: DATA: support for .TXT files was mistakenly removed with 1.4 - fixed that. Also: DEFAULTS were never applied to # - now they are. New modifier -target to override TARGET.
 ⍝                          also incompatible change: to import *.APLA use the APL directive! DATA used to support this, but it now strictly reads file content and assigns it.
 ⍝                          Removed code for compatibility with old versions. DBuild/DTest 1.7 requires at least Dyalog v18.0.
 ⍝                          Various little tweaks in DBuild & DTest and its tools (for example, if -halt is used, Check will produce more verbose output & explanation).
 ⍝                          Renamed switch "-coco" to "-coverage" (can be shortened to -co and changed name of "CodeCoverage_Subject" in .dyalogtest file to "Coverage" per #9)
+⍝                          Support for "SuccessIndicator" in .dyalogtest file: in case tests would return boolean result instead of string. Parameter value if an APL Expression
+⍝                          that creates the exact value which test return to indicate "success". Anything else will be interpreted as sign of failure.
 
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
+    SuccessIndicator←''
+
+
     :Section Compatibility
     ⎕IO←1
     ⎕ML←1
@@ -873,7 +878,7 @@
                       :If verbose
                           0 Log'running teardown: ',f
                       :EndIf
-                  (trace/1)ns.⎕STOP f
+                      (trace/1)ns.⎕STOP f
                       :Trap (~halt∨trace)/0 777
                           f LogTest(ns⍎f)⍬
                       :Else
@@ -1152,6 +1157,8 @@
                   args.coverage_ignore←params
               :Case 'alertifcoveragebelow'
                   args.alertifcoveragebelow←2⊃⎕VFI params
+              :Case 'successindicator'
+                  SuccessIndicator←⍎params
      
               :Else
                   Log'Invalid keyword: "',cmd,'"'
@@ -1701,7 +1708,10 @@
     ∇ {r}←{f}LogTest msg;type;i
     ⍝ this fn is mapped to fn "Log" that is defined in the ns in which tests are executed
       r←0 0⍴0 ⋄ type←3
-      →(0∊tally∊msg)⍴0
+      →(msg≡SuccessIndicator)⍴0
+      :If ~(⎕DR∊msg)∊80 82 160
+          msg←'Test returned numeric value = ',⍕msg
+      :EndIf
       :If 0=⎕NC'f'
           f←''
       :ElseIf 2≤|≡f
@@ -2051,39 +2061,44 @@
               ⎕FUNTIE t
           :EndIf
          
-              :Trap 0
-                  log←⎕SE ⎕WG'Log'
-                  :Trap 1
-                  :if 2=⎕nc'RunCITA∆OldLog'
-              z←RunCITA∆OldLog NrOfCommonLines log
-              :endif
-                      log←z↓log  
-                      log←∊log,¨⊂NL
-         
+          :Trap 0
+              log←⎕SE ⎕WG'Log'
+              :Trap 1
+                  :If 2=⎕NC'RunCITA∆OldLog'
+                      z←RunCITA∆OldLog NrOfCommonLines log
                   :Else
-                      :Trap 0
-                          ⎕←'trapped WSFULL! EN=',⎕EN
-                          l2←''
-                          :While 0<⍴log
-                              l2,←1⊃log
-                              l2,←NL
-                              log←1↓log
-                          :EndWhile
-                          log←l2
-                          ⎕EX'l2'
-                          ⎕←'fixed it!'
-                      :Else
-                          ⎕←'Unfixable WS FULL!'
-                          →0
-                      :EndTrap
-                  :EndTrap
-                  log,←'TS.End=',⍕⎕TS
-                  (⊂log)⎕NPUT(file←({(2>+\⍵='.')/⍵}file),'.CITA_log.txt')1
-                  ⎕←'Wrote log to ',file
+                      z←0
+                  :EndIf
+                  log←z↓log
+                  log←∊log,¨⊂NL
+         
               :Else
-                  ⎕←'*** Error while attempting to write sessionlog to a file:'
-                  ⎕←⎕DM
+                  :Trap 0
+                      ⎕←'trapped WSFULL! EN=',⎕EN
+                      l2←''
+                      :While 0<⍴log
+                          l2,←1⊃log
+                          l2,←NL
+                          log←1↓log
+                      :EndWhile
+                      log←l2
+                      ⎕EX'l2'
+                      ⎕←'fixed it!'
+                  :Else
+                      ⎕←'Unfixable WS FULL!'
+                      →0
+                  :EndTrap
               :EndTrap
+              log,←'TS.End=',⍕⎕TS
+              (⊂log)⎕NPUT(file←({(2>+\⍵='.')/⍵}file),'.CITA_log.txt')1
+              ⎕←'Wrote log to ',file
+          :Else
+              ⎕←'*** Error while attempting to write sessionlog to a file:'
+              ⎕←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
+              ⎕←'file=',file
+              ⎕←'log=',log
+              ⎕←'si' ⋄ ⎕←⍕⎕SI,[1.5]⎕LC
+          :EndTrap
           :If rc≠¯42
               ⎕←'Wrote the log, now we will call ⎕OFF'
               ⎕←'⎕tnums=',⎕TNUMS
@@ -2129,8 +2144,8 @@
           :EndIf
         ∇
 
-    
-NrOfCommonLines←{+/∧\{⍵=⍵[1]+¯1+⍳≢⍵}⍺{((≢⍺)⍴⍋⍋⍺⍳⍺⍪⍵)⍳(≢⍵)⍴⍋⍋⍺⍳⍵⍪⍺}⍵}
+
+        NrOfCommonLines←{+/∧\{⍵=⍵[1]+¯1+⍳≢⍵}⍺{((≢⍺)⍴⍋⍋⍺⍳⍺⍪⍵)⍳(≢⍵)⍴⍋⍋⍺⍳⍵⍪⍺}⍵}
 
 
     :EndNamespace

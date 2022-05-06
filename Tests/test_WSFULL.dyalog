@@ -24,7 +24,6 @@
 
 
 ⍝ add a test for a DBuild-Process that will crash with WS FULL
-
  res←##.Build ##.TESTSOURCE,'DBuild_WSFULL.dyalogbuild -quiet=2'
  :If 1 Check∨/'WS FULL'⍷∊res
      →0 Because∊(⊂'Log of DBuild_WSFULL did not indicate errors:'),##.NL,,(⊂'  > ')∘,¨res,¨⊂##.NL ⋄ :EndIf

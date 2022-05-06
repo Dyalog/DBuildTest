@@ -1,0 +1,6 @@
+DyalogTest : 1.70
+ID         : SuccessIndicator42
+Description: 
+SuccessIndicator: 42
+
+Test    : test_SuccessIndicator42

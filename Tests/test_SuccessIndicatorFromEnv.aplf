@@ -1,0 +1,3 @@
+test_SuccessIndicatorFromEnv←{
+⍎2⎕nq'.' 'GetEnvironment' 'SucIntVal'
+}

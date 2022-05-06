@@ -1,0 +1,6 @@
+DyalogTest : 1.70
+ID         : SuccessIndicatorOK
+Description: 
+SuccessIndicator: '''OK'''
+
+Test    : test_SuccessIndicatorOK
