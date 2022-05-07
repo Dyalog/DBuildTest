@@ -1,4 +1,4 @@
-dfn←{
+test_dfn←{
     42 Check 42:'This should not happen!'
     ''
     
