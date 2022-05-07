@@ -72,14 +72,14 @@
 ⍝                   v1.62: streamlined logging and creation of logfiles (reporting errors and optionally info and warnings, too)
 ⍝                   v1.62: it is also possible to get test results in a .json file (see loglvl): this file also has performance stats and collects various memory-related data
 ⍝ 2022 01 10 MBaas, v1.63: DBuild: ⎕WSID will not be set if save=0 (use save=2 to not save, but set ⎕WSID). "-q" modifier suppresses ALL logging (only logs errors)
-⍝ 2022 05 06 MBaas, v1.70: DBuild: DATA: support for .TXT files was mistakenly removed with 1.4 - fixed that. Also: DEFAULTS were never applied to # - now they are. New modifier -target to override TARGET.
+⍝ 2022 05 07 MBaas, v1.70: DBuild: DATA: support for .TXT files was mistakenly removed with 1.4 - fixed that. Also: DEFAULTS were never applied to # - now they are. New modifier -target to override TARGET.
 ⍝                          also incompatible change: to import *.APLA use the APL directive! DATA used to support this, but it now strictly reads file content and assigns it.
 ⍝                          Removed code for compatibility with old versions. DBuild/DTest 1.7 requires at least Dyalog v18.0.
 ⍝                          Various little tweaks in DBuild & DTest and its tools (for example, if -halt is used, Check will produce more verbose output & explanation).
 ⍝                          Renamed switch "-coco" to "-coverage" (can be shortened to -co and changed name of "CodeCoverage_Subject" in .dyalogtest file to "Coverage" per #9)
 ⍝                          Support for "SuccessIndicator" in .dyalogtest file: in case tests would return boolean result instead of string. Parameter value if an APL Expression
 ⍝                          that creates the exact value which test return to indicate "success". Anything else will be interpreted as sign of failure.
-
+⍝                          the values for the setup and teardown modifiers are now optional, so you can avoid running any by using the modifier w/o value (so -setup will run NO setups)
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessIndicator←''
@@ -588,6 +588,8 @@
       file←''
       args.coverage_subj←null
       args.coverage_ignore←⍕⎕THIS
+      WSFULL←0  ⍝ indicates if we were hit by WS FULL
+     
      
      
       :If 0∊⍴args.Arguments
@@ -686,6 +688,7 @@
                   →0
               :EndIf
               LogTest'"',source,'" is neither a namespace nor a folder or a .dyalogtest-file.'
+              (TESTSOURCE base)←2↑⎕NPARTS source
               →FAIL
           :EndIf
       :EndIf
@@ -764,7 +767,6 @@
       :EndSelect
       LOGSi←LOGS
       :For run :In ⍳repeat
-          WSFULL←0  ⍝ indicates if we were hit by WS FULL
           :If verbose∧repeat>1
               0 Log'run #',(⍕run),' of ',⍕repeat
           :EndIf
@@ -774,9 +776,10 @@
               LOGS←3⍴⊂''
               :If verbose
               :AndIf setup≢null
+              :AndIf setup≢,1
                   r,←⊂'For setup = ',setup
               :EndIf
-              :If ~setupok←null≡f←setup
+              :If ~setupok←(⊂f←setup)∊(,1)null
                   :If 3=ns.⎕NC f ⍝ function is there
                       :If verbose
                           0 Log'running setup: ',f
@@ -1818,9 +1821,9 @@
       r.Name←'DBuild' 'DTest' 'GetTools4CITA'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory' 'Load tools to run CITA-tests'
       :If 14>1⊃_Version
-          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '1 -clear[=] -tests= -testlog[=] -filter= -setup= -teardown= -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2' ''
+          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '1 -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2' ''
       :Else
-          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup= -teardown= -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coverage[=]' ''
+          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coverage[=]' ''
       :EndIf
     ∇
 
@@ -1918,7 +1921,7 @@
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory | Version ',2⊃Version
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup=fn] [-suite=file] [-teardown=fn] [-testlog=] [-tests=] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init] [-order=]'
+          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup=[fn]] [-suite=file] [-teardown=[fn]] [-testlog=] [-tests=] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init] [-order=]'
           :Select level
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more info'
@@ -1950,9 +1953,9 @@
               r,←⊂'                        2=do not )OFF, but create .log-files (see loglvl)'
               r,←⊂'    -quiet            qa mode: only output actual errors'
               r,←⊂'    -repeat=n         repeat test n times'
-              r,←⊂'    -setup=fn         run the function fn before any tests'
+              r,←⊂'    -setup=[fn]       run the function fn before any tests'
               r,←⊂'    -suite=file       run tests defined by a .dyalogtest file'
-              r,←⊂'    -teardown=fn      run the function fn after all tests'
+              r,←⊂'    -teardown=[fn]    run the function fn after all tests'
               r,←⊂'    -testlog=         force name of logfiles (default name of testfile)'
               r,←⊂'    -tests=           comma-separated list of tests to run'
               r,←⊂'    -timeout          sets a timeout. Seconds after which test(suite)s will be terminated. (Default=0 means: no timeout)'
