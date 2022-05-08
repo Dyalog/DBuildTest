@@ -7,8 +7,9 @@
 
      sink←1 Assert 0.5+0.5                ⍝[t1]: this should not fail
 
+     1 Assert 0*=:'Meaningless'    ⍝ the guard will never will be executed, because Assert's ⎕SIGNAL will terminate test
+
      MyMsg←'Now thats a surprise!' ⍝ result of difficult computations!
      sink←MyMsg IfNot 1 Assert 1      ⍝this is syntax if the msg can not be given in comment, but is result of some other routine
-
      ''  ⍝ empty string as default, indicating "no errors to report"
  }
