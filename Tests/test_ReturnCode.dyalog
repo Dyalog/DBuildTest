@@ -35,5 +35,6 @@ cleanExit:
      1 ⎕NDELETE ##.TESTSOURCE,'test_retcode.log'  ⍝ wipe out that expected log-file
      1 ⎕NDELETE ##.TESTSOURCE,'test_retcode.session.log'
      1 ⎕NDELETE ##.TESTSOURCE,'test_retcode.log.json'
+     1 ⎕NDELETE ##.TESTSOURCE,'MemRep.dcf'  ⍝ not interested in this file (forthis test)
 
  :EndIf

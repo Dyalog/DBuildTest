@@ -12,13 +12,14 @@
  GetJSONlog←{⍝ read the log file and return a → target in r[1] and the log in r[2]
      a←(∊2↑⎕NPARTS ##.TESTSOURCE),theTest,'.log.json'
      0::(cleanExit Because'Caught error processing ',a,':',(⎕UCS 13),(⎕JSON⍠'Compact' 0)⎕DMX)⍬
-     ⍬(⎕JSON 1⊃⎕NGET ⎕←a)
+     ⍬(⎕JSON 1⊃⎕NGET a)
  }
 
  ClearLogs←{⍝ delete logfiles
+     0<≢⍵:sink←1(⎕NDELETE ⎕OPT'Wildcard'('*'∊⍵))##.TESTSOURCE,⍵  ⍝ wipe out that expected log-file
      sink←1 ⎕NDELETE ##.TESTSOURCE,'test_',theTest,'.log'  ⍝ wipe out that expected log-file
      trash←1 ⎕NDELETE ##.TESTSOURCE,'test_',theTest,'.log.json'
-     0
+     ⍬
  }
 
  RunTest←{⍝ execute a test (SuccessIndicatorEnvVar⍵) and return result ⍺ (default is ⍵)
@@ -29,18 +30,19 @@
      }⍺
      w←⍕⍵
      sink←ClearLogs w
-     30 sub_RunAPLProcess((##.TESTSOURCE,'RunCITA')(⎕←'CITATest=',(f←##.TESTSOURCE,theTest,'.dyalogtest'),' mode=DTest ',(' dtestmods="'cmdLineParams ⍺),' -off -loglvl=32',(##.halt/' -halt'),(##.verbose/' -verbose'),'"'))
+     30 sub_RunAPLProcess((##.TESTSOURCE,'RunCITA')('CITATest=',(f←##.TESTSOURCE,theTest,'.dyalogtest'),' mode=DTest ',(' dtestmods="'cmdLineParams ⍺),' -off -loglvl=32',(##.halt/' -halt'),(##.verbose/' -verbose'),'"'))
      0
  }
 
  Execute←{
+     ⍺←⍵
      sink←⍺{
-         ##.verbose:⎕←'Running ',theTest,' with cmdLineParams "',(''cmdLineParams ⍵),'", returning ',⍺,', expecting it to ',(1+⍺{
+         ##.verbose:⎕←'Running ',theTest,' with cmdLineParams "',(''cmdLineParams ⍵),'", returning ',(⍕⍺),', expecting it to ',(1+⍺{
              0=⎕NC'expectedResult':⍺≡⍵
              expectedResult
          }⍵)⊃'fail' 'succeed'
+         ⍬
      }⍵
-     ⍺←⍵
      sink←⍺ RunTest ⍵
  ⍝ was a log-file written?
      1 Check WeHaveAlog⍕⍵:(cleanExit Because'Test did not produce json-file') ⍝ could also be an indication of a crash....!
@@ -61,14 +63,14 @@
 
 
 ⍝=========================== The tests   ==================================================
-→goHere
+ →goHere
  cmdLineParams←{'SucIntVal=',(⍕⍵),' ',⍕⍺}  ⍝ pass an environment variable SucIntVal
  theTest←'SuccessIndicatorEnvVar0'
  →0 Execute 0
  →32768 Execute 0
  theTest←'SuccessIndicatorEnvVar42'
  →42 Execute 42
- →'OK' Execute 42
+ →'OK'Execute 42
  theTest←'SuccessIndicatorEnvVarOK'
  →'OK'Execute'OK'
  →'APL'Execute'OK'
@@ -76,14 +78,13 @@
 
 goHere:
  theTest←'SuccessIndicator0'
- cmdLineParams←{q←(' '=⍥⎕dr ⍵)/'''' ⋄ ⍺,' -SuccessIndicator=',q,(⍕⍵),q}  ⍝ pass value as modifier for DTest command
+ cmdLineParams←{q←(' '=⍥⎕DR ⍵)/'''' ⋄ ⍺,' -SuccessIndicator=',q,(⍕⍵),q}  ⍝ pass value as modifier for DTest command
 
-⍝  →0 Execute 0
+ →0 Execute 0
  expectedResult←1  ⍝ indicates failure
 
- →',0' Execute 0
-
-
+ →',0'Execute 0
 
 cleanExit:
- ClearLogs ⍬
+ sink←ClearLogs'SuccessIndicator*.lo*'
+ 1⎕NDELETE ##.TESTSOURCE,'MemRep.dcf'

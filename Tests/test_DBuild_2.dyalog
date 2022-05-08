@@ -29,3 +29,4 @@
 →0 Because'Build process left behind more than just variables'⋄ :endif
 
 
+1 ⎕ndelete ##.TESTSOURCE,'MemRep.dcf'  ⍝ not interested in this file (forthis test)

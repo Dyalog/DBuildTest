@@ -25,3 +25,4 @@
  1(⎕NDELETE ⎕OPT'Wildcard' 1)logfile,'.*'
  1 ⎕NDELETE'/tmp/DBuild_TEST_4.dws'
  1 ⎕NDELETE'/tmp/DBuild_TEST_4.exe'
+ 1 ⎕NDELETE ##.TESTSOURCE,'MemRep.dcf'  ⍝ not interested in this file (forthis test)

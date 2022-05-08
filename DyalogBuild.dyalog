@@ -655,6 +655,9 @@
      
                       :Trap (DEBUG∨halt)↓0
                           filter←∊LoadCode source(⍕ns)
+                          :If args.tests≡0
+                              args.tests←filter  ⍝ transfer into tests, as filtering could be ambigous and we wouldn't want to run more than required...
+                          :EndIf
                           f←¯1↓TESTSOURCE ⋄ type←1 ⍝ Load contents of folder
                       :Else
                           msg←'Error loading test from folder "',source,'"',NL
@@ -932,13 +935,12 @@
               :EndFor
               :If 0∊⍴3⊃LOGS
                   r,←(quiet≡null)/⊂'   ',(((setup≢null)∧1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' passed in ',(1⍕0.001×⎕AI[3]-start),'s'
-                  1 ⎕NDELETE TESTSOURCE,'*.rng.txt' ⍝ delete memorized random-numbers when tests succeeded
+                  1(⎕NDELETE ⎕OPT'Wildcard' 1)TESTSOURCE,'*.rng.txt' ⍝ delete memorized random-numbers when tests succeeded
               :Else
                   r,←⊂' Time spent: ',(1⍕0.001×⎕AI[3]-start),'s'
               :EndIf
           :EndFor ⍝ Setup
       :EndFor ⍝ repeat
-     
       r,←((1<tally setups)∧quiet≡null)/⊂'Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
       :If ~0∊⍴3⊃LOGS
       :AndIf ~0∊⍴order
@@ -1743,6 +1745,7 @@
       r←0 0⍴0 ⋄ type←3
      
       →(msg≡SuccessIndicator)⍴0
+⍝     (⎕lc[1]+1)⎕stop 1⊃⎕si
       :If (⎕DR msg)=326
           msg←'Test returned data with unsupported ⎕DR=326'
       :ElseIf ~(⎕DR∊msg)∊80 82 160
@@ -1753,7 +1756,7 @@
       :Else
           msg←'Test returned character value = "',msg,'"'
           :If SuccessIndicator≢''
-              msg,←' which did not match SuccessIndicator=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ ⍕⍵}SuccessIndicator
+              msg,←' which did not match SuccessIndicator=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessIndicator
             ⍝   ⎕←msg
         ⍝  (⎕lc[1]+1)⎕stop 1⊃⎕si
           :EndIf
