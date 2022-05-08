@@ -1,5 +1,5 @@
 DyalogTest : 1.70
-ID         : SuccessIndicatorEnvVar0
+ID         : SuccessIndicator
 Description: 
 SuccessIndicator: 0  ⍝ we always expect 0, but test will return result given in EnvVar "SucIntVal"
 

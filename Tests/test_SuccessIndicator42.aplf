@@ -1,0 +1,4 @@
+test_SuccessIndicator42←{
+0=1: 1  
+42
+}

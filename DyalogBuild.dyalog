@@ -80,6 +80,7 @@
 ⍝                          Support for "SuccessIndicator" in .dyalogtest file: in case tests would return boolean result instead of string. Parameter value if an APL Expression
 ⍝                          that creates the exact value which test return to indicate "success". Anything else will be interpreted as sign of failure.
 ⍝                          the values for the setup and teardown modifiers are now optional, so you can avoid running any by using the modifier w/o value (so -setup will run NO setups)
+⍝                          added Assert for "lighter" tests
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessIndicator←''
@@ -147,7 +148,7 @@
           args←'#'
       :EndIf
       :Trap DEBUG↓0
-          args ⎕NS'Because' 'Fail' 'Check' 'IsNotElement' 'eis'
+          args ⎕NS'Because' 'Fail' 'Check' 'IsNotElement' 'eis' 'Assert' 'IfNot'
       :EndTrap
       ⎕RL←⍬ 2  ⍝ CompCheck: ignore
      
@@ -538,6 +539,30 @@
 
     :Section TEST "DSL" FUNCTIONS
 
+    ∇ r←l Assert b;cl;cc;t
+      nr←1↓⎕NR 2⊃⎕SI
+      cl←⎕LC[2]⊃nr  ⍝ the current line
+      :If verbose
+          ⎕←cl
+      :EndIf
+      →(l Check b)↓r←0
+      t←nr[(≢nr)⌊⎕LC[2]-0 1 ¯1]     ⍝ search exactly these 3 lines!
+      t←('⍝(.*)'⎕S'\1'⎕OPT('Mode' 'L'))t  ⍝ search for text of comments
+      cc←(¯1+cl⍳'⍝')↑cl
+      :If ∨/z←'IfNot'⍷cc
+          t←(¯1+⊃where z)↑cc
+          t←(1⊃⎕RSI)⍎t
+          t ⎕SIGNAL 777
+      :ElseIf ∨/(1⊃t)⍷cl  ⍝ don't add comment if it is on the line of the test!
+          ⎕SIGNAL 777
+      :Else
+          ({0<≢2⊃t:2⊃t ⋄ 3⊃t}t)⎕SIGNAL 777
+      :EndIf
+    ∇
+
+
+    IfNot←{(~⍵)/⍺}  ⍝ simply need to define this to avoid errors
+
     ∇ r←Test args;TID;timeout;ai;nl;i;quiet
       ⍝ run some tests from a namespace or a folder
       ⍝ switches: args.(filter setup teardown verbose)
@@ -576,6 +601,9 @@
       (verbose filter halt quiet trace timestamp order)←args.(verbose filter halt quiet trace ts order)
       :If (,quiet)≢(,1)
           ⎕←ThisTestID  ⍝ this MUST go into the session because it marks the start of this test (useful to capture session.log later!)
+      :EndIf
+      :If args.SuccessIndicator≢0
+          SuccessIndicator←{0::⍵ ⋄ ⍎⍵}args.SuccessIndicator
       :EndIf
       repeat←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}args.repeat
       loglvl←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}args.loglvl
@@ -623,7 +651,8 @@
                           LogTest'Can''t run test with file-argument AND -filter-switch!'
                           →FAIL
                       :EndIf
-                      'ns'⎕NS''
+                      'ns'⎕NS'verbose' 'filter' 'halt' 'quiet' 'trace' 'timestamp' 'order' 'off'
+     
                       :Trap (DEBUG∨halt)↓0
                           filter←∊LoadCode source(⍕ns)
                           f←¯1↓TESTSOURCE ⋄ type←1 ⍝ Load contents of folder
@@ -721,7 +750,7 @@
       :Else
           'ns'⎕NS'Check'
       :EndIf
-      'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis'
+      'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Assert' 'IfNot'
       ns.Log←{⍺←{⍵} ⋄ ⍺ ##.LogTest ⍵}  ⍝ ⍺←rtack could cause problems with classic...
       :If args.tests≢0
           orig←fns←(','Split args.tests)~⊂''args.tests
@@ -848,11 +877,11 @@
                       0 Log'running: ',f
                   :EndIf
                   (trace/1)ns.⎕STOP f
-                  :Trap (~halt∨trace)/0 777
+                  :Trap (~halt∨trace)/0
                       ⍝f LogTest(ns⍎f)⍬
-                      LogTest(ns⍎f)⍬   ⍝ avoid additional line with title of fn
+                      f LogTest(ns⍎f)⍬   ⍝ avoid additional line with title of fn
                   :Case 777 ⍝ Assertion failed
-                      f LogTest'Assertion failed: ',,⍕⎕DM,¨⊂NL
+                      f LogTest'Assertion failed: ',,∊⎕DM[⍳2],¨⊂NL
                   :Else
                       en←⎕EN  ⍝ save error-no before it gets overwritten
                       msg←'Error executing test "',f,'": '
@@ -1161,7 +1190,7 @@
               :Case 'alertifcoveragebelow'
                   args.alertifcoveragebelow←2⊃⎕VFI params
               :Case 'successindicator'
-                  SuccessIndicator←⍎params
+                  args.SuccessIndicator←⍎params
      
               :Else
                   Log'Invalid keyword: "',cmd,'"'
@@ -1565,15 +1594,16 @@
                           pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(GetParam'icon')(GetParam'cmdline')(det)
                           command←'2 ⎕NQ ',∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨¯1↓pars
                           command←command,' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
-                          ⎕SE.Dyalog.Utils.display pars
-                          ⎕SE.Dyalog.Utils.display command
                           2 #.⎕NQ pars
                       :Else
                           Log'Builds using "type" (to create something else than a DWS) are only supported on Windows!'
                       :EndIf
                   :Else
-                      command←')SAVE ',wsid
-                      0 #.⎕SAVE wsid
+                      :If save≡1
+                          save←wsid
+                      :EndIf
+                      command←')SAVE ',save
+                      0 #.⎕SAVE save
                   :EndIf
                   :Trap DEBUG↓0  ⍝ paranoid, but want to avoid any bugs here to trigger the save again...
                       :If ⎕NEXISTS det←wsid{''≡3⊃⎕NPARTS ⍺:⍺,⍵ ⋄ ⍺}'.dws'
@@ -1705,15 +1735,28 @@
       :EndIf
     ∇
 
-    LineNo←{    '[',(,'ZI3'⎕FMT ⊃,⍵),']'    }  ⍝ m19572 deals with Edit|Reformat not removing those blanks...!
+    LineNo←{    '[',(,'ZI3'⎕FMT ⊃,⍵),']'    }  ⍝ m19572 deals with Edit|Reformat not removing the blanks in the dfn!
     PrefixTS←{(,'ZI2,<:>,ZI2,<:>,ZI2,<.>,ZI4,⎕> ⎕'⎕FMT 1 4⍴3↓⎕TS),⍵}
 
     ∇ {r}←{f}LogTest msg;type;i
     ⍝ this fn is mapped to fn "Log" that is defined in the ns in which tests are executed
       r←0 0⍴0 ⋄ type←3
+     
       →(msg≡SuccessIndicator)⍴0
-      :If ~(⎕DR∊msg)∊80 82 160
-          msg←'Test returned numeric value = ',⍕msg
+      :If (⎕DR msg)=326
+          msg←'Test returned data with unsupported ⎕DR=326'
+      :ElseIf ~(⎕DR∊msg)∊80 82 160
+          msg←'Test returned numeric ',((0 1⍳⍴⍴msg)⊃'scalar' 'vector'),' = ',⍕msg
+          :If SuccessIndicator≢''
+              msg,←' which did not match SuccessIndicator=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ ((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessIndicator
+          :EndIf
+      :Else
+          msg←'Test returned character value = "',msg,'"'
+          :If SuccessIndicator≢''
+              msg,←' which did not match SuccessIndicator=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ ⍕⍵}SuccessIndicator
+            ⍝   ⎕←msg
+        ⍝  (⎕lc[1]+1)⎕stop 1⊃⎕si
+          :EndIf
       :EndIf
       :If 0=⎕NC'f'
           f←''
@@ -1821,9 +1864,9 @@
       r.Name←'DBuild' 'DTest' 'GetTools4CITA'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory' 'Load tools to run CITA-tests'
       :If 14>1⊃_Version
-          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '1 -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2' ''
+          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '1 -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -SuccessIndicator=' ''
       :Else
-          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coverage[=]' ''
+          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coverage[=]  -SuccessIndicator=' ''
       :EndIf
     ∇
 

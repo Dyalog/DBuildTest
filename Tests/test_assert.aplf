@@ -1,0 +1,14 @@
+ test_assert←{⍝ this test shows how to write tests a dfns
+
+⍝ it is a sample - but testing the Assert function will require calling this or other tests with DTest and checking we get the right results!
+⍝ as done in test_SuccessIndicator.dyalog
+
+⍝ not trying to wstablish a pattern with ⍝[t...] but want  in to make sure (we can check that) the error shows the expected line!
+
+     sink←1 Assert 0.5+0.5                ⍝[t1]: this should not fail
+
+     MyMsg←'Now thats a surprise!' ⍝ result of difficult computations!
+     sink←MyMsg IfNot 1 Assert 1      ⍝this is syntax if the msg can not be given in comment, but is result of some other routine
+
+     ''  ⍝ empty string as default, indicating "no errors to report"
+ }

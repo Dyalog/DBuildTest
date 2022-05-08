@@ -1,3 +1,5 @@
-test_SuccessIndicatorFromEnv←{
-⍎2⎕nq'.' 'GetEnvironment' 'SucIntVal'
-}
+ test_SuccessIndicatorFromEnv←{
+     v←2 ⎕NQ'.' 'GetEnvironment' 'SucIntVal'
+     ∧/v∊⎕D,'.':⍎v
+     v
+ }
