@@ -561,7 +561,11 @@
     ∇
 
 
-    IfNot←{(~⍵)/⍺}  ⍝ simply need to define this to avoid errors
+    IfNot←{
+        r←~⍵
+        0=⎕nc'⍺': r
+        r/⍺
+        }  ⍝ simply need to define this to avoid errors
 
     ∇ r←Test args;TID;timeout;ai;nl;i;quiet
       ⍝ run some tests from a namespace or a folder
