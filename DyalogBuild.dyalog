@@ -550,7 +550,7 @@
       t←('⍝(.*)'⎕S'\1'⎕OPT('Mode' 'L'))t  ⍝ search for text of comments
       cc←(¯1+cl⍳'⍝')↑cl
       :If ∨/z←'IfNot'⍷cc
-          t←(¯1+⊃where z)↑cc
+          t←(¯1+⊃##.where z)↑cc
           t←(1⊃⎕RSI)⍎t
           t ⎕SIGNAL 777
       :ElseIf ∨/(1⊃t)⍷cl  ⍝ don't add comment if it is on the line of the test!

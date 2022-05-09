@@ -3,13 +3,11 @@
 ⍝ it is a sample - but testing the Assert function will require calling this or other tests with DTest and checking we get the right results!
 ⍝ as done in test_SuccessIndicator.dyalog
 
-⍝ not trying to wstablish a pattern with ⍝[t...] but want  in to make sure (we can check that) the error shows the expected line!
+     sink←1 Assert 0.5+0.5                ⍝this should not fail
 
-     sink←1 Assert 0.5+0.5                ⍝[t1]: this should not fail
-
-     1 Assert 0*=:'Meaningless'    ⍝ the guard will never will be executed, because Assert's ⎕SIGNAL will terminate test
+     1 Assert 0*0:    ⍝ empty guards are possible ("RH style")
 
      MyMsg←'Now thats a surprise!' ⍝ result of difficult computations!
-     sink←MyMsg IfNot 1 Assert 1      ⍝this is syntax if the msg can not be given in comment, but is result of some other routine
+     MyMsg IfNot 1 Assert 2×.5:      ⍝this is syntax if the msg can not be given in comment, but is result of some other routine
      ''  ⍝ empty string as default, indicating "no errors to report"
  }
