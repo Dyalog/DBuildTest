@@ -4,13 +4,13 @@ ID: NameClash
 ⍝ this test creates a few conflicting names - so we want to check if DBuild reports them!
 
 EXEC: #.NameClash1←⍳3
-NS: ./files/NS1*.dyalog, target=#.NameClash1
+NS: ./files/NS1*.dyalog, target=#.NameClash1   ⍝ error 1: collision of existing var name & target
 
 EXEC: #.NameClash2←⍳3
-CSV: ./files/array.csv, Target=#.NameClash2
+CSV: ./files/array.csv, Target=#.NameClash2    ⍝ error 2: another collision
 
 CSV: ./files/array.csv, Target=#.NameClash3
-NS: ./files/NS1*.dyalog, target=#.NameClash3
+NS: ./files/NS1*.dyalog, target=#.NameClash3   ⍝ the 3d one
 
 EXEC: #.london1←⍳4
-DATA: ./files/london1*.txt
+DATA: ./files/london1*.txt, target=#           ⍝ and this should also not work...

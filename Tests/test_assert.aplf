@@ -1,13 +1,16 @@
- test_assert←{⍝ this test shows how to write tests a dfns
+﻿ test_assert←{⍝ this test shows how to write tests a dfns
 
 ⍝ it is a sample - but testing the Assert function will require calling this or other tests with DTest and checking we get the right results!
-⍝ as done in test_SuccessIndicator.dyalog
+⍝ as done in test_SuccessValue.dyalog
 
      sink←1 Assert 0.5+0.5                ⍝this should not fail
 
-     1 Assert 0*0:    ⍝ empty guards are possible ("RH style")
+     1 Assert 0*0:    ⍝ here we give a reason for the failure
 
      MyMsg←'Now thats a surprise!' ⍝ result of difficult computations!
-     MyMsg IfNot 1 Assert 2×.5:      ⍝this is syntax if the msg can not be given in comment, but is result of some other routine
-     ''  ⍝ empty string as default, indicating "no errors to report"
+     MyMsg⊢1 Assert 2×0.5:      ⍝this is syntax if the msg can not be given in comment, but is result of some other routine
+
+     0<≢MyMsg IfNot 1 Check 1.1:MyMsg
+
+     0  ⍝ empty string as default, indicating "no errors to report"
  }

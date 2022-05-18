@@ -1,0 +1,6 @@
+DyalogTest : 1.70
+ID         : SuccessValueOK
+Description: 
+SuccessValue: 'OK'
+
+Test    : test_SuccessValueOK

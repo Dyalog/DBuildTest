@@ -1,0 +1,11 @@
+﻿ test_SuccessValueFromEnv←{
+     {
+         v←⍵
+         0=≢v:v
+         0::v
+         'b64!'≡4↑v:∇ #.base64dec 4↓v
+         'json!'≡5↑v:∇ 0 ⎕JSON 5↓v
+         'apl!'≡4↑v:∇⍎4↓v
+         v
+     }2 ⎕NQ'.' 'GetEnvironment' 'SucVal'
+ }

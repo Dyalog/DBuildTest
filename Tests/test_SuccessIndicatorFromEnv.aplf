@@ -1,6 +1,0 @@
- test_SuccessIndicatorFromEnv←{
-     v←2 ⎕NQ'.' 'GetEnvironment' 'SucIntVal'
-     0=≢v: v
-     ∧/v∊⎕D,'.':⍎v
-     v
- }
