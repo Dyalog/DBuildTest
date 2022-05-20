@@ -15,10 +15,9 @@ Test: test_SuccessValue
 
 Test: test_DBuild_1          ⍝ some features of DBuild   -- disabled because of "-c" (which clears #)
 
-⍝ can't do these as long as m19846 isn't fixed...
-⍝Test: test_DBuild_2          ⍝ test a build with .aplf, *.csv, .aplo
-⍝Test: test_DBuild_3          ⍝ test if DEFAULTS produces desired ⎕IO, ⎕ML in new namespaces etc.
-⍝Test: test_DBuild_4          ⍝ trying to build & save (also .exe!)
+Test: test_DBuild_2          ⍝ test a build with .aplf, *.csv, .aplo
+Test: test_DBuild_3          ⍝ test if DEFAULTS produces desired ⎕IO, ⎕ML in new namespaces etc.
+Test: test_DBuild_4          ⍝ trying to build & save (also .exe!)
 
 Test: test_DBuild_nameclash  ⍝ do we handle nameclashes correctly?
 Test: test_DBuild_tube         ⍝ tube.dws serves as a nice test-case

@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.70
+﻿:Namespace DyalogBuild ⍝ V 1.70
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -309,7 +309,7 @@
                       :CaseList '.dyalog' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
                           :Trap DEBUG↓0 ⍝↓↓↓↓ be sure to pass target as a ref, bad things may happen otherwise ()
                               res←0({0::⍵ ⋄ ⍎⍵}target)0 ⎕SE.SALT.Load fl,' ',options
-
+     
                               ⍝source←⎕SE.SALT.Load fl,' -source=no'  ⍝ unfortunately need two calls to establish fn & get source
                               ⍝source←1⊃⎕NGET fl
                           :Else
@@ -1602,7 +1602,7 @@
               rfs←0 2⍴''
               ⎕EX¨'⎕SE.'∘,¨'SALTUtils.spc.z' 'SALTUtils.spc.res'
               :Trap 0
-                  :For nam :In '⎕SE.'∘,¨'THIS' 'SALTUtils.cs' 'SALTUtils.c.THIS' 'SALTUtils.spc.ns.proc'
+                  :For nam :In '⎕SE.'∘,¨'THIS' 'SALTUtils.cs' 'SALTUtils.c.THIS' 'SALTUtils.spc.ns.proc' 'input.c.THIS'
                       :If 0<⎕NC nam
                       :AndIf 326=⎕DR⍎nam
                           str←⍕⍎nam
@@ -1720,7 +1720,7 @@
       r←table r
       :If off=1  ⍝ careful: off∊0 1 2!
           logfile←∊(2↑⎕NPARTS file),'.log'
-          ⎕NDELETE logfile
+          1 ⎕NDELETE logfile
           :If ~0∊⍴3⊃LOGS
               (∊r,¨⊂NL)Put logfile
           :EndIf
