@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.70
+:Namespace DyalogBuild ⍝ V 1.70
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -72,16 +72,15 @@
 ⍝                   v1.62: streamlined logging and creation of logfiles (reporting errors and optionally info and warnings, too)
 ⍝                   v1.62: it is also possible to get test results in a .json file (see loglvl): this file also has performance stats and collects various memory-related data
 ⍝ 2022 01 10 MBaas, v1.63: DBuild: ⎕WSID will not be set if save=0 (use save=2 to not save, but set ⎕WSID). "-q" modifier suppresses ALL logging (only logs errors)
-⍝ 2022 05 18 MBaas, v1.70: DBuild: DATA: support for .TXT files was mistakenly removed with 1.4 - fixed that. Also: DEFAULTS were never applied to # - now they are. New modifier -target to override TARGET.
+⍝ 2022 05 20 MBaas, v1.70: DBuild: DATA: support for .TXT files was mistakenly removed with 1.4 - fixed that. Also: DEFAULTS were never applied to # - now they are. New modifier -target to override TARGET.
 ⍝                          also incompatible change: to import *.APLA use the APL directive! DATA used to support this, but it now strictly reads file content and assigns it.
 ⍝                          Removed code for compatibility with old versions. DBuild/DTest 1.7 requires at least Dyalog v18.0.
 ⍝                          Various little tweaks in DBuild & DTest and its tools (for example, if -halt is used, Check will produce more verbose output & explanation).
 ⍝                          Renamed switch "-coco" to "-coverage" (can be shortened to -co and changed name of "CodeCoverage_Subject" in .dyalogtest file to "Coverage" per #9)
-⍝                          Support for "SuccessValue" in .dyalogtest file: in case tests would return boolean result instead of string.
-⍝                          (see help for details)
-⍝                          that creates the exact value which test return to indicate "success". Anything else will be interpreted as sign of failure.
-⍝                          the values for the setup and teardown modifiers are now optional, so you can avoid running any by using the modifier w/o value (so -setup will run NO setups)
-⍝                          added Assert for "lighter" tests
+⍝                          Support for "SuccessValue" in .dyalogtest file: in case tests would return boolean result instead of string. (see help for details)
+⍝                                       SuccessValue defines the exact value which test return to indicate "success". Anything else will be interpreted as sign of failure.
+⍝                          The values for the setup and teardown modifiers are now optional, so you can avoid running any by using the modifier w/o value (so -setup will run NO setups)
+⍝                          Added Assert for "lighter" tests (details: https://github.com/Dyalog/DBuildTest/wiki/Assert)
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessValue←''
@@ -303,13 +302,14 @@
           :If 0<⍬⍴⍴fls←(ListFiles sf,f2,f3)[;1]
               :For fl :In fls
                   :If 'data'≡lc mode
-                      res←⎕SE.SALT.Load fl,' -source=no'
+                      res←⎕SE.SALT.Load fl,' -source'
                       names,←⊂fl res
                   :Else  ⍝ mode≡pl
                       :Select lc 3⊃⎕NPARTS fl
                       :CaseList '.dyalog' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
-                          :Trap DEBUG↓0
-                              res←0 target 0 ⎕SE.SALT.Load fl
+                          :Trap DEBUG↓0 ⍝↓↓↓↓ be sure to pass target as a ref, bad things may happen otherwise ()
+                              res←0({0::⍵ ⋄ ⍎⍵}target)0 ⎕SE.SALT.Load fl,' ',options
+
                               ⍝source←⎕SE.SALT.Load fl,' -source=no'  ⍝ unfortunately need two calls to establish fn & get source
                               ⍝source←1⊃⎕NGET fl
                           :Else
@@ -1145,6 +1145,7 @@
           :EndIf
           ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕SI
           (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
+          ⍝ test failed! Execution suspended so that you can examine the problem...
       :EndIf
     ∇
 
@@ -1794,7 +1795,6 @@
       r←0 0⍴0 ⋄ type←3
      
       →(msg≡SuccessValue)⍴0
-⍝     (⎕lc[1]+1)⎕stop 1⊃⎕si
       :If 0=⎕NC'f'
       :AndIf (⎕DR∊msg)∊80 82 160
           f←''
@@ -1816,7 +1816,6 @@
               :Else
                   msg,←' when DTest expected an empty charvec to indicate success'
             ⍝   ⎕←msg
-        ⍝  (⎕lc[1]+1)⎕stop 1⊃⎕si
               :EndIf
           :EndIf
           :If 2≤|≡f

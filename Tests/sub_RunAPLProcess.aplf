@@ -1,7 +1,8 @@
-﻿ R←secsTimeout sub_RunAPLProcess arg;apl;exited;ai3
+﻿ R←secsTimeout sub_RunAPLProcess arg;apl;exited;ai3;msTimeout
 ⍝ arg = APLProcess argument(s)
 ⍝ R=¯1: timeout
 ⍝ other values: returncode of APLProcess (Windows only)
+msTimeout←{0::⍵ ⋄ ⍵×1000}secsTimeout
  :If 0=#.⎕NC'APLProcess'
 ⍝     ⎕SE.SALT.Load ##.TESTSOURCE,'APLProcess.aplc -target=#'
      ⎕SE.SALT.Load'APLProcess -target=#'
@@ -12,8 +13,8 @@
  ai3←⎕AI[3] ⋄ proc←⎕NEW #.APLProcess arg
  :While ~proc.IsRunning proc.Proc.Id ⋄ ai3←⎕AI[3] ⋄ :EndWhile   ⍝ wait until process has started
  :Repeat
-     ⎕DL 1⌊secsTimeout×1000  ⍝ delay one second by default, but allow smaller (if someone challenges our timeouts...)
- :Until (ai31←⎕AI[3])≥⌊ai3+secsTimeout×1000
+     ⎕DL 1⌊msTimeout  ⍝ delay one second by default, but allow smaller (if someone challenges our timeouts...)
+ :Until (ai31←⎕AI[3])≥⌊ai3+msTimeout
  :OrIf exited←proc.HasExited
 
  :If 0=⎕NC'exited'
