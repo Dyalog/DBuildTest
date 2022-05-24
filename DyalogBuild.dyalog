@@ -576,14 +576,16 @@
       t←('⍝(.*)'⎕S'\1'⎕OPT('Mode' 'L'))t  ⍝ search for text of comments
       cc←(¯1+cl⍳'⍝')↑cl
       :If ∨/z←cc=⎕AV[60]  ⍝ look for right tack as separator between reason & test (not using symbol directly )
-          orif∨/z←'IfNot'⍷cc
+      :OrIf ∨/z←'IfNot'⍷cc
           t←(¯1+⊃##.where z)↑cc
           t←(1⊃⎕RSI)⍎t
           t ⎕SIGNAL 777
       :ElseIf ∨/(1⊃t)⍷cl  ⍝ don't add comment if it is on the line of the test!
           ⎕SIGNAL 777
+      :ElseIf 0<≢1⊃t
+          (1⊃t)⎕SIGNAL 777
       :Else
-          ({0<≢2⊃t:2⊃t ⋄ 3⊃t}t)⎕SIGNAL 777
+          ⎕SIGNAL 777
       :EndIf
     ∇
 

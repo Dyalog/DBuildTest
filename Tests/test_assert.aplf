@@ -3,14 +3,16 @@
 ⍝ it is a sample - but testing the Assert function will require calling this or other tests with DTest and checking we get the right results!
 ⍝ as done in test_SuccessValue.dyalog
 
-     sink←1 Assert 0.5+0.5                ⍝this should not fail
+     
+     ⍝ this should not fail with value 0.5+0.5!
+     sink←1 Assert 0.5+0.5 
 
      1 Assert 0*0:    ⍝ here we give a reason for the failure
 
-     MyMsg←'Now thats a surprise!' ⍝ result of difficult computations!
+     MyMsg←'Error msg computed elsewhere...' ⍝ result of difficult computations!
      MyMsg⊢1 Assert 2×0.5:      ⍝this is syntax if the msg can not be given in comment, but is result of some other routine
 
-     0<≢MyMsg IfNot 1 Check 1.1:MyMsg
+     1 Check 1: MyMsg       ⍝ "traditional" checks  return an error msg if test fails
 
      0  ⍝ empty string as default, indicating "no errors to report"
  }
