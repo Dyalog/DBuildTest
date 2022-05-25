@@ -76,7 +76,7 @@
 ⍝                          also incompatible change: to import *.APLA use the APL directive! DATA used to support this, but it now strictly reads file content and assigns it.
 ⍝                          Removed code for compatibility with old versions. DBuild/DTest 1.7 requires at least Dyalog v18.0.
 ⍝                          Various little tweaks in DBuild & DTest and its tools (for example, if -halt is used, Check will produce more verbose output & explanation).
-⍝                          Renamed switch "-coco" to "-coverage" (can be shortened to -co and changed name of "CodeCoverage_Subject" in .dyalogtest file to "Coverage" per #9)
+⍝                          Renamed switch "-coco" to "-coverage" 
 ⍝                          Support for "SuccessValue" in .dyalogtest file: in case tests would return boolean result instead of string. (see help for details)
 ⍝                                       SuccessValue defines the exact value which test return to indicate "success". Anything else will be interpreted as sign of failure.
 ⍝                          The values for the setup and teardown modifiers are now optional, so you can avoid running any by using the modifier w/o value (so -setup will run NO setups)
@@ -892,7 +892,7 @@
                       :EndIf
                       subj,←⍕ns
                   :EndIf
-                  CoCo←⎕NEW CodeCoverage,⊂subj
+                  CoCo←⎕NEW CodeCoverage(,⊂subj)
                   CoCo.Info←'Report created by DTest ',(2⊃Version),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
                   :If 1<≢args.coverage
                   :AndIf (⎕DR' ')=⎕DR args.coverage
@@ -2036,6 +2036,7 @@
               r,←⊂'    path                 path to directory containing functions in .dyalog files'
               r,←'' 'Optional modifiers are:'
               r,←⊂'    -clear[=n]           clear ws before running tests (optionally delete nameclass n only)'
+              r,←⊂'    -coverage            enable analysis of code coverage'
               r,←⊂'    -filter=string       only run functions whose name start with filter'
               r,←⊂'    -halt                halt on error rather than log and continue'
               r,←⊂'    -init                if specified test-file wasn''t found, it will be initialised with a template'
@@ -2047,6 +2048,7 @@
               r,←⊂'                          16={base}.session.log ONLY if test failed'
               r,←⊂'                          32={base}.log.json: machine-readable results'
               r,←⊂'                             Creating such a log is the ONLY way to get data on performance and memory usage of tests!'
+              r,←⊂'                             (Values are bit flags and can be added)'
               r,←⊂'    -order=0|1|"NumVec"  control sequence of tests (default 0: random; 1:sequential;"NumVec":order)'
               r,←⊂'    -off[=0|1|2]         )off after running the tests'
               r,←⊂'                           0=do not )OFF after test'
@@ -2062,7 +2064,7 @@
               r,←⊂'                          (NB: this can be tricky when you want to use 0 - see wiki for details!)'
               r,←⊂'    -suite=file          run tests defined by a .dyalogtest file'
               r,←⊂'    -teardown=[fn]       run the function fn after all tests'
-              r,←⊂'    -testlog=            force name of logfiles (default name of testfile)'
+              r,←⊂'    -testlog=            force name of logfile(s) (default name of testfile)'
               r,←⊂'    -tests=              comma-separated list of tests to run'
               r,←⊂'    -timeout             sets a timeout. Seconds after which test(suite)s will be terminated. (Default=0 means: no timeout)'
               r,←⊂'    -ts                  add timestamp (no date) to logged messages'
