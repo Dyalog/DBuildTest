@@ -72,11 +72,11 @@
 ⍝                   v1.62: streamlined logging and creation of logfiles (reporting errors and optionally info and warnings, too)
 ⍝                   v1.62: it is also possible to get test results in a .json file (see loglvl): this file also has performance stats and collects various memory-related data
 ⍝ 2022 01 10 MBaas, v1.63: DBuild: ⎕WSID will not be set if save=0 (use save=2 to not save, but set ⎕WSID). "-q" modifier suppresses ALL logging (only logs errors)
-⍝ 2022 05 20 MBaas, v1.70: DBuild: DATA: support for .TXT files was mistakenly removed with 1.4 - fixed that. Also: DEFAULTS were never applied to # - now they are. New modifier -target to override TARGET.
+⍝ 2022 05 26 MBaas, v1.70: DBuild: DATA: support for .TXT files was mistakenly removed with 1.4 - fixed that. Also: DEFAULTS were never applied to # - now they are. New modifier -target to override TARGET.
 ⍝                          also incompatible change: to import *.APLA use the APL directive! DATA used to support this, but it now strictly reads file content and assigns it.
 ⍝                          Removed code for compatibility with old versions. DBuild/DTest 1.7 requires at least Dyalog v18.0.
 ⍝                          Various little tweaks in DBuild & DTest and its tools (for example, if -halt is used, Check will produce more verbose output & explanation).
-⍝                          Renamed switch "-coco" to "-coverage" 
+⍝                          Renamed switch "-coco" to "-coverage"
 ⍝                          Support for "SuccessValue" in .dyalogtest file: in case tests would return boolean result instead of string. (see help for details)
 ⍝                                       SuccessValue defines the exact value which test return to indicate "success". Anything else will be interpreted as sign of failure.
 ⍝                          The values for the setup and teardown modifiers are now optional, so you can avoid running any by using the modifier w/o value (so -setup will run NO setups)
@@ -147,7 +147,7 @@
           args←'#'
       :EndIf
       :Trap DEBUG↓0
-          args ⎕NS'Because' 'Fail' 'Check' 'IsNotElement' 'eis' 'Assert' 'IfNot' 'Assert' 'base64' 'base64dec' 'base64enc'
+          args ⎕NS'eis' 'base64' 'base64dec' 'base64enc'
       :EndTrap
       ⎕RL←⍬ 2  ⍝ CompCheck: ignore
      
@@ -155,16 +155,17 @@
     ∇
 
     ∇ {sink}←SetupCompatibilityFns
-      sink←⍬   ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
-      eis←{1=≡⍵:⊂⍵ ⋄ ⍵}                         ⍝ enclose if simple (can't use left-shoe underbar because of classic compatibility )
+      sink←⍬              ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
      
       :If ~_isClassic
+          eis←⍎⎕UCS 8838
           table←⍎⎕UCS 9066
           ltack←⍎⎕UCS 8867
           rtack←⍎⎕UCS 8866
           GetNumParam←{⍺←ltack ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)
           where←⍎⎕UCS 9080
       :Else
+          eis←{1=≡⍵:⊂⍵ ⋄ ⍵}   ⍝ enclose if simple (can't use left-shoe underbar because of classic compatibility)
           table←{r←(⍴⍵),(1≥⍴⍴⍵)/1 ⋄ r←r[1],×/1↓⍴⍵ ⋄ r⍴⍵}
           ltack←{⍺}
           rtack←{⍵}
@@ -401,18 +402,10 @@
           ⍺⍺¨refs ⍵   ⍝ Apply to each space
       }
 
-    ⍝─── these fns are removed with v1.7 - but in this releasde we'll issue a DEPRECATED msg when they are called (so that anyone that uses them has time to update...)
-    qNDELETE←{(2⊃⎕si),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'}
-    qNEXISTS←{(2⊃⎕si),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'}
-    qGET←{(2⊃⎕si),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'}
-    qMKDIR←{(2⊃⎕si),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'}
-    qNPARTS←{(2⊃⎕si),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'}
-    qJSON←{(2⊃⎕si),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'}
-    qJSONi←{(2⊃⎕si),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'}
-    qJSONe←{(2⊃⎕si),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'}
-    qPUT←{(2⊃⎕si),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'}
-    ListPre15←{(2⊃⎕si),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'}
-    ⎕fx'_FindDefine' '(2⊃⎕si),'' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'''    ⍝ niladic fn...
+    ⍝─── these fns are removed with v1.7 - but in this release we'll issue a DEPRECATED msg when they are called (so that anyone that uses them becomes aware of needed update...)
+    qNDELETE ←qNEXISTS← qGET← qMKDIR← qNPARTS← qJSON← qJSONi← qJSONe← qPUT← ListPre15←    {((1⊃⎕SI),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these')⎕SIGNAL 6}
+    ⍝ need to replace niladic _FindDefine with a tradfn:
+    ⎕fx'_FindDefine' '((1⊃⎕si),'' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'')⎕signal 11'    ⍝ niladic fn...
     :endSection Compatibility
 
     :Section ADOC
@@ -685,7 +678,7 @@
                       'ns'⎕NS'verbose' 'filter' 'halt' 'quiet' 'trace' 'timestamp' 'order' 'off'
      
                       :Trap (DEBUG∨halt)↓0
-                          filter←∊LoadCode source(⍕ns)
+                          filter←∊LoadCode source ns
                           :If args.tests≡0
                               args.tests←filter  ⍝ transfer into tests, as filtering could be ambigous and we wouldn't want to run more than required...
                           :EndIf
@@ -705,7 +698,7 @@
                   'ns'⎕NS''
                   :For f :In files
                       :Trap (DEBUG∨halt)↓0
-                          LoadCode f(ns)
+                          LoadCode f ns
                       :Else
                           msg←'Error loading code from file "',f,'"'
                           LogError msg,⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
