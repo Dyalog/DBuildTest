@@ -403,7 +403,7 @@
       }
 
     ⍝─── these fns are removed with v1.7 - but in this release we'll issue a DEPRECATED msg when they are called (so that anyone that uses them becomes aware of needed update...)
-    qNDELETE ←qNEXISTS← qGET← qMKDIR← qNPARTS← qJSON← qJSONi← qJSONe← qPUT← ListPre15←    {((1⊃⎕SI),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these')⎕SIGNAL 6}
+    qNDELETE←qNEXISTS←qNGET←qMKDIR←qNPARTS←qJSON←qJSONi←qJSONe←qPUT←ListPre15←{((1⊃⎕SI),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these')⎕SIGNAL 6}
     ⍝ need to replace niladic _FindDefine with a tradfn:
     ⎕fx'_FindDefine' '((1⊃⎕si),'' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'')⎕signal 11'    ⍝ niladic fn...
     :endSection Compatibility
