@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.62
+﻿:Namespace DyalogBuild ⍝ V 1.70
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -72,12 +72,22 @@
 ⍝                   v1.62: streamlined logging and creation of logfiles (reporting errors and optionally info and warnings, too)
 ⍝                   v1.62: it is also possible to get test results in a .json file (see loglvl): this file also has performance stats and collects various memory-related data
 ⍝ 2022 01 10 MBaas, v1.63: DBuild: ⎕WSID will not be set if save=0 (use save=2 to not save, but set ⎕WSID). "-q" modifier suppresses ALL logging (only logs errors)
+⍝ 2022 05 26 MBaas, v1.70: DBuild: DATA: support for .TXT files was mistakenly removed with 1.4 - fixed that. Also: DEFAULTS were never applied to # - now they are. New modifier -target to override TARGET.
+⍝                          also incompatible change: to import *.APLA use the APL directive! DATA used to support this, but it now strictly reads file content and assigns it.
+⍝                          Removed code for compatibility with old versions. DBuild/DTest 1.7 requires at least Dyalog v18.0.
+⍝                          Various little tweaks in DBuild & DTest and its tools (for example, if -halt is used, Check will produce more verbose output & explanation).
+⍝                          Renamed switch "-coco" to "-coverage"
+⍝                          Support for "SuccessValue" in .dyalogtest file: in case tests would return boolean result instead of string. (see help for details)
+⍝                                       SuccessValue defines the exact value which test return to indicate "success". Anything else will be interpreted as sign of failure.
+⍝                          The values for the setup and teardown modifiers are now optional, so you can avoid running any by using the modifier w/o value (so -setup will run NO setups)
+⍝                          Added Assert for "lighter" tests (details: https://github.com/Dyalog/DBuildTest/wiki/Assert)
 
-    DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being ⎕se even after Edit > Reformat.
+    DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
+    SuccessValue←''
+
     :Section Compatibility
     ⎕IO←1
     ⎕ML←1
-
 
     ∇ R←GetDOTNETVersion;vers;⎕IO;⎕USING
 ⍝ R[1] = 0/1/2: 0=nothing, 1=.net Framework, 2=NET CORE
@@ -118,19 +128,17 @@
     ∇ {R}←GetTools4CITA args;names
       :Access public
     ⍝ args primarily intended for internal use (giving the ns in which to setup DSL)
-    ⍝ sets up ns "⎕se._cita' and define some tools for writing tests in it
+    ⍝ sets up ns "⎕se._cita' and define some tools for writing tests in it (and copy DSL into # or ns passed as argument)
     ⍝ a few essential ⎕N-Covers and the tools for CITA to write a log and a status-file
       Init 2
       :If 0=⎕SE.⎕NC'_cita'
           names←'SetupCompatibilityFns' 'DyaVersion' 'APLVersion' 'isChar' 'Split' 'Init' 'GetDOTNETVersion'
-          names,←'qNPARTS' 'qMKDIR' 'qNEXISTS' 'qNDELETE' '_Filetime_to_TS' 'Nopen'
+          names,←'_Filetime_to_TS' 'Nopen'
           names,←'isWin' 'isChar' 'GetCurrentDirectory' 'unixfix' ⍝ needed by these tools etc.
           names,←'swise' 'refs'   ⍝ useful to deal with WS FULL
-          :If DyaVersion≤15
-              names,←'ListPre15' 'GetVTV' 'Put' '_FindDefine' '_FindFirstFile' '_FindNextFile' '_FindTrim' 'GetText'
-          :Else
-              names,←⊂'ListPost15'
-          :EndIf
+          names,←⊂'ListPost15'
+          names,←'base64' 'base64dec' 'base64enc'
+     
           '⎕se._cita'⎕NS names
           _cita.('⎕se._cita'⎕NS ⎕NL-3)
       :EndIf
@@ -139,131 +147,38 @@
           args←'#'
       :EndIf
       :Trap DEBUG↓0
-          args ⎕NS'Because' 'Fail' 'Check' 'IsNotElement' 'eis'
+          args ⎕NS'eis' 'base64' 'base64dec' 'base64enc'
       :EndTrap
-      :If ⎕SE._cita.DyaVersion≥15
-          ⎕RL←⍬ 2  ⍝ CompCheck: ignore
-      :EndIf
-      ⎕SE._cita.randomstring←(⎕A,⎕D)[?32⍴36]
+      ⎕RL←⍬ 2  ⍝ CompCheck: ignore
      
-      R←⎕SE._cita.randomstring,'⍝     ───  Loaded tools into namespace ⎕se._cita ─── (WA=',(,'CI15'⎕FMT ⎕WA),' bytes) ───'
+      R←'───  Loaded tools into namespace ⎕se._cita ─── (WA=',(,'CI15'⎕FMT ⎕WA),' bytes) ───'
     ∇
 
     ∇ {sink}←SetupCompatibilityFns
-      sink←⍬   ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
-      eis←{1=≡⍵:⊂⍵ ⋄ ⍵}                         ⍝ enclose if simple (can't use left-shoe underbar because of classic compatibility )
+      sink←⍬              ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
      
-      :If 13≤DyaVersion
-      :AndIf ~_isClassic
+      :If ~_isClassic
+          eis←⍎⎕UCS 8838
           table←⍎⎕UCS 9066
           ltack←⍎⎕UCS 8867
           rtack←⍎⎕UCS 8866
           GetNumParam←{⍺←ltack ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)
+          where←⍎⎕UCS 9080
       :Else
+          eis←{1=≡⍵:⊂⍵ ⋄ ⍵}   ⍝ enclose if simple (can't use left-shoe underbar because of classic compatibility)
           table←{r←(⍴⍵),(1≥⍴⍴⍵)/1 ⋄ r←r[1],×/1↓⍴⍵ ⋄ r⍴⍵}
           ltack←{⍺}
           rtack←{⍵}
           GetNumParam←{⍺←'0' ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)
-      :EndIf
-     
-      :If 14≤DyaVersion
-          tally←≢    ⍝ CompCheck: ignore
-      :Else
-          tally←{⍬⍴1,⍨⍴⍵}
-      :EndIf
-     
-      :If 15≤DyaVersion
-          GetFilesystemType←{⊃1 ⎕NINFO ⍵} ⍝ 1=Directory, 2=Regular file  ⍝ CompCheck: ignore
-          ListFiles←{⍺←'' ⋄ ⍺ ListPost15 ⍵}
-          qNGET←{⎕NGET ⍵ 1}   ⍝ CompCheck: ignore
-          ⍝qNPUT←{(⊂⍺)⎕NPUT ⍵}    ⍝ CompCheck: ignore
-          qNPUT←{
-             ⍝ 0::∘∘∘,⎕←(⎕JSON ⎕DMX),⎕trap←0'S'
-              (~0∊⍴⍺)∧3≠≡⍺:(⊂∊(eis,⍺),¨⊂NL)⎕NPUT ⍵             ⍝ CompCheck: ignore
-              (eis,⍺)⎕NPUT ⍵             ⍝ CompCheck: ignore
-          }
-      :Else
-          ListFiles←{⍺←'' ⋄ ⍺ ListPre15 ⍵}
-          GetFilesystemType←{2-(ListFiles{(-∨/'\/'=¯1↑⍵)↓⍵}⍵)[1;4]}
-          ⍝ we only emulate ⎕NGET {filename} 1
-          qNGET←{⍝ return nested content, so that 1⊃qNGET is ≡ 1⊃⎕NGET (no other elements used here!)
-              ,⊂GetVTV ⍵
-          }
-          qNPUT←{⍝ extra-complicated to at least handle overwrite (no append yet)
-              (,1)≡2⊃(eis ⍵),0:(⍺ Put⊃eis ⍵)ltack(qNDELETE⊃⍵)
-              ⍺ Put⊃eis ⍵
-          }
-      :EndIf
-     
-      :If 16≤DyaVersion
-      :AndIf ~_isClassic
-          where←⍎⎕UCS 9080
-      :Else
           where←{(,⍵)/,⍳⍴⍵}
       :EndIf
      
-      :If 16≤DyaVersion
-          qJSONi←qJSONe←⎕JSON                          ⍝ CompCheck: ignore
-      :ElseIf 14.1≤DyaVersion
-          qJSONi←{0(7159⌶)⍵} ⍝ CompCheck: ignore
-          qJSONe←{(7160⌶)⍵} ⍝ CompCheck: ignore
-      :Else
-          qJSONi←qJSONe←{'This functionality not available in versions < 14.1'⎕SIGNAL 11}
-      :EndIf
-      :If 18≤DyaVersion
-          lc←¯1∘⎕C                                             ⍝ lower case ⍝ CompCheck: ignore
-          uc←1∘⎕C                                              ⍝ upper case ⍝ CompCheck: ignore
-      :ElseIf 15≤DyaVersion
-          lc←819⌶                                     ⍝ lower case ⍝ CompCheck: ignore
-          uc←1∘(819⌶)                                 ⍝ upper case ⍝ CompCheck: ignore
-      :Else
-          lowerAlphabet←'abcdefghijklmnopqrstuvwxyzáâãçèêëìíîïðòóôõùúûýàäåæéñöøü'
-          upperAlphabet←'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÂÃÇÈÊËÌÍÎÏÐÒÓÔÕÙÚÛÝÀÄÅÆÉÑÖØÜ'
-          fromto←{1<|≡⍵:(⊂⍺)∇¨⍵ ⋄ n←⍴1⊃(t f)←⍺ ⋄ ~∨/b←n≥i←f⍳s←,⍵:s ⋄ (b/s)←t[b/i] ⋄ (⍴⍵)⍴s} ⍝ from-to casing fn
-          lc←lowerAlphabet upperAlphabet∘fromto ⍝ :Includable Lower-casification of simple array
-          uc←upperAlphabet lowerAlphabet∘fromto ⍝ Ditto Upper-casification
-      :EndIf
-    ∇
-
-    ∇ r←{normalize}qNPARTS filename;filesep;mask;path;file;ext;cd;i;pth
-          ⍝ splits a filename into: path name ext
-      :If 0=⎕NC'normalize'
-          normalize←0
-      :EndIf
-      :If 15≤DyaVersion
-          r←normalize ⎕NPARTS filename ⍝ CompCheck: ignore
-      :Else
-          filesep←(~isWin)↓'\/'
-          mask←⌽∨\⌽filename∊filesep
-          path←mask/filename
-          ((path∊filesep)/path)←'/'
-          file←(~mask)/filename
-          :If normalize
-              cd←GetCurrentDirectory,'/' ⋄ pth←path ⋄ path←''
-              ((cd∊filesep)/cd)←'/'
-              :If 0∊⍴pth
-                  path←cd
-              :Else
-                  :While 0<⍴pth
-                      :If './'≡2↑pth
-                          path←cd{0∊⍴⍵:⍺ ⋄ ⍵}path
-                          pth←2↓pth
-                      :ElseIf '../'≡3↑pth
-                          path←{(2≤⌽+\⌽⍵∊filesep)/⍵}cd{0∊⍴⍵:⍺ ⋄ ⍵}path
-                          pth←3↓pth
-                      :Else
-                          i←⍬⍴where pth∊filesep
-                          path←path,i↑pth
-                          pth←i↓pth
-                      :EndIf
-                  :EndWhile
-              :EndIf
-          :EndIf
-          mask←∨\⌽<\⌽'.'=file
-          ext←mask/file
-          file←(~mask)/file
-          r←path file ext
-      :EndIf
+      tally←≢    ⍝ CompCheck: ignore
+      lc←¯1∘⎕C                                              ⍝ lower case ⍝ CompCheck: ignore
+      uc←1∘⎕C                                               ⍝ upper case ⍝ CompCheck: ignore
+     
+      GetFilesystemType←{⊃1 ⎕NINFO ⍵} ⍝ 1=Directory, 2=Regular file  ⍝ CompCheck: ignore
+      ListFiles←{⍺←'' ⋄ ⍺ ListPost15 ⍵}
     ∇
 
     ∇ r←GetCurrentDirectory;GCD;GetLastError
@@ -282,8 +197,6 @@
       :EndSelect
     ∇
 
-
-
     ∇ r←{quietly}_SH cmd
       :Access public shared
       quietly←{6::⍵ ⋄ quietly}0
@@ -292,93 +205,6 @@
       :EndIf
       r←{0::'' ⋄ ⎕SH ⍵}cmd
     ∇
-
-    ∇ {larg}qMKDIR path;CreateDirectory;GetLastError;err
-      ⍝ Create a folder
-      :If 15>DyaVersion      ⍝ Versions < 15 can't deal with the different ⍺ of ⎕MKDIR, so larg is ignored here...
-          :Select APLVersion
-          :CaseList '*nix' 'Mac'
-              :If ~DirExists path
-                  1 _SH'mkdir ',unixfix path
-                  ('mkdir error on ',path)⎕SIGNAL 11/⍨~DirExists path
-              :EndIf
-          :Case 'Win'
-              ⎕NA'I kernel32.C32∣CreateDirectory* <0T I4' ⍝ Try for best function
-              →(0≠CreateDirectory path 0)⍴0 ⍝ 0 means "default security attributes"
-              ⎕NA'I4 kernel32.C32|GetLastError'
-              err ⎕SIGNAL⍨'CreateDirectory error:',⍕err←GetLastError
-          :EndSelect
-      :Else
-          :If 0=⎕NC'larg'
-              ⎕MKDIR path ⍝ CompCheck: ignore
-          :Else
-              larg ⎕MKDIR path ⍝ CompCheck: ignore
-          :EndIf
-      :EndIf
-    ∇
-
-
-    ∇ R←qNEXISTS FileOrDir
-      :If DyaVersion≤15
-      :OrIf (DyaVersion≤17)∧∨/'*?'∊FileOrDir
-          :Trap DEBUG↓R←0
-              R←0<1↑⍴ListFiles FileOrDir
-          :EndTrap
-      :ElseIf ∨/'*?'∊FileOrDir
-          R←(⎕NEXISTS ⎕OPT'Wildcard' 1)FileOrDir ⍝ CompCheck: ignore
-      :Else
-          R←⎕NEXISTS FileOrDir ⍝ CompCheck: ignore
-      :EndIf
-    ∇
-
-    ∇ {sink}←{wild}qNDELETE name;DeleteFileX;GetLastError;FindFirstFile;FindNextFile;FindClose;handle;rslt;ok;next;⎕IO;path
-    ⍝ not entirely compatible, uses ⍺ to emulate variant 'Wildcard'1
-      sink←⍬
-      :If 0=⎕NC'wild'
-          wild←0
-      :EndIf
-      :If wild∧DyaVersion<17
-      :OrIf DyaVersion≤15
-          ⎕IO←0
-          :Select APLVersion
-          :CaseList '*nix' 'Mac'
-              _SH'rm -f ',unixfix name
-          :Case 'Win'
-              'DeleteFileX'⎕NA'I kernel32.C32∣DeleteFile* <0T'
-              ⎕NA'I4 kernel32.C32|GetLastError'
-              :If ∨/'*?'∊name ⍝ wildcards?
-                  path←{(⌽∨\⌽⍵∊'\/')/⍵}name
-                  _FindDefine
-                  handle rslt←_FindFirstFile name
-                  :If 0=handle
-                      :Return ⍝ ('ntdir error:',⍕rslt)⎕SIGNAL 102      ⍝ file not found
-                  :EndIf
-                  :If '.'≠⊃6⊃rslt
-                      {}DeleteFileX⊂path,6⊃rslt
-                  :EndIf
-                  :While 1=0⊃ok next←_FindNextFile handle
-                      :If '.'≠⊃6⊃next
-                          {}DeleteFileX⊂path,6⊃next
-                      :EndIf
-                  :EndWhile
-                  :If 0 18∨.≠ok next
-                      ('ntdir error:',⍕next)⎕SIGNAL 11   ⍝ DOMAIN
-                  :EndIf
-                  {}FindClose handle
-              :Else
-                  :If 0=DeleteFileX⊂name
-                  :AndIf 2≠GetLastError
-                      11 ⎕SIGNAL⍨'DeleteFile error:',⍕GetLastError
-                  :EndIf
-              :EndIf
-          :EndSelect
-      :ElseIf wild
-          1(⎕NDELETE ⎕OPT 1)name   ⍝ CompCheck: ignore
-      :Else
-          1 ⎕NDELETE name   ⍝ CompCheck: ignore
-      :EndIf
-    ∇
-
 
 
     ∇ r←{pattern}ListPost15 path
@@ -392,86 +218,6 @@
       r[;4]←r[;4]=1
     ∇
 
-    ∇ r←{pattern}ListPre15 path;z;rslt;handle;next;ok;attrs;⎕IO;FindFirstFileX;FindNextFileX;FindClose;FileTimeToLocalFileTime;FileTimeToSystemTime;GetLastError;isFile;filter;isFolder
-    ⍝ path and pattern are related.
-    ⍝ If there is no pattern (or pattern is empty)
-    ⍝   If path ends with '/' or '\' then return information for the contents of the folder, otherwise, return information about the folder (or file) itself
-    ⍝ If a non-empty pattern exists, it is used as a filter on the contents of path (path is treated as a folder name)
-    ⍝ Examples:
-    ⍝   List '/dir/foo'  ⍝ returns information about /dir/foo
-    ⍝   List '/dir/foo/' ⍝ returns information about the contents of /dir/foo/
-    ⍝   '*.dyalog' List '/dir/foo'  ⍝ returns information about the .dyalog files in /dir/foo/
-    ⍝   List '/dir/foo/*.dyalog'    ⍝ also returns information about the .dyalog files in /dir/foo/
-     
-    ⍝ Information returned is:
-    ⍝ [;0] Name [;1] Length [;2] LastAccessTime [;3] IsDirectory
-    ⍝ taken from MiServer's Files-class, with minor changes for usage in DyalogBuild
-      ⎕IO←0
-      :If 0=⎕NC'pattern'
-      :OrIf pattern≡''
-          pattern←''
-      :Else
-          path,←(~path[(⍴path)-~⎕IO]∊'\/')/'/'
-      :EndIf
-      isFolder←'/\'∊⍨¯1↑path
-      filter←''
-      :If isFile←~0∊⍴pattern
-          filter←isFolder↓'/',pattern
-      :EndIf
-     
-      r←0 4⍴'' 0 0 0
-     
-      :Select APLVersion
-      :Case '*nix'
-          →(0∊⍴rslt←1 _SH'ls -al',isFolder↓'d --time-style=full-iso ',unixfix path,filter)⍴0
-          rslt←↑rslt
-          rslt←' ',('total '≡6⍴rslt)↓[0]rslt
-          r←((1↑⍴rslt),4)⍴0
-          z←∧⌿' '=rslt ⍝ entirely blank columns
-          z←z∧10>+\z    ⍝ Do not split file names
-          rslt←z⊂rslt
-          r[;3]←'d'=(0⊃rslt)[;1]                 ⍝ IsDirectory
-          r[;1]←(~r[;3])×1⊃⎕VFI,4⊃rslt ⍝ Size
-          z←,(5⊃rslt),6⊃rslt ⋄ ((z∊'-:')/z)←' ' ⋄ z←((1↑⍴r),6)⍴1⊃⎕VFI z
-          r[;2]←↓⌊z,1000×1|z[;5]                ⍝ Add msec to Timestamp
-          r[;0]←{(⌽~∨\⌽⍵='/')/⍵}¨{(-+/∧\' '=⌽⍵)↓¨↓⍵}0 1↓8⊃rslt    ⍝ Name
-     
-      :Case 'Mac'
-          →(0∊⍴rslt←1 _SH'stat -lt "%F %T %z" ',unixfix path,isFolder{0∊⍴⍵:⍺/'*' ⋄ ⍵}filter)⍴0
-          r←((1↑⍴rslt),4)⍴0
-          rslt←↑{⎕ML←3 ⋄ ⍵⊂⍨~{⍵∧9>+\⍵}' '=⍵}¨rslt
-          r[;3]←'d'=0⊃¨rslt[;1]                         ⍝ IsDirectory
-          r[;1]←(~r[;3])×1⊃¨⎕VFI¨rslt[;4]               ⍝ Size
-          z←↑∊¨↓{w←⍵ ⋄ ((w∊'-:')/w)←' ' ⋄ 1⊃⎕VFI w}¨rslt[;5 6] ⍝
-          r[;2]←↓z,0                                    ⍝ 0 msec for MacOS to Timestamp
-          r[;0]←path∘{⍺((⍴⍺){⍵↓⍨⍺⍺×⍺≡⍺⍺⍴⍵})⍵}¨rslt[;8]  ⍝ Name
-     
-      :Case 'Win'
-      ⍝ See DirX for explanations of results of _FindNextFile etc
-          _FindDefine
-          handle rslt←_FindFirstFile path,isFolder{0∊⍴⍵:⍺/'*' ⋄ ⍵}filter
-          :If 0=handle
-              :Return ⍝ ('ntdir error:',⍕rslt)⎕SIGNAL 102      ⍝ file not found
-          :EndIf
-          rslt←,⊂rslt
-          :While 1=0⊃ok next←_FindNextFile handle
-              rslt,←⊂next
-          :EndWhile
-          :If 0 18∨.≠ok next
-              ('ntdir error:',⍕next)⎕SIGNAL 11   ⍝ DOMAIN
-          :EndIf
-          ok←FindClose handle
-          →(0∊⍴rslt←↓[0]↑rslt)⍴0
-          rslt←(⊂~(6⊃rslt)∊(,'.')'..')/¨rslt  ⍝ remove . and ..
-          r←((1↑⍴0⊃rslt),4)⍴0
-          (0⊃rslt)←⍉attrs←(32⍴2)⊤0⊃rslt    ⍝ Get attributes into bits
-          r[;3]←(0⊃rslt)[;27]              ⍝ IsDirectory?
-          r[;1]←0(2*32)⊥⍉↑4⊃rslt           ⍝ combine size elements
-          r[;2]←_Filetime_to_TS¨3⊃rslt     ⍝ As ⎕TS vector
-          r[;0]←(⊂{w←⍵ ⋄ ((w='\')/w)←'/' ⋄ w}isFolder⊃({(⌽∨\⌽⍵∊'/\')/⍵}path)path),¨6⊃rslt     ⍝ Name (prefixed with path, using / instead of \)
-      :EndSelect
-      r←r[⍋↑r[;0];]
-    ∇
 
     ∇ rslt←_Filetime_to_TS filetime;⎕IO
       :If 1≠0⊃rslt←FileTimeToLocalFileTime filetime(⎕IO←0)
@@ -479,45 +225,6 @@
           rslt←0 0                   ⍝ if either call failed then zero the time elements
       :EndIf
       rslt←1 1 0 1 1 1 1 1/1⊃rslt    ⍝ remove day of week
-    ∇
-
-    ∇ _FindDefine;WIN32_FIND_DATA
-      :If 0=⎕NC'FindFirstFileX'
-          WIN32_FIND_DATA←'{I4 {I4 I4} {I4 I4} {I4 I4} {U4 U4} {I4 I4} T[260] T[14]}'
-          'FindFirstFileX'⎕NA'I4 kernel32.C32|FindFirstFile* <0T >',WIN32_FIND_DATA
-          'FindNextFileX'⎕NA'U4 kernel32.C32|FindNextFile* I4 >',WIN32_FIND_DATA
-          ⎕NA'kernel32.C32|FindClose I4'
-          ⎕NA'I4 kernel32.C32|FileTimeToLocalFileTime <{I4 I4} >{I4 I4}'
-          ⎕NA'I4 kernel32.C32|FileTimeToSystemTime <{I4 I4} >{I2 I2 I2 I2 I2 I2 I2 I2}'
-          ⎕NA'I4 kernel32.C32∣GetLastError'
-      :EndIf
-    ∇
-
-    ∇ rslt←_FindFirstFile name;⎕IO
-      rslt←FindFirstFileX name(⎕IO←0)
-      :If ¯1=0⊃rslt                   ⍝ INVALID_HANDLE_VALUE
-          rslt←0 GetLastError
-      :Else
-          (1 6⊃rslt)_FindTrim←0        ⍝ shorten the file name at the null delimiter
-          (1 7⊃rslt)_FindTrim←0        ⍝ and for the alternate name
-      :EndIf
-    ∇
-
-    ∇ rslt←_FindNextFile handle;⎕IO
-      rslt←FindNextFileX handle(⎕IO←0)
-      :If 1≠0⊃rslt
-          rslt←0 GetLastError
-      :Else
-          (1 6⊃rslt)_FindTrim←0             ⍝ shorten the filename
-          (1 7⊃rslt)_FindTrim←0             ⍝ shorten the alternate name
-      :EndIf
-    ∇
-
-    ∇ name←name _FindTrim ignored;⎕IO
-     ⍝ Truncates a character vector at the null delimiting byte.
-     ⍝ The null is not included in the result.
-      ⎕IO←0
-      name↑⍨←name⍳⎕UCS 0
     ∇
 
     ∇ Chars←GetText name;nid;signature;nums;sz;b
@@ -561,24 +268,26 @@
       :EndIf
     ∇
 
-    ∇ {names}←{options}LoadCode file_target;target;file;whatWeHave;f1;f2;f3;fl;fls;sep;sf
+    ∇ {names}←{options}LoadCode file_target_mode;target;file;whatWeHave;f1;f2;f3;fl;fls;sep;sf;source;res;mode;larg
     ⍝ loads code from scriptfile (NB: file points to one existing file, no pattern etc.)
     ⍝ Options defines SALT-Options
-    ⍝ file_target: (filename )
+    ⍝ file_target_mode: (filename )
     ⍝ res: nested vector of names that were defined
       names←0⍴⊂''
-      →(0=tally file_target)/0  ⍝ gracefully treatment of empty calls
-      (file target)←file_target
+      →(0=tally file_target_mode)/0  ⍝ gracefully treatment of empty calls
+      :If 2=tally file_target_mode ⋄ file_target_mode←file_target_mode,⊂'apl' ⋄ :EndIf
+      (file target mode)←file_target_mode
       :If 0=⎕NC'options'
           options←''
       :EndIf
-      :If target≢''
-      :AndIf 0=⎕NC target
-          target ⎕NS''
+      :If target≢''         ⍝ if we have a target
+      :AndIf 9≠⎕NC'target'  ⍝ and it's not a ref
+      :AndIf 0=⎕NC target   ⍝ and doesn't even exist yet
+          target ⎕NS''      ⍝ THEN we create it!
       :EndIf
       options←' ',options
      
-      (f1 f2 f3)←qNPARTS file
+      (f1 f2 f3)←⎕NPARTS file
       ⍝ filenames may contain wildcards - which isn't so useable with Link.Import.
       ⍝ So we resolve them and work through the list, processing every file as good as we can
       ⍝ but List may not be the right tool to do that because it does not give us a filename with extension - so we can't recognize -.apla!
@@ -593,41 +302,46 @@
           :EndIf
           :If 0<⍬⍴⍴fls←(ListFiles sf,f2,f3)[;1]
               :For fl :In fls
-                  :If (⊂lc 3⊃qNPARTS fl)∊'.dyalog' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
-                      :Trap DEBUG↓0
-                          res←⎕SE.SALT.Load fl,' -target=',target,options
-                      :Else
-                          res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',target,options,'": ',NL
-                          :If DyaVersion<13.1
-                              res,←⍕⎕DM,¨⊂NL
+                  :If 'data'≡lc mode
+                      res←⎕SE.SALT.Load fl,' -source'
+                      names,←⊂fl res
+                  :Else  ⍝ mode≡pl
+                      :Select lc 3⊃⎕NPARTS fl
+                      :CaseList '.dyalog' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
+                          :Trap DEBUG↓0 ⍝↓↓↓↓ be sure to pass target as a ref, bad things may happen otherwise ()
+                              res←0({0::⍵ ⋄ ⍎⍵}target)0 ⎕SE.SALT.Load fl,' ',options
+     
+                              ⍝source←⎕SE.SALT.Load fl,' -source=no'  ⍝ unfortunately need two calls to establish fn & get source
+                              ⍝source←1⊃⎕NGET fl
                           :Else
+                              res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',target,options,'": ',NL
                               res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')   ⍝ CompCheck: ignore
-                          :EndIf
-                      :EndTrap
-                      res ⎕SIGNAL('***'≡3↑⍕res)/11
-                      names,←⊂res
-                  :ElseIf (3⊃qNPARTS file)≡'.apla'
-                      :If DyaVersion>17
-                      :AndIf 9=⎕SE.⎕NC'Link'
-                      :AndIf 3=⎕SE.Link.⎕NC'Import'
-                          :Trap DEBUG↓0
-                              {}⎕SE.Link.Import(⍎target)(fl)
-                          :Else
-                              res←'*** Error executing Link.Import (',target,') ',fl,':'
-                              res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')      ⍝ CompCheck: ignore
-                              res ⎕SIGNAL 11
                           :EndTrap
-                          names,←⊂{2 6::{2 6::⍵ ⋄ ⎕SE.Link.StripCaseCode 2⊃⎕NPARTS ⍵}⍵ ⋄ ⎕SE.Link.U.StripCaseCodePart ⍵}2⊃⎕NPARTS fl     ⍝ CompCheck: ignore
-                      :Else
-                          ('*** We need at least v17.1 with ]LINK to import ',fl)⎕SIGNAL 11
-                      :EndIf
+                          res ⎕SIGNAL('***'≡3↑⍕res)/11
+                          names,←⊂res
+                      :Case '.apla'
+                          :If 9=⎕SE.⎕NC'Link'
+                          :AndIf 3=⎕SE.Link.⎕NC'Import'
+                              :Trap DEBUG↓0
+                                  {}⎕SE.Link.Import(⍎target)(fl)
+                              :Else
+                                  res←'*** Error executing Link.Import (',target,') ',fl,':'
+                                  res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')      ⍝ CompCheck: ignore
+                                  res ⎕SIGNAL 11
+                              :EndTrap
+                              names,←⊂({2 6::{2 6::⍵ ⋄ ⎕SE.Link.StripCaseCode 2⊃⎕NPARTS ⍵}⍵ ⋄ ⎕SE.Link.U.StripCaseCodePart ⍵}2⊃⎕NPARTS fl)     ⍝ CompCheck: ignore
+                          :Else
+                              ('*** We need ]LINK to import ',fl)⎕SIGNAL 11
+                          :EndIf
+                      :EndSelect
                   :EndIf
               :EndFor
           :EndIf
-          :If ~0∊⍴names      ⍝ if we found any names
+          :If ~0∊⍴names         ⍝ if we found any names
               :Leave            ⍝ do not bother searching SALT's workdirs!
           :EndIf
       :EndFor
+     
     ∇
 
     ∇ {r}←data Put name
@@ -688,7 +402,10 @@
           ⍺⍺¨refs ⍵   ⍝ Apply to each space
       }
 
-
+    ⍝─── these fns are removed with v1.7 - but in this release we'll issue a DEPRECATED msg when they are called (so that anyone that uses them becomes aware of needed update...)
+    qNDELETE←qNEXISTS←qNGET←qMKDIR←qNPARTS←qJSON←qJSONi←qJSONe←qPUT←ListPre15←{((1⊃⎕SI),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these')⎕SIGNAL 6}
+    ⍝ need to replace niladic _FindDefine with a tradfn:
+    ⎕fx'_FindDefine' '((1⊃⎕si),'' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'')⎕signal 11'    ⍝ niladic fn...
     :endSection Compatibility
 
     :Section ADOC
@@ -699,24 +416,11 @@
 
     ∇ (n v d)←Version;f;s;z
     ⍝ Version of DBuildTest (3 elems: name version date)
-      :If DyaVersion≥16
-          s←⎕SRC ⎕THIS                  ⍝ appearently this only works in V16+
-      :Else
-          :If z←9=⎕NC'SALT_Data'           ⍝ namespace has been loaded,,,
-              :Trap DEBUG↓0
-                  s←GetVTV SALT_Data.SourceFile
-              :Else ⋄ z←0
-              :EndTrap
-          :EndIf
-          :If ~z
-              (n v d)←'DyalogBuild' '1.45' '2021-04-20'  ⍝ this happens during ]LOAD with Dyalog ≤ 15 or regular usage with v12! - it doesn't matter if this data isn't accurate (no harm during ]LOAD, need to find workaround for v12!)  ⍝ TODO: get version-#
-              →0
-          :EndIf
-      :EndIf
+      s←⎕SRC ⎕THIS                  ⍝ appearently this only works in V16+
       f←Words⊃s                     ⍝ split first line
       n←2⊃f                         ⍝ ns name
       v←'.0',⍨'V'~⍨⊃⌽f              ⍝ version number
-      d←1↓∊'-',¨3↑Words⊃⌽Comments s ⍝ date
+      d←1↓∊'-',¨3↑Words{w←⎕VFI¨⍵ ⋄ ⍵⊃⍨⊃{(,⍵)/,⍳⍴⍵}∊(∧/¨3↑¨1⊃¨w)}⌽Comments s ⍝ date (sorry, extra complicated - but getting date from last comment that has one)
     ∇
 
     Words←{(' '≠⍵){⎕ML←3 ⋄ ⍺⊂⍵}⍵}
@@ -742,13 +446,13 @@
       r←'Win'≡APLVersion
     ∇
 
-
     ∇ R←dVersion
       ⍝ numeric version (maj.min) of DBuildTest (for comparison against the min. version given in the Dyalogtest-element of a .dyalogtest)
       R←2⊃⎕VFI{(2>+\⍵='.')/⍵}2⊃Version
     ∇
 
-    Split←{dlb¨1↓¨(1,⍵∊⍺)⊂(⊃⍺),⍵}                       ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
+    Split←{dlb¨1↓¨(1,⍵∊⍺)⊂(⊃⍺),⍵}                    ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
+    Splitb←{     1↓¨(1,⍺)⊂'.',⍵}                     ⍝ Split of ⍵ where ⍺=1 (no dlb)
     SplitFirst←{dlb¨1↓¨(1,<\⍵=⍺)⊂⍺,⍵}                ⍝ Split ⍵ on first occurence of ⍺, and remove leading blanks from each segment
     GetParam←{⍺←'' ⋄ (⌊/names⍳eis ⍵)⊃values,⊂⍺}      ⍝ Get value of parameter
     dlb←{(∨\' '≠⍵)/⍵}                                ⍝ delete leading blanks
@@ -757,22 +461,6 @@
     whiteout←{w←⍵ ⋄ ((w=⎕UCS 9)/w)←' ' ⋄ w}          ⍝ convert whitespace to space
     isChar ←{0 2∊⍨10|⎕DR ⍵}                          ⍝ determine if argument's datatype is character
     _hasBitSet←{t←8⍴2 ⋄ 0<+/(t⊤⍺)∧t⊤⍵}                ⍝ deal with bit-flags (hardcoded maximum is 8)
-
-      Ö←{ ⍝ ö over/depth (AB's suggested operator)
-          ⍺←{⍵ ⋄ ⍺⍺}                 ⍝ monadic: pass-thorugh
-          3=⎕NC'⍵⍵':(⍵⍵ ⍺)⍺⍺(⍵⍵ ⍵)   ⍝ fÖg: over
-          2=⎕NC'⍺⍺':rtack ⍺((⍺⍺ ltack rtack)∇∇ ⍵⍵)⍵
-          k←⌽3⍴⌽⍵⍵                   ⍝ r → r r r    q r → r q r    p q r → p q r
-          n←k<0
-          d←|≡¨3⍴⍵ ⍺ ⍵ ⍵
-          (n/k)+←n/d
-          3 4∊⍨⎕NC'⍺':⍺⍺{⍵⍵<|≡⍵:∇¨⍵ ⋄ ⍺⍺ ⍵}(⊃k)rtack ⍵ ⍝ called monadically
-          b←1↓k<d
-          ⍱/b:rtack ⍺ ⍺⍺ ⍵
-          </b:rtack ⍺∘∇¨⍵
-          >/b:∇∘⍵¨rtack ⍺
-          ∧/b:rtack ⍺ ∇¨⍵
-      }
 
     ∇ txt←ExpandEnvVars txt;p;z;i;nam;val
    ⍝ Look for $EnvVar and replace with actual value
@@ -786,8 +474,6 @@
           txt←txt[⍳p-1],val,(p+i)↓txt
       :EndFor
     ∇
-
-
 
     ∇ w←WIN ⍝ running under Windows
       :Trap 6
@@ -804,7 +490,7 @@
           r←⎕CSV args  ⍝ CompCheck: ignore
       :Else
           (file encoding coltypes)←args
-          z←1⊃qNGET file
+          z←1⊃⎕NGET file
           z←1↓¨↑{(','=⍵)⊂⍵}¨',',¨z
           :If 0≠⍴num←(2=coltypes)/⍳⍴coltypes
               z[;num]←{⊃2⊃⎕VFI ⍵}¨z[;num]
@@ -842,11 +528,67 @@
       :EndIf
     ∇
 
+    ∇ r←base64 w
+        ⍝ from dfns workspace
+      r←{⎕IO ⎕ML←0 1             ⍝ Base64 encoding and decoding as used in MIME.
+          chars←'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+          bits←{,⍉(⍺⍴2)⊤⍵}                   ⍝ encode each element of ⍵ in ⍺ bits,
+                                                 ⍝   and catenate them all together
+          part←{((⍴⍵)⍴⍺↑1)⊂⍵}                ⍝ partition ⍵ into chunks of length ⍺
+          0=2|⎕DR ⍵:2∘⊥∘(8∘↑)¨8 part{(-8|⍴⍵)↓⍵}6 bits{(⍵≠64)/⍵}chars⍳⍵
+                                       ⍝ decode a string into octets
+          four←{                             ⍝ use 4 characters to encode either
+              8=⍴⍵:'=='∇ ⍵,0 0 0 0           ⍝   1,
+              16=⍴⍵:'='∇ ⍵,0 0               ⍝   2
+              chars[2∘⊥¨6 part ⍵],⍺          ⍝   or 3 octets of input
+          }
+          cats←⊃∘(,/)∘((⊂'')∘,)              ⍝ catenate zero or more strings
+          cats''∘four¨24 part 8 bits ⍵
+      }w
+    ∇
+
+    ∇ b64←base64enc txt
+      b64←base64'UTF-8'⎕UCS txt
+    ∇
+
+    ∇ txt←base64dec b64
+      txt←'UTF-8'⎕UCS base64 b64
+    ∇
     :EndSection ────────────────────────────────────────────────────────────────────────────────────
 
     :Section TEST "DSL" FUNCTIONS
 
-    ∇ r←Test args;TID;timeout;ai;nl
+    ∇ r←l Assert b;cl;cc;t
+      nr←1↓⎕NR 2⊃⎕SI
+      cl←⎕LC[2]⊃nr  ⍝ the current line
+      :If verbose
+          ⎕←cl
+      :EndIf
+      →(l Check b)↓r←0
+      t←nr[(≢nr)⌊⎕LC[2]-0 1 ¯1]     ⍝ search exactly these 3 lines!
+      t←('⍝(.*)'⎕S'\1'⎕OPT('Mode' 'L'))t  ⍝ search for text of comments
+      cc←(¯1+cl⍳'⍝')↑cl
+      :If ∨/z←cc=⎕AV[60]  ⍝ look for right tack as separator between reason & test (not using symbol directly )
+      :OrIf ∨/z←'IfNot'⍷cc
+          t←(¯1+⊃##.where z)↑cc
+          t←(1⊃⎕RSI)⍎t
+          t ⎕SIGNAL 777
+      :ElseIf ∨/(1⊃t)⍷cl  ⍝ don't add comment if it is on the line of the test!
+          ⎕SIGNAL 777
+      :ElseIf 0<≢1⊃t
+          (1⊃t)⎕SIGNAL 777
+      :Else
+          ⎕SIGNAL 777
+      :EndIf
+    ∇
+
+
+      IfNot←{
+          r←~⍵
+          r/⍺
+      }
+
+    ∇ r←Test args;TID;timeout;ai;nl;i;quiet
       ⍝ run some tests from a namespace or a folder
       ⍝ switches: args.(filter setup teardown verbose)
       ⍝ result "r" is build in XTest (excute test) as global "r" gets updated. Can't return explicit result in XTest because we're running it in a thread.
@@ -872,16 +614,20 @@
       :EndIf
     ∇
 
-    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log
+    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog
       i←quiet←0
       ⍝ Not used here, but we define them test scripts that need to locate data:
+      ∆OldLog←⎕SE ⎕WG'Log'
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
-      WSFOLDER←⊃qNPARTS ⎕WSID
+      WSFOLDER←⊃⎕NPARTS ⎕WSID
       ThisTestID←(,'ZI4,<->,ZI2,<->,ZI2,<->,ZI2,<:>,ZI2,<:>,ZI3'⎕FMT 1 6⍴⎕TS),' *** DTest ',2⊃Version
-      ⎕←ThisTestID  ⍝ this MUST go into the session because it marks the start of this test (useful to capture session.log later!)
       LOGSi←LOGS←3⍴⊂''   ⍝ use distinct variables for initial logs and test logs
-      i←0  ⍝ just in case we're logging outside main loop
+     
       (verbose filter halt quiet trace timestamp order)←args.(verbose filter halt quiet trace ts order)
+      :If (,quiet)≢(,1)
+          ⎕←ThisTestID  ⍝ this MUST go into the session because it marks the start of this test (useful to capture session.log later!)
+      :EndIf
+     
       repeat←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}args.repeat
       loglvl←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}args.loglvl
       off←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}args.off
@@ -891,6 +637,11 @@
      
       repeat←1⌈repeat
       file←''
+      args.coverage_subj←null
+      args.coverage_ignore←⍕⎕THIS
+      WSFULL←0  ⍝ indicates if we were hit by WS FULL
+     
+     
      
       :If 0∊⍴args.Arguments
       :AndIf 9≠#.⎕NC source←⊃args.Arguments←,⊂'Tests'
@@ -898,19 +649,19 @@
       :ElseIf 9=#.⎕NC source←1⊃args.Arguments ⍝ It's a namespace
           ns←#⍎source
           {}(⍕ns.##)⎕NS'verbose' 'filter' 'halt' 'quiet' 'trace' 'timestamp' 'order' 'off'
-          TESTSOURCE←⊃1 qNPARTS''
+          TESTSOURCE←⊃1 ⎕NPARTS''
           base←source
       :Else                               ⍝ Not a namespace
-          :If qNEXISTS f←source           ⍝ Argument is a file
-          :OrIf qNEXISTS f←source,'.dyalogtest'
-          :OrIf qNEXISTS f←WSFOLDER,source
-          :OrIf qNEXISTS f←WSFOLDER,source,'.dyalogtest'
-          :OrIf qNEXISTS f←WSFOLDER,'Tests/',source
-          :OrIf qNEXISTS f←WSFOLDER,'Tests/',source,'.dyalogtest'
-          :OrIf qNEXISTS f←∊1 qNPARTS source                     ⍝ deal with relative names for folders
-          :OrIf qNEXISTS f←∊1 qNPARTS source,'.dyalogtest'       ⍝ or individual tests
+          :If ⎕NEXISTS f←source           ⍝ Argument is a file
+          :OrIf ⎕NEXISTS f←source,'.dyalogtest'
+          :OrIf ⎕NEXISTS f←WSFOLDER,source
+          :OrIf ⎕NEXISTS f←WSFOLDER,source,'.dyalogtest'
+          :OrIf ⎕NEXISTS f←WSFOLDER,'Tests/',source
+          :OrIf ⎕NEXISTS f←WSFOLDER,'Tests/',source,'.dyalogtest'
+          :OrIf ⎕NEXISTS f←∊1 ⎕NPARTS source                     ⍝ deal with relative names for folders
+          :OrIf ⎕NEXISTS f←∊1 ⎕NPARTS source,'.dyalogtest'       ⍝ or individual tests
               file←f  ⍝ assign this variable which is needed by LogError
-              (TESTSOURCE z extension)←qNPARTS f
+              (TESTSOURCE z extension)←⎕NPARTS f
               base←z
               :If 2=type←GetFilesystemType f  ⍝ it's a file
                   :If '.dyalogtest'≡lc extension ⍝ That's a suite
@@ -921,19 +672,20 @@
                   :Else                          ⍝ Arg is a source file - load it
                       :If filter≢null
                           LogTest'Can''t run test with file-argument AND -filter-switch!'
+                          LOGSi←LOGS
                           →FAIL
                       :EndIf
-                      'ns'⎕NS''
+                      'ns'⎕NS'verbose' 'filter' 'halt' 'quiet' 'trace' 'timestamp' 'order' 'off'
+     
                       :Trap (DEBUG∨halt)↓0
-                          filter←∊LoadCode source(⍕ns)
+                          filter←∊LoadCode source ns
+                          :If args.tests≡0
+                              args.tests←filter  ⍝ transfer into tests, as filtering could be ambigous and we wouldn't want to run more than required...
+                          :EndIf
                           f←¯1↓TESTSOURCE ⋄ type←1 ⍝ Load contents of folder
                       :Else
                           msg←'Error loading test from folder "',source,'"',NL
-                          :If DyaVersion<13.1
-                              LogError msg,∊⎕DM,¨⊂NL
-                          :Else
-                              LogError msg,⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
-                          :EndIf
+                          LogError msg,⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
                           →endPrep1
                       :EndTrap
                   :EndIf
@@ -946,14 +698,10 @@
                   'ns'⎕NS''
                   :For f :In files
                       :Trap (DEBUG∨halt)↓0
-                          LoadCode f(⍕ns)
+                          LoadCode f ns
                       :Else
                           msg←'Error loading code from file "',f,'"'
-                          :If DyaVersion<13.1
-                              LogError msg,∊⍕⎕DM,¨⊂NL
-                          :Else
-                              LogError msg,⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
-                          :EndIf
+                          LogError msg,⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
                       :EndTrap
                   :EndFor
                   ⍝:if null≡args.tests
@@ -982,20 +730,26 @@
               :EndIf
           :Else
               :If args.init   ⍝ can we init it?
-              :AndIf ∧/0<∊⍴¨1↑¨(TESTSOURCE z extension)←qNPARTS source  ⍝ did user give a file-spec? then try to create it!
-                  :If ~qNEXISTS TESTSOURCE   ⍝ does directory exist?
-                      {}3 qMKDIR TESTSOURCE
+              :AndIf ∧/0<∊⍴¨1↑¨(TESTSOURCE z extension)←⎕NPARTS source  ⍝ did user give a file-spec? then try to create it!
+                  :If ~⎕NEXISTS TESTSOURCE   ⍝ does directory exist?
+                      {}3 ⎕MKDIR TESTSOURCE
                   :EndIf
                   :If '.dyalogtest'≡lc extension
                       templ←('DyalogTest : ',2⊃Version)'ID         :' 'Description:' '' 'Setup   :' 'Teardown:' '' 'Test:'
                   :Else
                       templ←('r←',z,' dummy;foo')'r←''''' ':If .. Check ..'('      →0 Because ''test failed'' ⋄ :EndIf')
                   :EndIf
-                  (⊂templ)qNPUT source
+                  (⊂templ)⎕NPUT source
                   Log'Initialised ',source
                   →0
               :EndIf
+              :If halt  ⍝ we found an error and need to stop
+                  ⎕←'"',source,'" is neither a namespace nor a folder or a .dyalogtest-file.'
+                  (⎕LC[1]+1)⎕STOP 1⊃⎕SI
+              :EndIf
               LogTest'"',source,'" is neither a namespace nor a folder or a .dyalogtest-file.'
+              (TESTSOURCE base)←2↑⎕NPARTS source
+              LOGSi←LOGS
               →FAIL
           :EndIf
       :EndIf
@@ -1022,51 +776,50 @@
           :EndIf
       :EndIf
      
+      :If args.SuccessValue≢0
+          SuccessValue←{0::⍵ ⋄ ⍎⍵}args.SuccessValue
+      :EndIf
+      SuccessValue←{
+          'json!'≡⎕C 5↑⍵:∇ ⎕JSON 5↓⍵
+          'apl!'≡⎕C 4↑⍵:∇⍎4↓⍵
+          'b64!'≡⎕C 4↑⍵:∇ base64dec 4↓⍵
+          ⍵
+      }SuccessValue
     ⍝ Establish test DSL in the namespace
       :If halt=0
-      :AndIf DyaVersion≥14
           ns.Check←≢   ⍝ CompCheck: ignore
       :Else
           'ns'⎕NS'Check'
       :EndIf
-      'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis'
+      'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Assert' 'IfNot' 'base64' 'base64dec' 'base64enc'
       ns.Log←{⍺←{⍵} ⋄ ⍺ ##.LogTest ⍵}  ⍝ ⍺←rtack could cause problems with classic...
-     
       :If args.tests≢0
-          orig←fns←(','Split args.tests)~⊂''args.tests
+          orig←fns←(','Split args.tests)~⊂''
           nl←ns.⎕NL ¯3
-          :If DyaVersion≥13
-              fns←{w←⍵ ⋄ ((w='?')/w)←'.' ⋄ ((w='*')/w)←⊂'.*' ⋄ ∊⍵}¨fns   ⍝ replace bare * wildcard with .* to and ? with . make it valid regex
-              fns←1⌽¨'$^'∘,¨fns ⍝ note ^ is shift-6, not the APL function ∧
-              t←1
-              :If 0∊⍴matches←↑fns ⎕S{⍵.(Block PatternNum)}ns.⎕NL ¯3   ⍝ CompCheck: ignore
-                  LogError'*** function(s) not found: ',,⍕t/orig
-                  fns←⍬
-              :Else
-                  :If ∨/t←~(⍳⍴fns)∊1+∪matches[;2]
-                      LogError'*** function(s) not found: ',,⍕t/orig
-                  :EndIf
-                  fns←∪matches[⍋matches[;2];1]
-              :EndIf
-          :Else
+          fns←{w←⍵ ⋄ ((w='?')/w)←'.' ⋄ ((w='*')/w)←⊂'.*' ⋄ ∊⍵}¨fns   ⍝ replace bare * wildcard with .* to and ? with . make it valid regex
+          fns←1⌽¨'$^'∘,¨fns ⍝ note ^ is shift-6, not the APL function ∧
+          t←1
+          :If 0∊⍴matches←↑fns ⎕S{⍵.(Block PatternNum)}ns.⎕NL ¯3   ⍝ CompCheck: ignore
+              LogError'*** function(s) not found: ',,⍕t/orig
               fns←⍬
-              :For f :In orig
-                  nl∆←nl
-                  s←where f='*'
-                  :If ~0∊⍴s
-                      nl∆←(s-1)↑¨nl∆
-                      f←(s-1)↑f
-                  :EndIf
-                  z←f='?' ⋄ nl∆←(⊂z){(+/⍺≠'?')>⍴⍵:'' ⋄ a←((⍴⍺)⌈⍴⍵)↑⍺ ⋄ (~a)/⍵}¨nl∆ ⋄ f←(~z)/f
-                  fns,←(nl∆≡¨⊂f)/nl
-              :EndFor
+          :Else
+              :If ∨/t←~(⍳⍴fns)∊1+∪matches[;2]
+                  LogError'*** function(s) not found: ',,⍕t/orig
+              :EndIf
+              fns←∪matches[⍋matches[;2];1]
           :EndIf
       :Else ⍝ No functions selected - run all named test_*
           fns←{⍵⌿⍨(⊂'test_')≡¨5↑¨⍵}ns.⎕NL-3
+          :If 0=≢fns
+              LogError'*** Not a single fn matched pattern "test_*"'
+              LOGSi←LOGS
+              →FAIL
+          :EndIf
       :EndIf
       :If null≢filter
       :AndIf 0∊⍴fns←(1∊¨filter∘⍷¨fns)/fns
           LogError'*** no functions match filter "',filter,'"'
+          LOGSi←LOGS
           →FAIL
       :EndIf
      
@@ -1086,7 +839,6 @@
       :EndSelect
       LOGSi←LOGS
       :For run :In ⍳repeat
-          WSFULL←0  ⍝ indicates if we were hit by WS FULL
           :If verbose∧repeat>1
               0 Log'run #',(⍕run),' of ',⍕repeat
           :EndIf
@@ -1096,9 +848,10 @@
               LOGS←3⍴⊂''
               :If verbose
               :AndIf setup≢null
+              :AndIf setup≢,1
                   r,←⊂'For setup = ',setup
               :EndIf
-              :If ~setupok←null≡f←setup
+              :If ~setupok←(⊂f←setup)∊(,1)null
                   :If 3=ns.⎕NC f ⍝ function is there
                       :If verbose
                           0 Log'running setup: ',f
@@ -1109,11 +862,7 @@
                           setupok←0=1↑⍴z
                       :Else
                           msg←'Error executing setup "',f,'": '
-                          :If DyaVersion<13.1
-                              msg,←NL,⍕⎕DM,¨⊂NL
-                          :Else
-                              msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
-                          :EndIf
+                          msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
                           LogError msg
                           setupok←0
                       :EndTrap
@@ -1124,44 +873,38 @@
               :EndIf
      
               →setupok↓END
-     
-⍝ after setup, make sure to start CodeCoverage (if modifier is set) - once only...
-              :If null≢args.coco  ⍝ if switch is set
-              :AndIf (1↑1⊃⎕VFI⍕args.coco)∨1<tally args.coco  ⍝ and we have either numeric value for switch or a longer string
+            ⍝ after setup, make sure to start CodeCoverage (if modifier is set) - once only...
+              :If null≢args.coverage ⍝ if switch is set
+              :AndIf (1↑1⊃⎕VFI⍕args.coverage)∨1<tally args.coverage  ⍝ and we have either numeric value for switch or a longer string
               :AndIf 0=⎕NC'CoCo'   ⍝ only neccessary if we don't have an instance yet...
-                  :If 18≤+/1 0.1 0 0×2⊃'.'⎕VFI 2⊃'.'⎕WG'APLVersion'   ⍝ needs at least 18.0
-                      home←1⊃⎕NPARTS SALT_Data.SourceFile  ⍝ CompCheck: ignore
-                      LoadCode(home,'aplteam-CodeCoverage-0.9.1/CodeCoverage.aplc')(⍕⎕THIS)  ⍝ we should use some other to bring this in ideally...()
-                      :If 0=≢subj←args.coco_subj
-                          :If 0<≢subj←#.⎕NL ¯9
-                              subj←∊(⊂'#.'),¨subj,¨','
-                          :EndIf
-                          subj,←⍕ns
+                  home←1⊃⎕NPARTS SALT_Data.SourceFile  ⍝ CompCheck: ignore
+                  LoadCode(home,'aplteam-CodeCoverage-0.9.1/CodeCoverage.aplc')(⍕⎕THIS)  ⍝ we should use some other to bring this in ideally...()
+                  :If 0=≢subj←args.coverage_subj
+                      :If 0<≢subj←#.⎕NL ¯9
+                          subj←∊(⊂'#.'),¨subj,¨','
                       :EndIf
-                      CoCo←⎕NEW CodeCoverage(,⊂subj)
-                      ⎕SE.Dyalog.Utils.disp ¯5↑⎕SE.Input
-                      CoCo.Info←'Report created by DTest ',(2⊃Version),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
-                      :If 1<≢args.coco
-                      :AndIf (⎕DR' ')=⎕DR args.coco
-                          :If ∨/'\/'∊args.coco  ⍝ if the argument looks like a filename (superficial test)
-                              CoCo.filename←args.coco
-                          :Else                  ⍝ otherwise we assume it is the name of the instance of an already running coverag-analysis
-                              CoCo.filename←(⍎args.coco).filename
-                              CoCo.NoStop←1
-                          :EndIf
-                      :Else
-                          CoCo.filename←(739⌶0),,'</CoCoDTest_>,ZI4,ZI2,ZI2,ZI2,ZI2,ZI3'⎕FMT 1 6⍴⎕TS
-                      :EndIf
-                      :If 0=≢ignore←args.coco_ignore
-                          ⍝ignore←∊(⊂⍕⎕THIS),¨'.',¨(⎕THIS.⎕NL ¯3 4),¨','
-                          ignore←∊{(⊂⍕⍵),¨'.',¨(⍵.⎕NL ¯3 4),¨','}⎕SE.input.c
-                      :EndIf
-                      ignore,←(((0<≢ignore)∧','≠¯1↑ignore)⍴','),¯1↓∊(⊂(⍕⎕THIS),'.ns.'),¨('Check' 'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Log'),¨','
-                      CoCo.ignore←ignore
-                      CoCo.Start ⍬
-                  :Else
-                      ⎕←'Need at least v18.0 to use Code Coverage with ]DTest!'
+                      subj,←⍕ns
                   :EndIf
+                  CoCo←⎕NEW CodeCoverage(,⊂subj)
+                  CoCo.Info←'Report created by DTest ',(2⊃Version),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
+                  :If 1<≢args.coverage
+                  :AndIf (⎕DR' ')=⎕DR args.coverage
+                      :If ∨/'\/'∊args.coverage  ⍝ if the argument looks like a filename (superficial test)
+                          CoCo.filename←args.coverage
+                      :Else                  ⍝ otherwise we assume it is the name of the instance of an already running coverag-analysis
+                          CoCo.filename←(⍎args.coverage).filename
+                          CoCo.NoStop←1
+                      :EndIf
+                  :Else
+                      CoCo.filename←(739⌶0),,'</CoCoDTest_>,ZI4,ZI2,ZI2,ZI2,ZI2,ZI3'⎕FMT 1 6⍴⎕TS
+                  :EndIf
+                  :If 0=≢ignore←args.coverage_ignore
+                          ⍝ignore←∊(⊂⍕⎕THIS),¨'.',¨(⎕THIS.⎕NL ¯3 4),¨','
+                      ignore←∊{(⊂⍕⍵),¨'.',¨(⍵.⎕NL ¯3 4),¨','}⎕SE.input.c
+                  :EndIf
+                  ignore,←(((0<≢ignore)∧','≠¯1↑ignore)⍴','),¯1↓∊(⊂(⍕⎕THIS),'.ns.'),¨('Check' 'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Log' 'Assert' 'IfNot')
+                  CoCo.ignore←ignore
+                  CoCo.Start ⍬
               :EndIf
      
      
@@ -1175,25 +918,16 @@
                       0 Log'running: ',f
                   :EndIf
                   (trace/1)ns.⎕STOP f
-                  :Trap (~halt∨trace)/0 777
+                  :Trap (~halt∨trace)/0
                       ⍝f LogTest(ns⍎f)⍬
-                      LogTest(ns⍎f)⍬   ⍝ avoid additional line with title of fn
+                      f LogTest(ns⍎f)⍬   ⍝ avoid additional line with title of fn
                   :Case 777 ⍝ Assertion failed
-                      f LogTest'Assertion failed: ',,⍕⎕DM,¨⊂NL
+                      f LogTest'Assertion failed: ',,∊⎕DM[⍳2],¨⊂NL
                   :Else
                       en←⎕EN  ⍝ save error-no before it gets overwritten
                       msg←'Error executing test "',f,'": '
-                      :If DyaVersion<13.1
-                          msg,←,⍕⎕DM,¨⊂NL
-                      :Else
-                          msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂''),NL     ⍝ CompCheck: ignore
-                          msg,←,⍕⎕DM,¨⊂NL
-                          :If 18≤DyaVersion
-                              msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX            ⍝ CompCheck: ignore
-                          :ElseIf 16≤DyaVersion
-                              msg,←⎕JSON ⎕DMX            ⍝ CompCheck: ignore
-                          :EndIf
-                      :EndIf
+                      msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂''),NL     ⍝ CompCheck: ignore
+                      msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
                       :If WSFULL←en=1   ⍝ special handling for WS FULL
                           msg,←NL,'⎕WA=',(⍕⎕WA)
                           msg,←NL,'The 20 largets objects found in the workspace:',NL
@@ -1217,20 +951,12 @@
                       :If verbose
                           0 Log'running teardown: ',f
                       :EndIf
+                      (trace/1)ns.⎕STOP f
                       :Trap (~halt∨trace)/0 777
                           f LogTest(ns⍎f)⍬
                       :Else
                           msg←'Error executing teardown "',f,'" :'
-                          :If DyaVersion<13.1
-                              msg,←,⍕⎕DM,¨⊂NL
-                          :Else
-                              msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')   ⍝ CompCheck: ignore
-                              :If 18≤DyaVersion
-                                  msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX            ⍝ CompCheck: ignore
-                              :ElseIf 16≤DyaVersion
-                                  msg,←⎕JSON ⎕DMX            ⍝ CompCheck: ignore
-                              :EndIf
-                          :EndIf
+                          msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
                           LogError msg
                       :EndTrap
                   :Else
@@ -1247,19 +973,18 @@
               :EndFor
               :If 0∊⍴3⊃LOGS
                   r,←(quiet≡null)/⊂'   ',(((setup≢null)∧1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' passed in ',(1⍕0.001×⎕AI[3]-start),'s'
-                  1 qNDELETE TESTSOURCE,'*.rng.txt' ⍝ delete memorized random-numbers when tests succeeded
+                  1(⎕NDELETE ⎕OPT'Wildcard' 1)TESTSOURCE,'*.rng.txt' ⍝ delete memorized random-numbers when tests succeeded
               :Else
                   r,←⊂' Time spent: ',(1⍕0.001×⎕AI[3]-start),'s'
               :EndIf
           :EndFor ⍝ Setup
       :EndFor ⍝ repeat
-     
       r,←((1<tally setups)∧quiet≡null)/⊂'Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
       :If ~0∊⍴3⊃LOGS
       :AndIf ~0∊⍴order
           r,←⊂'-order="',(⍕order),'"'
       :EndIf
-      :If args.coco≢null
+      :If args.coverage≢null
           :If 9=⎕NC'CoCo'
               :If 0=CoCo.⎕NC'NoStop'
               :OrIf CoCo.NoStop=0
@@ -1292,11 +1017,10 @@
       :If off>0
       :OrIf loglvl>0
           :If 0≢args.testlog
-              ⎕←'args.testlog=',args.testlog
               :If (⎕DR' ')=⎕DR args.testlog
               :AndIf 0<≢args.testlog
                   logFile←args.testlog
-                  :If ''≡1⊃qNPARTS logFile
+                  :If ''≡1⊃⎕NPARTS logFile
                   :AndIf ~∨/'\/'∊logFile
                       logFile←TESTSOURCE,logFile
                   :EndIf
@@ -1310,27 +1034,31 @@
               logFile←TESTSOURCE,base,'.log'
           :EndIf
      
-          logBase←({∊(1⊃qNPARTS ⍵),{⍵[⍳¯1+⍵⍳'.']}∊1↓qNPARTS ⍵}logFile),'.'
+          logBase←({∊(1⊃⎕NPARTS ⍵),{⍵[⍳¯1+⍵⍳'.']}∊1↓⎕NPARTS ⍵}logFile),'.'
           :If (loglvl _hasBitSet 16)∧0<⍴3⊃LOGS
           :OrIf loglvl _hasBitSet 8
               log←⎕SE ⎕WG'Log'
+              ⍝ use progressive iota to find new log in old log and remove the common parts (simple ∊ is not good enough...)
+            ⍝   z←+/∧\{⍵=⍵[1]+0,⍳¯1+≢⍵}∆OldLog{((≢⍺)⍴⍋⍋⍺⍳⍺⍪⍵)⍳(≢⍵)⍴⍋⍋⍺⍳⍵⍪⍺}log
+              z←∆OldLog _cita.NrOfCommonLines log
+              log←z↓log
               log←∊log,¨⊂NL
-              :If 0<≢i←{⍵/⍳tally ⍵}ThisTestID⍷log
-                  log←(i-1)↓log
-              :EndIf
-              (⊂log)qNPUT(logBase,'session.log')1
+     
+            ⍝   :If 0<≢i←{⍵/⍳tally ⍵}ThisTestID⍷log
+            ⍝       log←(i-1)↓log
+            ⍝   :EndIf
+              (⊂log)⎕NPUT(logBase,'session.log')1
           :EndIf
      
           :For j :In ⍳2
               :If ~0∊⍴j⊃LOGS
                   :If loglvl _hasBitSet j⊃2 4
-                      (⊂i⊃LOGS)qNPUT logBase,(j⊃'info.log' 'warn.log')
+                      (⊂i⊃LOGS)⎕NPUT logBase,(j⊃'info.log' 'warn.log')
                   :EndIf
               :EndIf
           :EndFor
      
           :If loglvl _hasBitSet 32
-          :AndIf 18≤DyaVersion
               res←⎕NS''
               res.rc←20+(~0∊⍴3⊃LOGS)+WSFULL
               res.(LogInfo LogWarn LogError)←LOGS
@@ -1341,13 +1069,13 @@
                   res.cpu23←⎕SE._cita.∆cpu
                   res.memStats←⎕SE._cita._memStats
               :EndIf
-              (⊂(⎕JSON ⎕OPT('Compact' 0)('HighRank' 'Split'))res)qNPUT(logFile,'.json')1  ⍝ CompCheck: ignore
+              (⊂(⎕JSON ⎕OPT('Compact' 0)('HighRank' 'Split'))res)⎕NPUT(logFile,'.json')1  ⍝ CompCheck: ignore
           :EndIf
      
           :If ~0∊⍴3⊃LOGS
           :AndIf (off>0)∨loglvl _hasBitSet 1
               ⎕←'Errors were collected - writing them to logFile',(off=1)/' before doing ⎕OFF ',⍕21+WSFULL
-              (⊂∊(3⊃LOGS),¨⊂NL)qNPUT logFile 1
+              (⊂∊(3⊃LOGS),¨⊂NL)⎕NPUT logFile 1
               :If off=1
                   rc←21+WSFULL
                   ⎕OFF rc
@@ -1365,27 +1093,37 @@
       msg ⎕SIGNAL(1∊value)/777
     ∇
 
-    ∇ line←line Because msg
+    ∇ line←line Because msg;si
      ⍝ set global "r", return branch label
       :If 0=⎕NC'r'
           r←''
       :EndIf
-      r←r,((~0∊tally r)/⎕UCS 10),(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: ',msg
+      si←''
+      :If 0=≢fn←('([A-z_∆⍙]*)\[\d*]'⎕S'\1')msg  ⍝ anything looking like fn[lc] already in msg?
+      :AndIf ~3∊∊⎕NC¨fn                     ⍝ then do not include it again...
+          si←(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: '
+      :EndIf
+      r←r,((~0∊tally r)/⎕UCS 10),si,msg
     ∇
 
     ∇ r←expect Check got
       :If r←expect≢got
       :AndIf ##.halt
+          ⎕←' TEST SUSPENDED! ───────────────────────────────────────────────────────────'
           ⎕←'expect≢got:'
           :If 200≥⎕SIZE'expect'
               ⎕←'expect=',,expect
+          :Else
+              ⎕←'expect   ⍝ left argument of "Check"-call'
           :EndIf
           :If 200≥⎕SIZE'got'
               ⎕←'got=',,got
+          :Else
+              ⎕←'got      ⍝ did not match right argument - examine variables or <Esc> into calling fn'
           :EndIf
-          ⍝ ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃(1⊃⎕RSI).⎕NR 2⊃⎕SI
           ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕SI
           (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
+          ⍝ test failed! Execution suspended so that you can examine the problem...
       :EndIf
     ∇
 
@@ -1402,6 +1140,7 @@
           :EndIf
           ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕SI
           (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
+          ⍝ test failed! Execution suspended so that you can examine the problem...
       :EndIf
     ∇
 
@@ -1411,8 +1150,8 @@
           ctxt←⎕SI[2 3]{(1⊃⍺),'_',(1⊃⍵),'_',(2⊃⍺),'_',2⊃⍵}⍕¨⎕LC[2 3]
       :EndIf  ⍝ use ⎕SI as indicator of context
       rFile←TESTSOURCE,ctxt,'.rng.txt'    ⍝ name of rng-file
-      :If qNEXISTS rFile         ⍝ found one - so re-use those numbers (instead of creating new series)
-          r←∊1⊃qNGET rFile
+      :If ⎕NEXISTS rFile         ⍝ found one - so re-use those numbers (instead of creating new series)
+          r←∊1⊃⎕NGET rFile
           (((⎕UCS r)∊10 13)/r)←' '
           R←2⊃⎕VFI r
       :Else
@@ -1427,31 +1166,28 @@
 
 
     ∇ res←LoadTestSuite suite;setups;lines;i;cmd;params;names;values;tmp;f;args
-      :If 0=tally 1⊃qNPARTS suite
+      :If 0=tally 1⊃⎕NPARTS suite
           suite←TESTSOURCE,suite
-      :ElseIf '.'≡1⊃1⊃qNPARTS suite ⍝ deal with relative paths
-          :If '.'≡1⊃1⊃qNPARTS TESTSOURCE   ⍝ if suite and source are relative, ignore suite's relative folder and use SOURCE's...
-              suite←∊(1 qNPARTS TESTSOURCE),1↓qNPARTS suite
+      :ElseIf '.'≡1⊃1⊃⎕NPARTS suite ⍝ deal with relative paths
+          :If '.'≡1⊃1⊃⎕NPARTS TESTSOURCE   ⍝ if suite and source are relative, ignore suite's relative folder and use SOURCE's...
+              suite←∊(1 ⎕NPARTS TESTSOURCE),1↓⎕NPARTS suite
           :Else
-              suite←∊1 qNPARTS TESTSOURCE,suite
+              suite←∊1 ⎕NPARTS TESTSOURCE,suite
           :EndIf
       :EndIf      ⍝ default path for a suite is the TESTSOURCE-folder
-      :If ''≡3⊃qNPARTS suite
+      :If ''≡3⊃⎕NPARTS suite
           suite←suite,'.dyalogtest'
       :EndIf   ⍝ default extension
      
-      :If qNEXISTS suite
-          lines←⊃qNGET suite
+      :If ⎕NEXISTS suite
+          lines←⊃⎕NGET suite 1
       :Else
           args←,⊂'Test suite "',suite,'" not found.' ⋄ res←0,args ⋄ →0
       :EndIf
       lines←dtb¨↓rmcm↑lines
       args←⎕NS''
       ⎕RL←2  ⍝ CompCheck: ignore ⍝ use O/S rng
-      path←1⊃1 qNPARTS suite
-      args.tests←⍬
-      args.coco_subj←''
-      args.coco_ignore←⍕⎕THIS
+      path←1⊃1 ⎕NPARTS suite
       :For i :In ⍳⍴lines
           :If ':'∊i⊃lines ⍝ Ignore blank lines
           :AndIf '⍝'≠1↑i⊃lines
@@ -1494,14 +1230,16 @@
               :Case 'order'
                   args.order←2⊃⎕VFI params
               :Case 'codecoverage_subject'   ⍝ ,-separated list of namespaces to watch while running test (must be present in ws after setup)
-                  args.coco_subj←params
+                  args.coverage_subj←params
               :Case 'codecoverage_ignore'
-                  args.coco_ignore←params
+                  args.coverage_ignore←params
               :Case 'alertifcoveragebelow'
                   args.alertifcoveragebelow←2⊃⎕VFI params
-     
+              :Case 'successvalue'
+                  args.SuccessValue←params
+                  ⎕←'args.SuccessValue was set to ',params
               :Else
-                  Log'Invalid keyword: ',cmd
+                  Log'Invalid keyword: "',cmd,'"'
               :EndSelect
           :EndIf
       :EndFor
@@ -1514,12 +1252,13 @@
 
     :Section BUILD
 
-    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;LOGS;logfile;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d;order;NQed;type;pars;det
+    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;LOGS;logfile;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d;order;NQed;type;pars;det;loaded
     ⍝ Process a .dyalogbuild file
       Init 2
       oFFIssue←0    ⍝ set to 1 to repo MB's Keypress issue...
       rc←0   ⍝ returncode (if possible)   0=ok, 1=errors during Build-process
       LOGS←3⍴⊂''
+      r←''
       :If isChar args  ⍝ also allow the fn to be called directly (not as a UCMD) with a simple string arg that we will then parse using DBuilds Parse rules:
           lst←List
           lst←lst[lst.Name⍳⊂'DBuild']
@@ -1530,7 +1269,6 @@
       :EndIf
       start←⎕AI[3]
       extension←'.dyalogbuild' ⍝ default extension
-      TargetList←0 5⍴''    ⍝ List of Targets we have to build ([;1]=lineno, [;2]=params names values)
       i←0 ⍝ we are on "line zero" if any logging happens
      
       :If 0∊⍴args.Arguments
@@ -1540,10 +1278,16 @@
           'Build file not named and no default found'⎕SIGNAL 22
       :EndIf
      
-      file←∊1 qNPARTS 1⊃args.Arguments
-      (prod quiet save halt TestClassic)←args.(production quiet save halt testclassic)
-      (TestClassic prod)←2⊃⎕VFI⍕TestClassic prod  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
+      file←∊1 ⎕NPARTS 1⊃args.Arguments
+      (prod quiet save halt TestClassic Target)←args.(production quiet save halt testclassic target)
+      (TestClassic prod save)←{2⊃⎕VFI⍕⍵}¨TestClassic prod save  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
       off←2 args.Switch'off'
+     
+      :If Target≡null
+          TargetList←0 5⍴''    ⍝ List of Targets we have to build ([;1]=lineno, [;2]=params names values)
+      :Else
+          TargetList←1 5⍴0('target: ',Target)('wsid=',Target)(,⊂'wsid')(,⊂Target)
+      :EndIf
      
       :If halt
           ⎕TRAP←0 'S'
@@ -1551,11 +1295,12 @@
      
       Clear args.clear
       (exists file)←OpenFile file
-      (path name extn)←qNPARTS file
+      (path name extn)←⎕NPARTS file
      
+      0 Log'DyalogBuild version ',⍕dVersion
       ('Build-File not found: ',file)⎕SIGNAL exists↓22
      
-      lines←1⊃qNGET file
+      lines←1⊃⎕NGET file 1
      
       _version←0
       _id←''
@@ -1564,7 +1309,7 @@
       :If ~prod
           ('Type' 'I')Log'NB: Loaded files will be linked to their source - use -prod to not link'
       :EndIf
-      :For i :In ⍳⍴lines
+      :For i :In ⍳tally lines
           :If ~':'∊line←i⊃lines                    ⍝ if the line does not have a name-value setting
           :OrIf '⍝'=⊃{(⍵≠' ')/⍵}line     ⍝ or if it's a comment
               :Continue                       ⍝ skip it!
@@ -1581,7 +1326,6 @@
           :Select cmd
           :Case 'dyalogbuild'
               :If dVersion≥_version←GetNumParam'version' ''
-                  0 Log'DyalogBuild version ',⍕dVersion
                   0 Log'Processing "',file,'" (written for version ≥ ',(⍕_version),')'
               :Else
                   ('Type' 'E')Log('This version of ]',Ûcmd,' only supports Dyalog Test file format v',(⍕dVersion),' and lower')
@@ -1599,12 +1343,16 @@
               wild←'*'∊source←GetParam'file' ''
               target←GetParam'target'
      
-              :If qNEXISTS path,target
+              :If ⎕NEXISTS path,target
                   :For f :In files←'*'ListFiles path,target
-                      qNDELETE f
+                      ⎕NDELETE f
                   :EndFor
               :Else
-                  2 qMKDIR path,target ⍝ /// needs error trapping
+                  :Trap 0
+                      3 ⎕MKDIR path,target ⍝ /// needs error trapping
+                  :Else
+                      LogError'Error while creating "',path,target,'":',∊⎕DM,¨⊂NL
+                  :EndTrap
               :EndIf
      
               :If 0∊⍴files←source ListFiles path
@@ -1633,25 +1381,24 @@
               :EndIf
      
           :CaseList 'ns' 'class' 'csv' 'apl' 'lib' 'data'
+              d←0   ⍝ will be set to 1 if we come across errors handling assignments
               target←'#'GetParam'target'
               target←(('#'≠⊃target)/'#.'),target
               :If 0∊⍴source←GetParam'source' ''
                   'Source is required'Signal 11
               :EndIf
-              :If (cmd≡'ns')∧0=⎕NC target
-                  target ⎕NS''
-                  :Trap halt↓0
-                      target⍎_defaults
-                      Log'Created namespace ',target
-                  :Else
-                      :If DyaVersion<13
-                          LogError'Error establishing defaults in namespace ',target,': ',⊃⎕DM
-                      :ElseIf DyaVersion<16
-                          LogError'Error establishing defaults in namespace ',target,': ',⎕DMX.(DM,': ',Message)    ⍝ CompCheck: ignore
+              :If cmd≡'ns'
+                  :If 0=⎕NC target
+                      target ⎕NS''
+                      :Trap halt↓0
+                          target⍎_defaults
+                          Log'Created namespace ',target
                       :Else
-                          LogError'Error establishing defaults in namespace ',target,': ',⎕JSON ⎕DMX                         ⍝ CompCheck: ignore
-                      :EndIf
-                  :EndTrap
+                          LogError'Error establishing defaults in namespace ',target,': ',⎕JSON ⎕DMX                          ⍝ CompCheck: ignore
+                      :EndTrap
+                  :ElseIf 2=⎕NC target  ⍝ if target is an existing variable name
+                      LogError'Can not created namespace ',target,' - a variable with that name already exists'
+                  :EndIf
               :EndIf
      
               :If cmd≡'csv'
@@ -1664,29 +1411,16 @@
                       ⍎target,'←tmp'
                       Log target,' defined from CSV file "',source,'"'
                   :Else
-                      :If DyaVersion<13.1
-                          LogError⊃⎕DM
-                      :Else
-                          LogError ⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
-                      :EndIf
+                      LogError ⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
                   :EndTrap
                   :Continue
               :EndIf
      
               wild←∨/'*?'∊source
-              options←((wild∧DyaVersion>14)/' -protect'),(prod/' -nolink'),(' -source'/⍨cmd≡'data')  ⍝ protect started with Dyalog 14 (or was it 13?)
-     
-              :If DyaVersion<13
-                  tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵[1,⍴⍵]≡'[]':⍵ ⋄ ⍺,⍵}source
-              :Else
-                  tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵,⍨⍺/⍨0∊⍴('^\[.*\]'⎕S 3)⍵}source   ⍝ CompCheck: ignore
-              :EndIf
+              options←(wild/' -protect'),(prod/' -nolink'),(' -source'/⍨cmd≡'data')  ⍝ protect started with Dyalog 14 (or was it 13?)
+              tmpPath←path{cmd≡'lib':⍵ ⋄ ⍵,⍨⍺/⍨0∊⍴('^\[.*\]'⎕S 3)⍵}source   ⍝ CompCheck: ignore
               :If cmd≡'lib'   ⍝ find path of library...(only if >17, so we'll be using ]LINK which needs path)
-                  :If 17<DyaVersion
-                      lib←⊃0(⎕NINFO ⎕OPT('Wildcard' 1)('Recurse' 1))((2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'),'/Library/',source,'.dyalog')  ⍝ CompCheck: ignore
-                  :Else
-                      lib←source
-                  :EndIf
+                  lib←⊃0(⎕NINFO ⎕OPT('Wildcard' 1)('Recurse' 1))((2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'),'/Library/',source,'.dyalog')  ⍝ CompCheck: ignore
                   lib←eis lib
                   :If 1=tally lib  ⍝ CompCheck: ignore
                       tmpPath←⊃lib
@@ -1700,13 +1434,10 @@
               :EndIf
               :Trap DEBUG↓11
                   ⍝z←⎕SE.SALT.Load tmp←tmpPath,((~0∊⍴target)/' -target=',target),options
-                  z←options LoadCode tmpPath target
+                  loaded←options LoadCode tmpPath target cmd
+⍝                  (2⊃¨loaded)←{(,⊂⍣(2=≡⍵)rtack ⍵)}¨2⊃¨loaded
               :Else
-                  :If DyaVersion<13.1
-                      LogError⊃⎕DM
-                  :Else
-                      LogError ⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
-                  :EndIf
+                  LogError ⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
                   :Continue
               :EndTrap
      
@@ -1716,49 +1447,63 @@
                   :If 'charvec'≡fileType
                       chars←'cr' 'lf' 'nel' 'vt' 'ff' 'ls' 'ps'
                       nums←'13' '10' '133' '11' '12' '8232' '8233'
-                      :If DyaVersion<13
-                          tmp←lc'lf'GetParam'seteol'
-                          j←chars⍳⊂tmp
-                          :If j≤⍴chars
-                              eol←⎕UCS j⊃nums
-                          :Else
-                              eol←⎕UCS 2⊃⎕VFI j⊃chars
-                          :EndIf
-                      :Else
-                          eol←⎕UCS⍎¨(chars,nums)⎕S(,⍨nums)rtack lc'lf'GetParam'seteol'   ⍝ CompCheck: ignore
-                      :EndIf
+                      eol←⎕UCS⍎¨(chars,nums)⎕S(,⍨nums)rtack lc'lf'GetParam'seteol'   ⍝ CompCheck: ignore
                   :EndIf
-                  tmpExt←3⊃qNPARTS tmpPath
+                  tmpExt←3⊃⎕NPARTS tmpPath
                   tmpExt,⍨←'='/⍨0≠⍴tmpExt
-                  targetNames←2⊃¨qNPARTS,eis(⎕SE.SALT.List tmpPath,' -extension',tmpExt,' -raw')[;2]
-                  :For targetName fileContent :InEach targetNames(,⊂⍣(1=≡z)rtack z)  ⍝ was 2!
+                  :If wild
+                      targetNames←2⊃¨⎕NPARTS,eis(⎕SE.SALT.List tmpPath,' -extension',tmpExt,' -raw')[;2]
+                  :ElseIf 1=tally loaded
+                      targetNames←2⊃⎕NPARTS tmpPath
+                  :ElseIf 0=tally loaded
+                      LogError'LoadCode  "',tmpPath,'" did not return anything - does the file even exist?'
+                      :Continue
+                  :Else
+                      LogError'"LoadCode" unexpectedly returned > 1 object for command "',line,'"'
+                      :Continue
+                  :EndIf
+                  :For targetName fileContent :In loaded
+                      targetName←2⊃⎕NPARTS targetName
+⍝                      fileContent←⊃fileContent
                       :Select fileType
                       :Case 'charvec'
                           fileData←(-⍴eol)↓∊fileContent,¨⊂eol
                       :Case 'charmat'
                           fileData←↑fileContent
                       :Case 'json'
-                          fileData←0 qJSON∊fileContent
+                          fileData←0 ⎕JSON∊fileContent
                       :Case 'charvecs'
                           fileData←fileContent
                       :EndSelect
-                      :If '.apla'≢lc 3⊃qNPARTS tmpPath  ⍝ has been brought in by LoadCode already
-                          targetName(⍎target).{⍎⍺,'←⍵'}fileData
-                      :EndIf
+                      :Trap 0
+                          :If 0=(⍎target).⎕NC targetName
+                              targetName(⍎target).{⍎⍺,'←⍵'}fileData
+                          :Else
+                              LogError'DATA does not support overwriting of existing names (as command "',(i⊃lines),'" would do)'
+                              d←1
+                              :Continue
+                          :EndIf
+                      :Else
+                          LogError'Error trying to assign "',target,'.',targetName,'": ',NL,⍕⎕DM,¨⊂NL
+                          d←1
+                          :Continue
+                      :EndTrap
                   :EndFor
-                  z←targetNames
+                  loaded←targetNames
                   fileType,←' '
               :Else
                   fileType←''
               :EndIf
-     
-              :If 0∊⍴z     ⍝ no names
-                  LogError'Nothing found: ',source
-              :ElseIf (,1)≡,⍴z ⍝ exactly one name
-                  Log{(uc 1↑⍵),1↓⍵}fileType,cmd,' ',source,' loaded as ',⍕⊃z
-              :Else        ⍝ many names
-                  Log(⍕⍴,z),' ',fileType,('namesfiles'↑⍨5×¯1*cmd≡'file'),' loaded from ',source,' into ',target
+              :If ~d
+                  :If 0∊⍴loaded     ⍝ no names
+                      LogError'Nothing found: ',source
+                  :ElseIf (,1)≡,⍴loaded ⍝ exactly one name
+                      Log{(uc 1↑⍵),1↓⍵}fileType,cmd,' ',source,' loaded as ',⍕⊃loaded
+                  :Else        ⍝ many names
+                      Log(⍕⍴,loaded),' ',fileType,' names loaded from ',source,' into ',target,'.',{1=≡⍵:⍵ ⋄ '(',(¯1↓∊⍵,¨' '),')'}loaded
+                  :EndIf
               :EndIf
+     
      
           :CaseList 'lx' 'exec' 'prod' 'defaults'
               :If 0∊⍴tmp←GetParam'expression' ''
@@ -1776,19 +1521,21 @@
                       :EndTrap
                       :If cmd≡'defaults'
                           _defaults←_defaults,'⋄',tmp ⋄ Log'Set defaults ',tmp
+                          #⍎_defaults    ⍝ apply defaults to #
                       :EndIf ⍝ Store for use each time a NS is created
                   :EndIf
               :EndIf
      
           :Case 'target'
               :If save=0
-              :AndIf 0='2'GetNumParam'save'
-                  Log'Found TARGET-Entry, but save=0 - TARGET with save=0 does not have any effect!'
-              :Else
+              :AndIf (('2'GetNumParam'save')∊0 1)
+                  Log'Found TARGET-Entry with SAVE-parameter, but commandline-switch save=',(⍕save),'overruled it'
+              :ElseIf Target≡null
                   TargetList⍪←i line params names values
               :EndIf
           :Else
               :If '⍝'≠⊃cmd ⍝ ignore commented lines
+              :AndIf 0<tally cmd
                   LogError'Invalid keyword: ',cmd
               :EndIf
           :EndSelect
@@ -1806,7 +1553,7 @@
               +∇¨(⊂⍵,'.'),¨(⍎⍵).⎕NL-2.1 3.1 9.1  ⍝ +∇ avoids crashes in 12.1...15
           }¨(⊂'#.'),¨#.⎕NL-2.1 3.1 3.2 9.1
           :If 0<⍴z
-              LogError('Classic-Test found incompatible characters in following functions/variables:',NL),¯2↓∊z{('- ',⍺,⍵)/⍨×,⍴⍺}Ö 1 rtack NL
+              LogError('Classic-Test found incompatible characters in following functions/variables:',NL),¯2↓∊z{('- ',⍺,⍵)/⍨×,⍴⍺}⍥1 rtack NL
           :Else
               Log'Workspace seems to be compatible with Classic Edition ',⍕{⍵>1:⍵ ⋄ 12}TestClassic
           :EndIf
@@ -1822,15 +1569,15 @@
               :If 0∊⍴tmp←GetParam'wsid' ''
                   LogError'wsid missing'
               :Else
-                  d←1⊃qNPARTS tmp  ⍝ directory given?
+                  d←1⊃⎕NPARTS tmp  ⍝ directory given?
                   :If {{~'/\'∊⍨(⎕IO+2×isWin∧':'∊⍵)⊃⍵}3↑⍵}d   ⍝ if that dir is an relative path
-                      wsid←∊1 qNPARTS path,tmp                  ⍝ prefix path of buildfile
+                      wsid←∊1 ⎕NPARTS path,tmp                  ⍝ prefix path of buildfile
                   :Else
                       wsid←tmp
                   :EndIf
-                  :If (⊂lc 3⊃qNPARTS wsid)∊'' '.dws'
+                  :If (⊂lc 3⊃⎕NPARTS wsid)∊'' '.dws'
                   :OrIf 0=tally GetParam'type'    ⍝ if type is not set, we're building a workspace
-                      :If save∊⍳2
+                      :If (save∊⍳2)∨99='99'GetNumParam'save'
                           ⎕WSID←wsid
                           Log'WSID set to ',wsid
                       :EndIf
@@ -1846,11 +1593,11 @@
               :If save∊0 2
                   :Continue
               :EndIf
-                     ⍝ Apr 21-research found these vars referencing # (or elements of it) - get them out of the way temporarily
+             ⍝ Apr 21-research found these vars referencing # (or elements of it) - get them out of the way temporarily
               rfs←0 2⍴''
               ⎕EX¨'⎕SE.'∘,¨'SALTUtils.spc.z' 'SALTUtils.spc.res'
               :Trap 0
-                  :For nam :In '⎕SE.'∘,¨'THIS' 'SALTUtils.cs' 'SALTUtils.c.THIS' 'SALTUtils.spc.ns.proc'
+                  :For nam :In '⎕SE.'∘,¨'THIS' 'SALTUtils.cs' 'SALTUtils.c.THIS' 'SALTUtils.spc.ns.proc' 'input.c.THIS'
                       :If 0<⎕NC nam
                       :AndIf 326=⎕DR⍎nam
                           str←⍕⍎nam
@@ -1868,9 +1615,7 @@
                   ('Type' 'W')Log'⎕SAVE workaround failed because of ',nam
                   rfs←0 2⍴''
               :EndTrap
-              :If DyaVersion≥16
-                  ⎕SIGNAL 0  ⍝ CompCheck: ignore   ⍝ reset ⎕DM, ⎕DMX to avoid problems with refs when saving
-              :EndIf
+              ⎕SIGNAL 0  ⍝ CompCheck: ignore   ⍝ reset ⎕DM, ⎕DMX to avoid problems with refs when saving
               :Trap DEBUG↓0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
                   :If ~0∊⍴type←GetParam'type'
                       :If isWin
@@ -1904,16 +1649,13 @@
                           Log'Builds using "type" (to create something else than a DWS) are only supported on Windows!'
                       :EndIf
                   :Else
-                      :If save≡1
-                          save←wsid
-                      :EndIf
-                      command←')SAVE ',save
-                      0 #.⎕SAVE save
+                      command←')SAVE ',wsid
+                      0 #.⎕SAVE wsid
                   :EndIf
                   :Trap DEBUG↓0  ⍝ paranoid, but want to avoid any bugs here to trigger the save again...
-                      :If qNEXISTS save←wsid{''≡3⊃qNPARTS ⍺:⍺,⍵ ⋄ ⍺}'.dws'
-                          tmp←⍕DEBUG{(~⍺)/~⍺::'???' ⋄ (ListFiles ⍵)[1;2]}save
-                          Log'Saved as ',save,' (',tmp,' bytes)'
+                      :If ⎕NEXISTS det←wsid{''≡3⊃⎕NPARTS ⍺:⍺,⍵ ⋄ ⍺}'.dws'
+                          tmp←⍕DEBUG{(~⍺)/~⍺::'???' ⋄ (ListFiles ⍵)[1;2]}det
+                          Log'Saved as ',det,' (',tmp,' bytes)'
                       :EndIf
                   :EndTrap
                   command←''
@@ -1932,14 +1674,14 @@
                   ('Type' 'E')Log'Problem creating ',wsid,':',,(↑⎕DM),⎕UCS 13
               :EndTrap
               :If ~0∊⍴command
-                  :If qNEXISTS wsid,'.dws'
-                  :AndIf ~'.exe'≡3⊃qNPARTS wsid
-                      qNDELETE wsid,'.dws'  ⍝ avoid prompts during )SAVE
+                  :If ⎕NEXISTS wsid,'.dws'
+                  :AndIf ~'.exe'≡3⊃⎕NPARTS wsid
+                      ⎕NDELETE wsid,'.dws'  ⍝ avoid prompts during )SAVE
                   :EndIf
                   :If isWin
                       {sink←2 ⎕NQ ⎕SE'keypress'⍵}¨'  ',command,⊂'ER'
                       NQed←1
-                      Log'Enqueued keypresses to automatically save after UCMD has completed'
+                      Log'Enqueued keypresses to automatically save after UCMD has completed: "',command,'"'
                   :Else
                       Log'Please execute the following command when the UCMD has finished:'
                       Log command
@@ -1960,7 +1702,7 @@
  ⍝     :endif
      endSave:
       ('Type' 'I')Log'DyalogBuild: ',(⍕⍴lines),' lines processed in ',(1⍕0.001×⎕AI[3]-start),' seconds.'
-      r←''
+     
       :If 0<n←tally 3⊃LOGS
           ('Type' 'I')Log(0≠n)/' ',(⍕n),' error',((n>1)/'s'),' encountered.'
       :EndIf
@@ -1972,8 +1714,8 @@
       :EndFor
       r←table r
       :If off=1  ⍝ careful: off∊0 1 2!
-          logfile←∊(2↑qNPARTS file),'.log'
-          qNDELETE logfile
+          logfile←∊(2↑⎕NPARTS file),'.log'
+          1 ⎕NDELETE logfile
           :If ~0∊⍴3⊃LOGS
               (∊r,¨⊂NL)Put logfile
           :EndIf
@@ -2003,26 +1745,26 @@
       r←''
       :Repeat
           path←(-(¯1↑path)∊'/\')↓path ⍝ drop trailing / or \
-          (path file ext)←qNPARTS path
-      :Until found←qNEXISTS r←path,file,'/',file,'.dyalogbuild'
+          (path file ext)←⎕NPARTS path
+      :Until found←⎕NEXISTS r←path,file,'/',file,'.dyalogbuild'
       :OrIf 1≥+/r∊'/\'
       r←found/r
     ∇
 
     ∇ (exists file)←OpenFile file;tmp;path;extn;name
-      (path name extn)←qNPARTS file
-      :If exists←qNEXISTS file
+      (path name extn)←⎕NPARTS file
+      :If exists←⎕NEXISTS file
           :If 1=GetFilesystemType file   ⍝ but it is a folder!
-              :If exists←qNEXISTS tmp←file,'/',name,extension ⍝ If folder contains name.dyalogbuild
+              :If exists←⎕NEXISTS tmp←file,'/',name,extension ⍝ If folder contains name.dyalogbuild
                   file←tmp ⍝ Then use the file instead
-              :ElseIf 1=⍴tmp←(ListFiles(⊃1 qNPARTS file),'*',extension)[;1] ⍝ if there's only a single .dyalogbuild file, use it
-                  exists←qNEXISTS file←⊃tmp
+              :ElseIf 1=⍴tmp←(ListFiles(⊃1 ⎕NPARTS file),'*',extension)[;1] ⍝ if there's only a single .dyalogbuild file, use it
+                  exists←⎕NEXISTS file←⊃tmp
               :ElseIf 1<⍴tmp
                   LogError'There is more than one ',(extension),' file in ',file,'. Please specify a single file.'
               :EndIf
           :EndIf
       :Else
-          exists←qNEXISTS file←file,(0∊⍴extn)/extension
+          exists←⎕NEXISTS file←file,(0∊⍴extn)/extension
       :EndIf
     ∇
 
@@ -2040,40 +1782,68 @@
       :EndIf
     ∇
 
-    LineNo←{    '[',(,'ZI3'⎕FMT ⊃,⍵),']'    }  ⍝ m19572 deals with Edit|Reformat not removing those blanks...!
+    LineNo←{    '[',(,'ZI3'⎕FMT ⊃,⍵),']'    }  ⍝ m19572 deals with Edit|Reformat not removing the blanks in the dfn!
+    PrefixTS←{(,'ZI2,<:>,ZI2,<:>,ZI2,<.>,ZI4,⎕> ⎕'⎕FMT 1 4⍴3↓⎕TS),⍵}
 
-    ∇ {r}←{f}LogTest msg;type
+    ∇ {r}←{f}LogTest msg;type;i
+    ⍝ this fn is mapped to fn "Log" that is defined in the ns in which tests are executed
       r←0 0⍴0 ⋄ type←3
-      →(0∊tally∊msg)⍴0
+     
+      →(msg≡SuccessValue)⍴0
       :If 0=⎕NC'f'
+      :AndIf (⎕DR∊msg)∊80 82 160
           f←''
-      :ElseIf 2≤|≡f
-          :If 2=|≡f ⍝ ONE name & value
-              f←⊂f
-          :EndIf
-          f←,f
-          :If (tally f)≥i←(,1↑¨f)⍳⊂,⊂'Type'
-              type←'IWE'⍳⊃2⊃i⊃f
-          :EndIf
-          :If (tally f)≥i←(,1↑¨f)⍳⊂,⊂'Prefix'
-              f←2⊃i⊃f
+          r←msg
+      :Else
+          :If (⎕DR msg)=326
+              msg←'Test returned data with unsupported ⎕DR=326'
+          :ElseIf ~(⎕DR∊msg)∊80 82 160
+              msg←'Test returned numeric ',((0 1⍳⍴⍴msg)⊃'scalar' 'vector'),' = ',⍕msg
+              :If SuccessValue≢''
+                  msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ ((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
+              :Else
+                  msg,←' when DTest expected an empty charvec to indicate success'
+              :EndIf
           :Else
-              f←''
+              msg←'Test returned character value = "',msg,'"'
+              :If SuccessValue≢''
+                  msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
+              :Else
+                  msg,←' when DTest expected an empty charvec to indicate success'
+            ⍝   ⎕←msg
+              :EndIf
           :EndIf
+          :If 2≤|≡f
+              :If 2=|≡f ⍝ ONE name & value
+                  f←⊂f
+              :EndIf
+              f←,f
+              :If (tally f)≥i←(,1↑¨f)⍳⊂,⊂'Type'
+                  type←'IWE'⍳⊃2⊃i⊃f
+              :EndIf
+              :If (tally f)≥i←(,1↑¨f)⍳⊂,⊂'Prefix'
+                  f←2⊃i⊃f
+              :Else
+                  f←''
+              :EndIf
+          :EndIf
+          :If 2=⎕NC'timestamp'
+          :AndIf timestamp=1
+              f←PrefixTS f
+          :EndIf
+          msg←(f,(~0∊⍴f)/': ')∘,¨eis msg
       :EndIf
-      :If 2=⎕NC'timestamp'
-      :AndIf timestamp=1
-          f←(⍕3↓⎕TS),' ',f
-      :EndIf
-      msg←(f,(~0∊⍴f)/': ')∘,¨eis msg
       :If verbose
       :AndIf quiet=0
           ⎕←msg
       :EndIf
-      LOGS[type],←⊂eis msg
+      :If quiet≠1
+      :OrIf type=3
+          LOGS[type],←⊂eis msg
+      :EndIf
     ∇
 
-    ∇ {pre}Log msg;type
+    ∇ {pre}Log msg;type;j
     ⍝ no ⍺ or  ⍺=1: prefix log with lineno.
     ⍝ alternatively pre can also be a VTV with Name/Value-pairs ('Prefix' 'foo')('Type' 'I')
       type←1    ⍝ Info
@@ -2088,11 +1858,11 @@
                   pre←⊂pre
               :EndIf
               pre←,pre
-              :If (tally pre)≥i←(,1↑¨pre)⍳⊂,⊂'Type'
-                  type←'IWE'⍳⊃2⊃i⊃pre
+              :If (tally pre)≥j←(,1↑¨pre)⍳⊂,⊂'Type'
+                  type←'IWE'⍳⊃2⊃j⊃pre
               :EndIf
-              :If (tally pre)≥i←(,1↑¨pre)⍳⊂,⊂'Prefix'
-                  pre←2⊃i⊃pre
+              :If (tally pre)≥j←(,1↑¨pre)⍳⊂,⊂'Prefix'
+                  pre←2⊃j⊃pre
               :Else
                   pre←''
               :EndIf
@@ -2100,7 +1870,11 @@
               pre←''
           :EndIf
       :EndIf
-     
+      :If 2=⎕NC'timestamp'
+      :AndIf timestamp=1
+          pre←PrefixTS pre
+      :EndIf
+      pre←pre,(∧/(0<≢pre),' '≠(¯1↑pre),1⊃msg)⍴' '   ⍝ optionally insert a blank to separate prefix and msg
       :If 0=⎕NC'LOGS'
           LOGS←3⍴⊂''
       :EndIf  ⍝ may happen during Clean...
@@ -2144,14 +1918,16 @@
       r.Name←'DBuild' 'DTest' 'GetTools4CITA'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory' 'Load tools to run CITA-tests'
       :If 14>1⊃_Version
-          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -testclassic' '1 -clear[=] -tests= -testlog[=] -filter= -setup= -teardown= -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2' ''
+          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '1 -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -SuccessValue=' ''
       :Else
-          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup= -teardown= -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coco[=]' ''
+          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coverage[=]  -SuccessValue=' ''
       :EndIf
     ∇
 
     ∇ Û←Run(Ûcmd Ûargs)
      ⍝ Run a build
+      Init 0
+      ('UCMD "',Ûcmd,'" requires at least Dyalog v18.0')⎕SIGNAL(DyaVersion<18)/11
       :Select Ûcmd
       :Case 'DBuild'
           Û←Build Ûargs
@@ -2242,51 +2018,92 @@
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory | Version ',2⊃Version
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup=fn] [-suite=file] [-teardown=fn] [-testlog=] [-tests=] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init] [-order=]'
+          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup=[fn]] [-suite=file] [-teardown=[fn]] [-testlog=] [-tests=] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init] [-order=]'
           :Select level
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more info'
           :Case 1
               r,'' 'Argument is one of:'
-              r,←⊂'    ns                namespace in the current workspace'
-              r,←⊂'    file              .dyalog file containing a namespace or a test-fn'
-              r,←⊂'    path              path to directory containing functions in .dyalog files'
+              r,←⊂'    ns                   namespace in the current workspace'
+              r,←⊂'    file                 .dyalog file containing a namespace or a test-fn'
+              r,←⊂'    path                 path to directory containing functions in .dyalog files'
               r,←'' 'Optional modifiers are:'
-              r,←⊂'    -clear[=n]        clear ws before running tests (optionally delete nameclass n only)'
-              r,←⊂'    -filter=string    only run functions whose name start with filter'
-              r,←⊂'    -halt             halt on error rather than log and continue'
-              r,←⊂'    -init             if specified test-file wasn''t found, it will be initialised with a template'
-              r,←⊂'    -loglvl           control which log files we create (if value of "-off" > 0)'
-              r,←⊂'                        1={base}.log: errors'
-              r,←⊂'                        2={base}.warn.log warnings'
-              r,←⊂'                        4={base}.warn.log info'
-              r,←⊂'                        8={base}.session.log'
-              r,←⊂'                       16={base}.session.log ONLY if test failed'
-              r,←⊂'                       32={base}.log.json: machine-readable results'
-              r,←⊂'                          Creating such a log is the ONLY way to get data on performance and memory usage of tests!'
-              r,←⊂'    -order=0|1|"NumVec" control sequence of tests (default 0: random; 1:sequential;"NumVec":order)'
-              r,←⊂'    -off[=0|1|2]      )off after running the tests'
-              r,←⊂'                        0=do not )OFF after test'
-              r,←⊂'                        1=)OFF after test'
-              r,←⊂'                          creates {base}.log if errors found'
-              r,←⊂'                          AND {warn|info}.log if warnings of info-msgs were created'
-              r,←⊂'                          (NB: depends on -loglvl!)'
-              r,←⊂'                        2=do not )OFF, but create .log-files (see loglvl)'
-              r,←⊂'    -quiet            qa mode: only output actual errors'
-              r,←⊂'    -repeat=n         repeat test n times'
-              r,←⊂'    -setup=fn         run the function fn before any tests'
-              r,←⊂'    -suite=file       run tests defined by a .dyalogtest file'
-              r,←⊂'    -teardown=fn      run the function fn after all tests'
-              r,←⊂'    -testlog=         force name of logfiles (default name of testfile)'
-              r,←⊂'    -tests=           comma-separated list of tests to run'
-              r,←⊂'    -timeout          sets a timeout. Seconds after which test(suite)s will be terminated. (Default=0 means: no timeout)'
-              r,←⊂'    -ts               add timestamp (no date) to logged messages'
-              r,←⊂'    -trace            set stop on line 1 of each test function'
-              r,←⊂'    -verbose          display more status messages while running'
+              r,←⊂'    -clear[=n]           clear ws before running tests (optionally delete nameclass n only)'
+              r,←⊂'    -coverage            enable analysis of code coverage'
+              r,←⊂'    -filter=string       only run functions whose name start with filter'
+              r,←⊂'    -halt                halt on error rather than log and continue'
+              r,←⊂'    -init                if specified test-file wasn''t found, it will be initialised with a template'
+              r,←⊂'    -loglvl              control which log files we create (if value of "-off" > 0)'
+              r,←⊂'                           1={base}.log: errors'
+              r,←⊂'                           2={base}.warn.log warnings'
+              r,←⊂'                           4={base}.warn.log info'
+              r,←⊂'                           8={base}.session.log'
+              r,←⊂'                          16={base}.session.log ONLY if test failed'
+              r,←⊂'                          32={base}.log.json: machine-readable results'
+              r,←⊂'                             Creating such a log is the ONLY way to get data on performance and memory usage of tests!'
+              r,←⊂'                             (Values are bit flags and can be added)'
+              r,←⊂'    -order=0|1|"NumVec"  control sequence of tests (default 0: random; 1:sequential;"NumVec":order)'
+              r,←⊂'    -off[=0|1|2]         )off after running the tests'
+              r,←⊂'                           0=do not )OFF after test'
+              r,←⊂'                           1=)OFF after test'
+              r,←⊂'                             creates {base}.log if errors found'
+              r,←⊂'                             AND {warn|info}.log if warnings of info-msgs were created'
+              r,←⊂'                             (NB: depends on -loglvl!)'
+              r,←⊂'                           2=do not )OFF, but create .log-files (see loglvl)'
+              r,←⊂'    -quiet               qa mode: only output actual errors'
+              r,←⊂'    -repeat=n            repeat test n times'
+              r,←⊂'    -setup=[fn]          run the function fn before any tests'
+              r,←⊂'    -successvalue=string defines an alternate value that indicates successfull execution of test (default is empty string)'
+              r,←⊂'                          (NB: this can be tricky when you want to use 0 - see wiki for details!)'
+              r,←⊂'    -suite=file          run tests defined by a .dyalogtest file'
+              r,←⊂'    -teardown=[fn]       run the function fn after all tests'
+              r,←⊂'    -testlog=            force name of logfile(s) (default name of testfile)'
+              r,←⊂'    -tests=              comma-separated list of tests to run'
+              r,←⊂'    -timeout             sets a timeout. Seconds after which test(suite)s will be terminated. (Default=0 means: no timeout)'
+              r,←⊂'    -ts                  add timestamp (no date) to logged messages'
+              r,←⊂'    -trace               set stop on line 1 of each test function'
+              r,←⊂'    -verbose             display more status messages while running'
               r,←⊂''
               r,←⊂'More info in the wiki!  → https://github.com/Dyalog/DBuildTest/wiki/DTest'
           :Case 'GetTools4CITA'
-              r←⊂'An internal tool for testing with CITA'
+              r←⊂'Primarily an internal tool for testing with CITA | Version ',2⊃Version
+              r,←⊂'    ]',Cmd,' [ns]'
+              :Select
+              :Case 0
+                  r,←⊂']',Cmd,' -?? ⍝ for more info'
+              :Case 1
+                  r,←⊂'This copies a few tools from the DTest-namespace into `⎕SE._cita` and some'
+                  r,←⊂'into the namespace passed as argument (default is #)'
+                  r,←⊂''
+                  r,←⊂'- SetupCompatibilityFns'
+                  r,←⊂'- DyaVersion - numeric variable holding {major}.{minor} Version of current interpreter'
+                  r,←⊂'- APLVersion - actually identifies the platform with value *nix|Win|Mac'
+                  r,←⊂'- isChar ⍵   - returns boolean value if argument is char'
+                  r,←⊂'- isWin      - niladic fn returning boolean to indicate if running on Windows'
+                  r,←⊂'- ⍺ Split ⍵  - split string ⍵ on positions that have value ⍺'
+                  r,←⊂'- Init       - establishes additional fns'
+                  r,←⊂'- GetDOTNETVersion - returns 4 elements to describe .NET Version that is in use:'
+                  r,←⊂'                     R[1] = 0/1/2: 0=nothing, 1=.net Framework, 2=NET CORE'
+                  r,←⊂'                     R[2] = Version (text-vector)'
+                  r,←⊂'                     R[3] = Version (identifiable x.y within [2] in numerical form)'
+                  r,←⊂'                     R[4] = Textual description of the framework'
+                  r,←⊂'- _FileTime_to_TS - legacy from the days w/o ⎕NINFO'
+                  r,←⊂'- Nopen      - helps dealing with native files'
+                  r,←⊂'...and a few others as well as:'
+                  r,←⊂'- base64enc'
+                  r,←⊂'- base64dec'
+                  r,←⊂'- base64 (subfn used by the last 2)'
+                  r,←⊂'to encode/decode a string using base64.'
+                  r,←⊂'The last three as well as the "DSL":'
+                  r,←⊂'- Because'
+                  r,←⊂'- Fail'
+                  r,←⊂'- Check'
+                  r,←⊂'- IfNot'
+                  r,←⊂'- IsNotElement'
+                  r,←⊂'- eis'
+                  r,←⊂'- Assert'
+                  r,←⊂' will also be copied into the ns passed as argument (# by default)'
+              :EndSelect
           :EndSelect
       :EndSelect
     ∇
@@ -2296,12 +2113,7 @@
         ∇ Write2Log txt;file
       ⍝ needs name of test
           file←GetCITA_Log 1
-          :If ~qNEXISTS file
-              txt qNPUT file
-          :Else ⍝ q&d "append":
-              old←qNGET file
-              (old,⊂txt)qNPUT file 1
-          :EndIf
+          (⊂txt)⎕NPUT file 2
         ∇
 
         ∇ R←GetCITA_Log signal;z
@@ -2313,7 +2125,7 @@
               :Else
               ⍝ alternatively use name of test
                   :If 0<≢R←2 ⎕NQ'.' 'GetEnvironment' 'CITATest'
-                      R←∊(2↑qNPARTS R),'.CITA.log'
+                      R←∊(2↑⎕NPARTS R),'.CITA.log'
                   :Else
                       :If signal
                           'Found no CITA_Log in Environment - this dws is supposed to be called from CITA which should have passed the right commandline'⎕SIGNAL 11
@@ -2354,7 +2166,7 @@
 ⍝ returncode=¯42 will NOT off (but will write the log file!)
           ⎕ML←1
           :If 0=⎕NC'msg' ⋄ msg←'' ⋄ :EndIf
-          file←∊2↑qNPARTS GetCITA_Log 1
+          file←∊2↑⎕NPARTS GetCITA_Log 1
           :If 1<⍴,status
           :AndIf 0={⎕ML←0 ⋄ ∊⍵}2⊃status
               (status MYrc)←status
@@ -2379,53 +2191,55 @@
           :If 2=⎕NC'MYrc'
               rc←MYrc
           :EndIf
-    ⍝ uses qNPUT (which is brought in with GetToolsForCITA to write a file on all APL-Versions)
     ⍝ we're intentionally not passing ⍵[2]as 1 to force overwrite - because this is supposed to be called once only!
     ⍝ So if it crashes...that is well deserved...
           file←file,'.',status
-          msg qNPUT file
+          (⊂msg)⎕NPUT file
           :If 2=⎕NC'⎕se._cita._memStats'
-              t←{0::⍵ ⎕FCREATE 0 ⋄ ⍵ ⎕FSTIE 0}(1⊃qNPARTS file),'MemRep'
+              t←{0::⍵ ⎕FCREATE 0 ⋄ ⍵ ⎕FSTIE 0}(1⊃⎕NPARTS file),'MemRep'
               ⎕SE._cita._memStats ⎕FAPPEND t
               ⎕SE._cita.∆cpu ⎕FAPPEND t
               ⎕FUNTIE t
           :EndIf
          
-          :If 2=⎕NC'randomstring'
-          :AndIf 0<⍴randomstring
-              :Trap 0
-                  log←⎕SE ⎕WG'Log'
-                  :Trap 1
-                      log←∊log,¨⊂NL
+          :Trap 0
+              log←⎕SE ⎕WG'Log'
+              :Trap 1
+                  :If 2=⎕NC'RunCITA∆OldLog'
+                      z←RunCITA∆OldLog NrOfCommonLines log
                   :Else
-                      :Trap 0
-                          ⎕←'trapped WSFULL! EN=',⎕EN
-                          l2←''
-                          :While 0<⍴log
-                              l2,←1⊃log
-                              l2,←NL
-                              log←1↓log
-                          :EndWhile
-                          log←l2
-                          ⎕EX'l2'
-                          ⎕←'fixed it!'
-                      :Else
-                          ⎕←'Unfixable WS FULL!'
-                          →0
-                      :EndTrap
-                  :EndTrap
-                  :If 1∊y←randomstring⍷log
-                      log←(y⍳1)↓log
-                      log←((NL⍷log)⍳1)↓log
+                      z←0
                   :EndIf
-                  log,←'TS.End=',⍕⎕TS
-                  log qNPUT(file←({(2>+\⍵='.')/⍵}file),'.sessionlog.txt')1
-                  ⎕←'Wrote log to ',file
+                  log←z↓log
+                  log←∊log,¨⊂NL
+         
               :Else
-                  ⎕←'*** Error while attempting to write sessionlog to a file:'
-                  ⎕←⎕DM
+                  :Trap 0
+                      ⎕←'trapped WSFULL! EN=',⎕EN
+                      l2←''
+                      :While 0<⍴log
+                          l2,←1⊃log
+                          l2,←NL
+                          log←1↓log
+                      :EndWhile
+                      log←l2
+                      ⎕EX'l2'
+                      ⎕←'fixed it!'
+                  :Else
+                      ⎕←'Unfixable WS FULL!'
+                      →0
+                  :EndTrap
               :EndTrap
-          :EndIf
+              log,←'TS.End=',⍕⎕TS
+              (⊂log)⎕NPUT(file←({(2>+\⍵='.')/⍵}file),'.CITA_log.txt')1
+              ⎕←'Wrote log to ',file
+          :Else
+              ⎕←'*** Error while attempting to write sessionlog to a file:'
+              ⎕←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
+              ⎕←'file=',file
+              ⎕←'log=',log
+              ⎕←'si' ⋄ ⎕←⍕⎕SI,[1.5]⎕LC
+          :EndTrap
           :If rc≠¯42
               ⎕←'Wrote the log, now we will call ⎕OFF'
               ⎕←'⎕tnums=',⎕TNUMS
@@ -2472,8 +2286,9 @@
         ∇
 
 
-    :EndNamespace
+        NrOfCommonLines←{+/∧\{⍵=⍵[1]+¯1+⍳≢⍵}⍺{((≢⍺)⍴⍋⍋⍺⍳⍺⍪⍵)⍳(≢⍵)⍴⍋⍋⍺⍳⍵⍪⍺}⍵}
 
+    :EndNamespace
     :EndSection
 
 :EndNamespace ⍝ DyalogBuild  $Revision$

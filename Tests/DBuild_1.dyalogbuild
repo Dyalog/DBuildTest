@@ -1,5 +1,5 @@
-DYALOGBUILD: 1.3
-ID: DBuild_TEST_1, Version 2 (for Dyalog 12 and better)
+DYALOGBUILD: 1.7
+ID: DBuild_TEST_2, Version 3 (for Dyalog 18 and better)
 
 DEFAULTS: ⎕IO←⎕ml←0
 NS: ./files/NS0.dyalog, target=#.MyNS0

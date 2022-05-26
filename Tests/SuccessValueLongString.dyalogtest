@@ -1,0 +1,5 @@
+DyalogTest : 1.70
+ID         : SuccessValueLongString   ⍝ will be passed on commandline to also test decoding
+Description: 
+
+Test    : test_SuccessValueLongString

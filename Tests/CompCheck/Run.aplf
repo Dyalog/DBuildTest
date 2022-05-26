@@ -1,4 +1,4 @@
- R←{opts}Run ref;s;z;minVers;critical;c;l;sf;V;f;features;v;v∆;NL;i;Features∆;nq;uncmnt
+﻿ R←{opts}Run ref;s;z;minVers;critical;c;l;sf;V;f;features;v;v∆;NL;i;Features∆;nq;uncmnt;avuClassic
  ⍝ opts: select tests,
  ⍝ 1: will it run on Classic?
  ⍝ and/or: minimum-version for it to run:
@@ -21,10 +21,14 @@
      ⎕←'What''s in ref? Expecting ns or filespec'
      ∘∘∘
  :EndIf
-
- :If 1∊opts
+ :If 12.1∊opts
+     avuClassic←avuClassic121
+ :Else
+     avuClassic←avuClassic131
+ :EndIf
+ :If 1∊⌊opts
      sf←∊s
-     z←~(⎕UCS sf)∊avuClassic
+     z←~(⎕UCS sf)∊avuClassic,(1.1∊opts)/9061
      :If ∨/z
          ⎕←(⍕≢∪z/sf),' Non-classic characters found in ',(⍕ref),': ',∪z/sf
          R←0

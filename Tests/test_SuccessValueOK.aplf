@@ -1,0 +1,4 @@
+test_SuccessValueOK←{
+0=1: 1  
+'OK'
+}

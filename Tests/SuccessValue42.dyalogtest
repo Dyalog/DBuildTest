@@ -1,0 +1,5 @@
+DyalogTest : 1.70
+ID         : SuccessValue42
+Description: 
+SuccessValue: 42
+Test    : test_SuccessValue42
