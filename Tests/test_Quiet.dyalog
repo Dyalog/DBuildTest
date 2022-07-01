@@ -3,12 +3,12 @@
  r←⍬
 
    ⍝ 1. For DTest
- rc←300 sub_RunAPLProcess((##.TESTSOURCE,'RunCITA')('CITATest=',##.TESTSOURCE,'test_retcode.dyalog mode=DTest ok=1 dtestmods="-off -q -loglvl=40',(##.halt/' -halt'),' -testlog=',##.TESTSOURCE,'test_retcodeq"'))
+ rc←300 sub_RunAPLProcess((##.TESTSOURCE,'Executor')('CITATest=',##.TESTSOURCE,'test_retcode.dyalog mode=DTest ok=1 dtestmods="-off -q -loglvl=40',(##.halt/' -halt'),' -testlog=',##.TESTSOURCE,'test_retcodeq"'))
  :If 0 Check 2 ⎕NINFO ##.TESTSOURCE,'test_retcode.session.log'
      →0 Because'Running DTest with -q (="quiet") modifier produced output!' ⋄ :EndIf
 
     ⍝ 2. for DBuild
- rc←300 sub_RunAPLProcess((##.TESTSOURCE,'RunCITA')('RunUCMD="DBuild ',##.TESTSOURCE,'DBuild_1.dyalogbuild -q" -RunCITAlog="',##.TESTSOURCE,'test_dbuilq"'))
+ rc←300 sub_RunAPLProcess((##.TESTSOURCE,'Executor')('RunUCMD="DBuild ',##.TESTSOURCE,'DBuild_1.dyalogbuild -q" -testlog="',##.TESTSOURCE,'test_dbuilq"'))
  :If 0 Check 2 ⎕NINFO ##.TESTSOURCE,'test_retcode.session.log'
      →0 Because'Running DTest with -q (="quiet") modifier produced output!' ⋄ :EndIf
 

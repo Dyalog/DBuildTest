@@ -8,7 +8,7 @@
  r←''
  logfile←##.TESTSOURCE,'testWSFULL'
 
- ret←300 sub_RunAPLProcess(##.TESTSOURCE,'RunCITA')('RunUCMD="DTest ',##.TESTSOURCE,'test_wsfull1.dyalog -loglvl=32 -off',(##.verbose/' -verbose'),' -testlog=',logfile,'" CITA_Log="',logfile,'"')
+ ret←300 sub_RunAPLProcess(##.TESTSOURCE,'Executor')('RunUCMD="DTest ',##.TESTSOURCE,'test_wsfull1.dyalog -loglvl=32 -off',(##.verbose/' -verbose'),' -testlog=',logfile,'" CITA_Log="',logfile,'"')
  :If ##._isWin
      :If 22 Check ret
          →0 Because'Failing test did not end with code 22 (returned ',(⍕ret),')' ⋄ :EndIf
@@ -29,7 +29,7 @@
      →0 Because∊(⊂'Log of DBuild_WSFULL did not indicate errors:'),##.NL,,(⊂'  > ')∘,¨res,¨⊂##.NL ⋄ :EndIf
 
  logfile←##.TESTSOURCE,'DBuildWSFULL'
- ret←300 sub_RunAPLProcess(##.TESTSOURCE,'RunCITA')('RunUCMD="DBuild ',##.TESTSOURCE,'DBuild_WSFULL.dyalogbuild -q" CITA_Log="',logfile,'" CITAnqOFF=1')
+ ret←300 sub_RunAPLProcess(##.TESTSOURCE,'Executor')('RunUCMD="DBuild ',##.TESTSOURCE,'DBuild_WSFULL.dyalogbuild -q" CITA_Log="',logfile,'" CITAnqOFF=1')
 
  :If 1 Check ⎕NEXISTS f←logfile,'.RunUCMD.log'  ⍝ was a log-file written?
      →0 Because'Failing build not produce log-file "',f,'"' ⋄ :EndIf

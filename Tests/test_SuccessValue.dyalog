@@ -28,7 +28,7 @@
          ⍺:⎕←⍵
          ⍬
      }pars←'CITATest=',(f←##.TESTSOURCE,theTest,(~'.'∊theTest)/'.dyalogtest'),' mode=DTest ',(' dtestmods="'cmdLineParams ⍵),' -off -loglvl=32',(##.halt/' -halt'),(##.trace/' -trace'),(##.verbose/' -verbose'),'"'
-     ((1+##.(halt∨trace))⊃30(0.001×⌊/⍬))sub_RunAPLProcess(##.TESTSOURCE,'RunCITA')pars
+     ((1+##.(halt∨trace))⊃30(0.001×⌊/⍬))sub_RunAPLProcess(##.TESTSOURCE,'Executor')pars
      0
  }
 

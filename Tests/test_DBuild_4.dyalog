@@ -10,7 +10,7 @@
  :If 9=##.⎕NC'CoCo'   ⍝ if CodeCoverage has been enabled, ensure we're adding this run to the log by passing along the filename...
      suff←'-coverage=',##.CoCo.filename
  :EndIf
- sink←300 sub_RunAPLProcess(##.TESTSOURCE,'RunCITA')('RunUCMD="DBuild ',##.TESTSOURCE,'DBuild_4.dyalogbuild -save=1 -p  -off=0 ',suff,'"  CITA_Log="',logfile,'" CITAnqOFF=1')
+ sink←300 sub_RunAPLProcess(##.TESTSOURCE,'Executor')('RunUCMD="DBuild ',##.TESTSOURCE,'DBuild_4.dyalogbuild -save=1 -p  -off=0 ',suff,'"  CITA_Log="',logfile,'" CITAnqOFF=1')
 
  :If ~⎕NEXISTS'/tmp/DBuild_TEST_4.dws'
      →0 Because'DBuild_4.dyalogbuild did not create /tmp/DBuild_TEST_4.dws'

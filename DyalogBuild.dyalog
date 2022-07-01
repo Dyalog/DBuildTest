@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.70
+﻿:Namespace DyalogBuild ⍝ V 1.71
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -81,7 +81,8 @@
 ⍝                                       SuccessValue defines the exact value which test return to indicate "success". Anything else will be interpreted as sign of failure.
 ⍝                          The values for the setup and teardown modifiers are now optional, so you can avoid running any by using the modifier w/o value (so -setup will run NO setups)
 ⍝                          Added Assert for "lighter" tests (details: https://github.com/Dyalog/DBuildTest/wiki/Assert)
-
+⍝ 2022 07 01 MBaas, v1.71: made Log less verbose when msg type is provided;PerfStats now contain "raw" (unformatted) data which makes it easier to analze
+⍝
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessValue←''
 
@@ -862,7 +863,7 @@
                           setupok←0=1↑⍴z
                       :Else
                           msg←'Error executing setup "',f,'": '
-                          msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')    ⍝ CompCheck: ignore
+                          msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
                           LogError msg
                           setupok←0
                       :EndTrap
@@ -926,7 +927,6 @@
                   :Else
                       en←⎕EN  ⍝ save error-no before it gets overwritten
                       msg←'Error executing test "',f,'": '
-                      msg,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂''),NL     ⍝ CompCheck: ignore
                       msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
                       :If WSFULL←en=1   ⍝ special handling for WS FULL
                           msg,←NL,'⎕WA=',(⍕⎕WA)
@@ -1075,7 +1075,12 @@
           :If ~0∊⍴3⊃LOGS
           :AndIf (off>0)∨loglvl _hasBitSet 1
               ⎕←'Errors were collected - writing them to logFile',(off=1)/' before doing ⎕OFF ',⍕21+WSFULL
-              (⊂∊(3⊃LOGS),¨⊂NL)⎕NPUT logFile 1
+              :Trap 0
+                  (⊂∊(3⊃LOGS),¨⊂NL)⎕NPUT logFile 1
+              :Else
+                  ⎕←'Error writing logFile'
+                  ⎕←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
+              :EndTrap
               :If off=1
                   rc←21+WSFULL
                   ⎕OFF rc
@@ -1500,7 +1505,7 @@
                   :ElseIf (,1)≡,⍴loaded ⍝ exactly one name
                       Log{(uc 1↑⍵),1↓⍵}fileType,cmd,' ',source,' loaded as ',⍕⊃loaded
                   :Else        ⍝ many names
-                      Log(⍕⍴,loaded),' ',fileType,' names loaded from ',source,' into ',target,'.',{1=≡⍵:⍵ ⋄ '(',(¯1↓∊⍵,¨' '),')'}loaded
+                      Log(⍕⍴,loaded),' ',fileType,' names loaded from ',source,' into ',(⍕target),'.',{1=≡⍵:⍵ ⋄ '(',(¯1↓∊⍕¨⍵,¨' '),')'}loaded
                   :EndIf
               :EndIf
      
@@ -1679,6 +1684,7 @@
                       ⎕NDELETE wsid,'.dws'  ⍝ avoid prompts during )SAVE
                   :EndIf
                   :If isWin
+                      {sink←2 ⎕NQ ⎕SE'keypress'⍵}¨'  )RESET',⊂'ER'
                       {sink←2 ⎕NQ ⎕SE'keypress'⍵}¨'  ',command,⊂'ER'
                       NQed←1
                       Log'Enqueued keypresses to automatically save after UCMD has completed: "',command,'"'
@@ -1787,7 +1793,10 @@
 
     ∇ {r}←{f}LogTest msg;type;i
     ⍝ this fn is mapped to fn "Log" that is defined in the ns in which tests are executed
-      r←0 0⍴0 ⋄ type←3
+    ⍝ optional f is ('Type' 'I|W|E') (or 'Info|Warning|Error', 1st char matters) and/or ('Prefix' 'any text to prefix to the msg')
+    ⍝ msg is the ReturnValue of a test, traditionally we expect a text vector there, but anything that matches "SuccessValue" (empty string)
+    ⍝ will not be logged whereas anything different will be logged as an error, unless specified differently through 'Type'.
+      r←0 0⍴0 ⋄ type←0  ⍝ initial value...
      
       →(msg≡SuccessValue)⍴0
       :If 0=⎕NC'f'
@@ -1795,24 +1804,6 @@
           f←''
           r←msg
       :Else
-          :If (⎕DR msg)=326
-              msg←'Test returned data with unsupported ⎕DR=326'
-          :ElseIf ~(⎕DR∊msg)∊80 82 160
-              msg←'Test returned numeric ',((0 1⍳⍴⍴msg)⊃'scalar' 'vector'),' = ',⍕msg
-              :If SuccessValue≢''
-                  msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ ((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
-              :Else
-                  msg,←' when DTest expected an empty charvec to indicate success'
-              :EndIf
-          :Else
-              msg←'Test returned character value = "',msg,'"'
-              :If SuccessValue≢''
-                  msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
-              :Else
-                  msg,←' when DTest expected an empty charvec to indicate success'
-            ⍝   ⎕←msg
-              :EndIf
-          :EndIf
           :If 2≤|≡f
               :If 2=|≡f ⍝ ONE name & value
                   f←⊂f
@@ -1827,11 +1818,33 @@
                   f←''
               :EndIf
           :EndIf
+          :If type=0  ⍝ only add this information if Log came w/o explicit type
+              type←3   ⍝ and the default message type is "Error"
+              :If (⎕DR msg)=326
+                  msg←'fn returned data with unsupported ⎕DR=326'
+              :ElseIf ~(⎕DR∊msg)∊80 82 160
+                  msg←'fn returned numeric ',((0 1⍳⍴⍴msg)⊃'scalar' 'vector'),' = ',⍕msg
+                  :If SuccessValue≢''
+                      msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ ((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
+                  :Else
+                      msg,←' when DTest expected an empty charvec to indicate success'
+                  :EndIf
+              :Else
+                  msg←'fn returned character value = "',msg,'"'
+                  :If SuccessValue≢''
+                      msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
+                  :Else
+                      msg,←' when DTest expected an empty charvec to indicate success'
+            ⍝   ⎕←msg
+                  :EndIf
+              :EndIf
+          :EndIf
           :If 2=⎕NC'timestamp'
           :AndIf timestamp=1
               f←PrefixTS f
           :EndIf
           msg←(f,(~0∊⍴f)/': ')∘,¨eis msg
+     
       :EndIf
       :If verbose
       :AndIf quiet=0
@@ -2205,8 +2218,8 @@
           :Trap 0
               log←⎕SE ⎕WG'Log'
               :Trap 1
-                  :If 2=⎕NC'RunCITA∆OldLog'
-                      z←RunCITA∆OldLog NrOfCommonLines log
+                  :If 2=⎕SE.⎕NC'RunCITA∆OldLog'
+                      z←⎕SE.RunCITA∆OldLog NrOfCommonLines log
                   :Else
                       z←0
                   :EndIf
@@ -2271,10 +2284,9 @@
          
           r←⍬
           :For f :In facts
-              r,←⊂pFmt(2000⌶)1⊃f
+              r,←⊂f,(2000⌶)1⊃f
           :EndFor
-          r←↑r
-          r←↓('<   >,I2,< >'⎕FMT∊1⊃¨facts),(↑2⊃¨facts),'=',' ',(-+/' '=r)⌽r
+          r,←⊂¯1 'APLVersion'(2⊃'.'⎕WG'aplversion')
          
           R,←⊂'Memory manager statistics',((0<≢suffix)⍴' '),suffix,':'
           R,←r
