@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.71
+﻿:Namespace DyalogBuild ⍝ V 1.72
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -81,7 +81,8 @@
 ⍝                                       SuccessValue defines the exact value which test return to indicate "success". Anything else will be interpreted as sign of failure.
 ⍝                          The values for the setup and teardown modifiers are now optional, so you can avoid running any by using the modifier w/o value (so -setup will run NO setups)
 ⍝                          Added Assert for "lighter" tests (details: https://github.com/Dyalog/DBuildTest/wiki/Assert)
-⍝ 2022 07 01 MBaas, v1.71: made Log less verbose when msg type is provided;PerfStats now contain "raw" (unformatted) data which makes it easier to analze
+⍝ 2022 07 01 MBaas, v1.71: made Log less verbose when msg type is provided;PerfStats now contain "raw" (unformatted) data which makes it easier to analyse
+⍝ 2022 07 25 MBaas, v1.72: fixed issues with the workarounds of "0⎕SAVE-problem" (refs from ⎕SE to #)
 ⍝
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessValue←''
@@ -662,7 +663,7 @@
           :OrIf ⎕NEXISTS f←∊1 ⎕NPARTS source                     ⍝ deal with relative names for folders
           :OrIf ⎕NEXISTS f←∊1 ⎕NPARTS source,'.dyalogtest'       ⍝ or individual tests
               file←f  ⍝ assign this variable which is needed by LogError
-              (TESTSOURCE z extension)←⎕NPARTS f
+              (TESTSOURCE z extension)←1 ⎕NPARTS f
               base←z
               :If 2=type←GetFilesystemType f  ⍝ it's a file
                   :If '.dyalogtest'≡lc extension ⍝ That's a suite
@@ -731,7 +732,7 @@
               :EndIf
           :Else
               :If args.init   ⍝ can we init it?
-              :AndIf ∧/0<∊⍴¨1↑¨(TESTSOURCE z extension)←⎕NPARTS source  ⍝ did user give a file-spec? then try to create it!
+              :AndIf ∧/0<∊⍴¨1↑¨(TESTSOURCE z extension)←1 ⎕NPARTS source  ⍝ did user give a file-spec? then try to create it!
                   :If ~⎕NEXISTS TESTSOURCE   ⍝ does directory exist?
                       {}3 ⎕MKDIR TESTSOURCE
                   :EndIf
@@ -749,7 +750,7 @@
                   (⎕LC[1]+1)⎕STOP 1⊃⎕SI
               :EndIf
               LogTest'"',source,'" is neither a namespace nor a folder or a .dyalogtest-file.'
-              (TESTSOURCE base)←2↑⎕NPARTS source
+              (TESTSOURCE base)←2↑1 ⎕NPARTS source
               LOGSi←LOGS
               →FAIL
           :EndIf
@@ -1550,7 +1551,7 @@
       :If prod
           ⎕EX'#.SALT_Var_Data'
       :EndIf
-     
+      ⎕EX'loaded'   ⍝ kill possible refs (otherwise ⎕save may fail)
       :If TestClassic>0
           z←TestClassic{
               2=⎕NC ⍵:⍵{0<⍴,⍵:⍺,': ',⍵ ⋄ ''}∆TestClassic⍎⍵
@@ -1692,11 +1693,11 @@
                       Log'Please execute the following command when the UCMD has finished:'
                       Log command
                   :EndIf
-                  :If ~0∊⍴rfs      ⍝ and created some refs
-                      :For (nam str) :In ↓rfs   ⍝ then restore them...
-                          ⍎nam,'←',str
-                      :EndFor
-                  :EndIf
+              :EndIf
+              :If 0<≢rfs      ⍝ and created some refs
+                  :For (nam str) :In ↓rfs   ⍝ then restore them...
+                      ⍎nam,'←',str
+                  :EndFor
               :EndIf
           :EndFor
       :Else
@@ -2244,8 +2245,8 @@
                   :EndTrap
               :EndTrap
               log,←'TS.End=',⍕⎕TS
-              (⊂log)⎕NPUT(file←({(2>+\⍵='.')/⍵}file),'.CITA_log.txt')1
-              ⎕←'Wrote log to ',file
+              file←(1⊃⎕NPARTS file),({(2>+\⍵='.')/⍵}2⊃⎕NPARTS file),'.txt'
+              (⊂log)⎕NPUT file 1
           :Else
               ⎕←'*** Error while attempting to write sessionlog to a file:'
               ⎕←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
@@ -2254,7 +2255,7 @@
               ⎕←'si' ⋄ ⎕←⍕⎕SI,[1.5]⎕LC
           :EndTrap
           :If rc≠¯42
-              ⎕←'Wrote the log, now we will call ⎕OFF'
+              ⎕←'Wrote the log, now we will call ⎕OFF ',rc
               ⎕←'⎕tnums=',⎕TNUMS
               ⎕←'on this line!' ⋄ ⎕OFF rc
           :EndIf
