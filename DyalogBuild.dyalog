@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.72
+﻿:Namespace DyalogBuild ⍝ V 1.73
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -83,6 +83,7 @@
 ⍝                          Added Assert for "lighter" tests (details: https://github.com/Dyalog/DBuildTest/wiki/Assert)
 ⍝ 2022 07 01 MBaas, v1.71: made Log less verbose when msg type is provided;PerfStats now contain "raw" (unformatted) data which makes it easier to analyse
 ⍝ 2022 07 25 MBaas, v1.72: fixed issues with the workarounds of "0⎕SAVE-problem" (refs from ⎕SE to #)
+⍝ 2022 07 26 MBaas, v1.73: DBuild: dealt with error if wsid contains invalid path; minor addition to help for -prod flag
 ⍝
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessValue←''
@@ -1581,6 +1582,10 @@
                   :Else
                       wsid←tmp
                   :EndIf
+                  :If ~⎕NEXISTS 1⊃⎕NPARTS wsid
+                      LogError'Folder of wsid ("',(1⊃⎕NPARTS wsid),'") not found! wsid will not be set and ws not saved!'
+                      :Continue
+                  :EndIf
                   :If (⊂lc 3⊃⎕NPARTS wsid)∊'' '.dws'
                   :OrIf 0=tally GetParam'type'    ⍝ if type is not set, we're building a workspace
                       :If (save∊⍳2)∨99='99'GetNumParam'save'
@@ -1967,7 +1972,7 @@
               r,←'' 'Optional modifiers are:'
               r,←⊂'    -clear[=NCs]              expunge all objects, optionally of specified nameclasses only'
               r,←⊂'    -halt                     halt on error rather than log and continue'
-              r,←⊂'    -production               remove links to source files'
+              r,←⊂'    -production               remove links to source files (and execute code given in PROD instructions in buildfile)'
               r,←⊂'    -quiet                    only output actual errors (quiet=2 only writes them to log, not into session)'
               r,←⊂'    -save=0|1|2               save the build workspace (overwrites TARGET''s save-option). NB: we only save if no errors were logged during Build-process!'
               r,←⊂'                              save=2: do NOT save, but set ⎕WSID (according to TARGET-Instruction in buildfile)'
