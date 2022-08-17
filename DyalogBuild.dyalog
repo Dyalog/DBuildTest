@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.73
+﻿:Namespace DyalogBuild ⍝ V 1.74
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -84,6 +84,7 @@
 ⍝ 2022 07 01 MBaas, v1.71: made Log less verbose when msg type is provided;PerfStats now contain "raw" (unformatted) data which makes it easier to analyse
 ⍝ 2022 07 25 MBaas, v1.72: fixed issues with the workarounds of "0⎕SAVE-problem" (refs from ⎕SE to #)
 ⍝ 2022 07 26 MBaas, v1.73: DBuild: dealt with error if wsid contains invalid path; minor addition to help for -prod flag
+⍝ 2022 08 15 MBaas, v1.74: DBuild: addressed #11 (if prod is set, -quiet will default to 1 and -save to 0); shorter log for loading of files to avoid linebreaks;added check for valence of setup/teardown/test fns
 ⍝
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessValue←''
@@ -856,19 +857,23 @@
               :EndIf
               :If ~setupok←(⊂f←setup)∊(,1)null
                   :If 3=ns.⎕NC f ⍝ function is there
-                      :If verbose
-                          0 Log'running setup: ',f
-                      :EndIf
-                      (trace/1)ns.⎕STOP f
-                      :Trap halt↓0
-                          f LogTest z←(ns⍎f)⍬
-                          setupok←0=1↑⍴z
+                      :If 0=1 2⊃ns.⎕AT f
+                          LogError'setup fn "',f,'" must not be niladic!'
                       :Else
-                          msg←'Error executing setup "',f,'": '
-                          msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
-                          LogError msg
-                          setupok←0
-                      :EndTrap
+                          :If verbose
+                              0 Log'running setup: ',f
+                          :EndIf
+                          (trace/1)ns.⎕STOP f
+                          :Trap halt↓0
+                              f LogTest z←(ns⍎f)⍬
+                              setupok←0=1↑⍴z
+                          :Else
+                              msg←'Error executing setup "',f,'": '
+                              msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
+                              LogError msg
+                              setupok←0
+                          :EndTrap
+                      :EndIf
                   :Else
                       LogTest'-setup function not found: ',f
                       setupok←0
@@ -917,50 +922,56 @@
               :EndIf
               :For f :In fns[order]
                   steps+←1
-                  :If verbose
-                      0 Log'running: ',f
-                  :EndIf
-                  (trace/1)ns.⎕STOP f
-                  :Trap (~halt∨trace)/0
-                      ⍝f LogTest(ns⍎f)⍬
-                      f LogTest(ns⍎f)⍬   ⍝ avoid additional line with title of fn
-                  :Case 777 ⍝ Assertion failed
-                      f LogTest'Assertion failed: ',,∊⎕DM[⍳2],¨⊂NL
+                  :If 0=1 2⊃ns.⎕AT f
+                      LogError'test fn "',f,'" must not be niladic!'
                   :Else
-                      en←⎕EN  ⍝ save error-no before it gets overwritten
-                      msg←'Error executing test "',f,'": '
-                      msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
-                      :If WSFULL←en=1   ⍝ special handling for WS FULL
-                          msg,←NL,'⎕WA=',(⍕⎕WA)
-                          msg,←NL,'The 20 largets objects found in the workspace:',NL
-                          :Trap 1
-                              res←⊃⍪/{((⊂⍕⍵),¨'.',¨↓nl),[1.5]⍵.⎕SIZE nl←⍵.⎕NL⍳9}swise ns  ⍝ CompCheck: ignore
-                              res←res[(20⌊1↑⍴res)↑⍒res[;2];]
-                              msg←msg,∊((↑res[;1]),'CI18'⎕FMT res[;,2]),⊂NL
-                          :Else
-                              msg,←'Error while generating that report: ',NL,,↑⎕DM,⊂NL
-                          :EndTrap
-     
+                      :If verbose
+                          0 Log'running: ',f
                       :EndIf
-                      ⍝ LogError msg
-                      f LogTest msg
-                  :EndTrap
+                      (trace/1)ns.⎕STOP f
+                      :Trap (~halt∨trace)/0
+                          f LogTest((ns⍎f)⍬)    ⍝ avoid additional line with title of fn
+                      :Case 777 ⍝ Assertion failed
+                          f LogTest'Assertion failed: ',,∊⎕DM[⍳2],¨⊂NL
+                      :Else
+                          en←⎕EN  ⍝ save error-no before it gets overwritten
+                          msg←'Error executing test "',f,'": '
+                          msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
+                          :If WSFULL←en=1   ⍝ special handling for WS FULL
+                              msg,←NL,'⎕WA=',(⍕⎕WA)
+                              msg,←NL,'The 20 largets objects found in the workspace:',NL
+                              :Trap 1
+                                  res←⊃⍪/{((⊂⍕⍵),¨'.',¨↓nl),[1.5]⍵.⎕SIZE nl←⍵.⎕NL⍳9}swise ns  ⍝ CompCheck: ignore
+                                  res←res[(20⌊1↑⍴res)↑⍒res[;2];]
+                                  msg←msg,∊((↑res[;1]),'CI18'⎕FMT res[;,2]),⊂NL
+                              :Else
+                                  msg,←'Error while generating that report: ',NL,,↑⎕DM,⊂NL
+                              :EndTrap
      
+                          :EndIf
+                      ⍝ LogError msg
+                          f LogTest msg
+                      :EndTrap
+                  :EndIf
               :EndFor
      
               :If null≢f←args.teardown
                   :If 3=ns.⎕NC f ⍝ function is there
-                      :If verbose
-                          0 Log'running teardown: ',f
-                      :EndIf
-                      (trace/1)ns.⎕STOP f
-                      :Trap (~halt∨trace)/0 777
-                          f LogTest(ns⍎f)⍬
+                      :If 0=1 2⊃ns.⎕AT f
+                          LogError'teardown fn "',f,'" must not be niladic!'
                       :Else
-                          msg←'Error executing teardown "',f,'" :'
-                          msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
-                          LogError msg
-                      :EndTrap
+                          :If verbose
+                              0 Log'running teardown: ',f
+                          :EndIf
+                          (trace/1)ns.⎕STOP f
+                          :Trap (~halt∨trace)/0 777
+                              f LogTest(ns⍎f)⍬
+                          :Else
+                              msg←'Error executing teardown "',f,'" :'
+                              msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
+                              LogError msg
+                          :EndTrap
+                      :EndIf
                   :Else
                       LogError'-teardown function not found: ',f
                   :EndIf
@@ -1286,7 +1297,16 @@
       :EndIf
      
       file←∊1 ⎕NPARTS 1⊃args.Arguments
+      :If args.production  ⍝ #11: if prod is set, quiet←1 and save←0 (unless set differently on the commandline)
+          :If 999=999 args.Switch'quiet'
+              args.quiet←1
+          :EndIf
+          :If 999=999 args.Switch'save'
+              args.save←0
+          :EndIf
+      :EndIf
       (prod quiet save halt TestClassic Target)←args.(production quiet save halt testclassic target)
+     
       (TestClassic prod save)←{2⊃⎕VFI⍕⍵}¨TestClassic prod save  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
       off←2 args.Switch'off'
      
@@ -1506,8 +1526,10 @@
                       LogError'Nothing found: ',source
                   :ElseIf (,1)≡,⍴loaded ⍝ exactly one name
                       Log{(uc 1↑⍵),1↓⍵}fileType,cmd,' ',source,' loaded as ',⍕⊃loaded
-                  :Else        ⍝ many names
-                      Log(⍕⍴,loaded),' ',fileType,' names loaded from ',source,' into ',(⍕target),'.',{1=≡⍵:⍵ ⋄ '(',(¯1↓∊⍕¨⍵,¨' '),')'}loaded
+                  :Else     ⍝ many names: -verbose shows complete list always, otherwise limit to ⎕PW
+                      Log((⍕⍴,loaded),' ',fileType,' names loaded from ',source,' into ',(⍕target),'.'){⎕PW>12+≢⍺,⍵:⍺,⍵ ⋄ ⍺,(⎕UCS 13),(⎕UCS 13)@(' '∘=)⍵}{1=≡⍵:⍵ ⋄ '(',(¯1↓∊⍕¨⍵,¨' '),')'}loaded
+                      ⍝:else
+                    ⍝   Log((⍕⍴,loaded),' ',fileType,' names loaded from ',source,' into ',(⍕target),'.'){⎕pw>12+≢⍺,⍵:  ⍺,⍵ ⋄ ⍺,(((0⌈⎕pw-12+≢⍺)↑⍵)),'...)' }{1=≡⍵:⍵ ⋄ '(',(¯1↓∊⍕¨⍵,¨' '),')'}loaded
                   :EndIf
               :EndIf
      
@@ -1572,64 +1594,65 @@
                                     ⍝ pretend we had one which save under name of build-file
               TargetList←1 5⍴0('target: ',name)('wsid=',name)(,⊂'wsid')(,⊂name)
           :EndIf
-          :For (i line params names values) :In ↓TargetList
-              :If 0∊⍴tmp←GetParam'wsid' ''
-                  LogError'wsid missing'
-              :Else
-                  d←1⊃⎕NPARTS tmp  ⍝ directory given?
-                  :If {{~'/\'∊⍨(⎕IO+2×isWin∧':'∊⍵)⊃⍵}3↑⍵}d   ⍝ if that dir is an relative path
-                      wsid←∊1 ⎕NPARTS path,tmp                  ⍝ prefix path of buildfile
+          :If save
+              :For (i line params names values) :In ↓TargetList
+                  :If 0∊⍴tmp←GetParam'wsid' ''
+                      LogError'wsid missing'
                   :Else
-                      wsid←tmp
+                      d←1⊃⎕NPARTS tmp  ⍝ directory given?
+                      :If {{~'/\'∊⍨(⎕IO+2×isWin∧':'∊⍵)⊃⍵}3↑⍵}d   ⍝ if that dir is an relative path
+                          wsid←∊1 ⎕NPARTS path,tmp                  ⍝ prefix path of buildfile
+                      :Else
+                          wsid←tmp
+                      :EndIf
+                      :If ~⎕NEXISTS 1⊃⎕NPARTS wsid
+                          LogError'Folder of wsid ("',(1⊃⎕NPARTS wsid),'") not found! wsid will not be set and ws not saved!'
+                          :Continue
+                      :EndIf
+                      :If (⊂lc 3⊃⎕NPARTS wsid)∊'' '.dws'
+                      :OrIf 0=tally GetParam'type'    ⍝ if type is not set, we're building a workspace
+                          :If (save∊⍳2)∨99='99'GetNumParam'save'
+                              ⎕WSID←wsid
+                              Log'WSID set to ',wsid
+                          :EndIf
+                      :EndIf
                   :EndIf
-                  :If ~⎕NEXISTS 1⊃⎕NPARTS wsid
-                      LogError'Folder of wsid ("',(1⊃⎕NPARTS wsid),'") not found! wsid will not be set and ws not saved!'
+                  save←⍬⍴99~⍨(99 args.Switch'save'),bld←1,⍨'99'GetNumParam'save'
+                  :If save<1=⊃bld~99
+                      Log'Target not saved because of switch -save=0'
+                  :EndIf
+                  :If off=2
+                      off←1=GetNumParam'off' 0
+                  :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default-value of 2)
+                  :If save∊0 2
                       :Continue
                   :EndIf
-                  :If (⊂lc 3⊃⎕NPARTS wsid)∊'' '.dws'
-                  :OrIf 0=tally GetParam'type'    ⍝ if type is not set, we're building a workspace
-                      :If (save∊⍳2)∨99='99'GetNumParam'save'
-                          ⎕WSID←wsid
-                          Log'WSID set to ',wsid
-                      :EndIf
-                  :EndIf
-              :EndIf
-              save←⍬⍴99~⍨(99 args.Switch'save'),bld←1,⍨'99'GetNumParam'save'
-              :If save<1=⊃bld~99
-                  Log'Target not saved because of switch -save=0'
-              :EndIf
-              :If off=2
-                  off←1=GetNumParam'off' 0
-              :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default-value of 2)
-              :If save∊0 2
-                  :Continue
-              :EndIf
              ⍝ Apr 21-research found these vars referencing # (or elements of it) - get them out of the way temporarily
-              rfs←0 2⍴''
-              ⎕EX¨'⎕SE.'∘,¨'SALTUtils.spc.z' 'SALTUtils.spc.res'
-              :Trap 0
-                  :For nam :In '⎕SE.'∘,¨'THIS' 'SALTUtils.cs' 'SALTUtils.c.THIS' 'SALTUtils.spc.ns.proc' 'input.c.THIS'
-                      :If 0<⎕NC nam
-                      :AndIf 326=⎕DR⍎nam
-                          str←⍕⍎nam
-                          :If 1=⍴⍴⍎nam
-                              str←',',str
-                          :EndIf
-                          :If (⍎nam)≢⍎str  ⍝ CompCheck: ignore
-                              Log ⎕←'⎕SAVE workaround failed because of ',nam
-                          :EndIf
-                          rfs⍪←(nam)(str)  ⍝ remember refs stringified...
-                          ⎕EX nam         ⍝ and delete them
-                      :EndIf
-                  :EndFor
-              :Else
-                  ('Type' 'W')Log'⎕SAVE workaround failed because of ',nam
                   rfs←0 2⍴''
-              :EndTrap
-              ⎕SIGNAL 0  ⍝ CompCheck: ignore   ⍝ reset ⎕DM, ⎕DMX to avoid problems with refs when saving
-              :Trap DEBUG↓0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
-                  :If ~0∊⍴type←GetParam'type'
-                      :If isWin
+                  ⎕EX¨'⎕SE.'∘,¨'SALTUtils.spc.z' 'SALTUtils.spc.res'
+                  :Trap 0
+                      :For nam :In '⎕SE.'∘,¨'THIS' 'SALTUtils.cs' 'SALTUtils.c.THIS' 'SALTUtils.spc.ns.proc' 'input.c.THIS'
+                          :If 0<⎕NC nam
+                          :AndIf 326=⎕DR⍎nam
+                              str←⍕⍎nam
+                              :If 1=⍴⍴⍎nam
+                                  str←',',str
+                              :EndIf
+                              :If (⍎nam)≢⍎str  ⍝ CompCheck: ignore
+                                  Log ⎕←'⎕SAVE workaround failed because of ',nam
+                              :EndIf
+                              rfs⍪←(nam)(str)  ⍝ remember refs stringified...
+                              ⎕EX nam         ⍝ and delete them
+                          :EndIf
+                      :EndFor
+                  :Else
+                      ('Type' 'W')Log'⎕SAVE workaround failed because of ',nam
+                      rfs←0 2⍴''
+                  :EndTrap
+                  ⎕SIGNAL 0  ⍝ CompCheck: ignore   ⍝ reset ⎕DM, ⎕DMX to avoid problems with refs when saving
+                  :Trap DEBUG↓0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
+                      :If ~0∊⍴type←GetParam'type'
+                          :If isWin
                       ⍝ This uses an undocumented function. It won't be documented because it is due to be changed soon - so we don't want
                       ⍝ to be bound by any published behaviour ;)
                       ⍝ So THIS documentation is purely informal and only describes CURRENT behaviour:
@@ -1650,61 +1673,62 @@
                       ⍝            search for "string-name" in https://msdn.microsoft.com/en-us/library/windows/desktop/aa381058(v=vs.85).aspx for more details for executables.
                       ⍝            For .NET assemblies, look at https://msdn.microsoft.com/en-us/library/system.reflection(v=vs.110).aspx;
                       ⍝            any of the classes listed which has a constructor which takes a single string value as its argument should be definable.
-                          det←⊃,/':'Split¨';'Split GetParam'details'
-                          det←(⌽2,0.5×⍴det)⍴det
-                          pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(GetParam'icon')(GetParam'cmdline')(det)
-                          command←'2 ⎕NQ ',∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨¯1↓pars
-                          command←command,' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
-                          2 #.⎕NQ pars
+                              det←⊃,/':'Split¨';'Split GetParam'details'
+                              det←(⌽2,0.5×⍴det)⍴det
+                              pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(GetParam'icon')(GetParam'cmdline')(det)
+                              command←'2 ⎕NQ ',∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨¯1↓pars
+                              command←command,' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
+                              2 #.⎕NQ pars
+                          :Else
+                              Log'Builds using "type" (to create something else than a DWS) are only supported on Windows!'
+                          :EndIf
                       :Else
-                          Log'Builds using "type" (to create something else than a DWS) are only supported on Windows!'
+                          command←')SAVE ',wsid
+                          0 #.⎕SAVE wsid
                       :EndIf
-                  :Else
-                      command←')SAVE ',wsid
-                      0 #.⎕SAVE wsid
-                  :EndIf
-                  :Trap DEBUG↓0  ⍝ paranoid, but want to avoid any bugs here to trigger the save again...
-                      :If ⎕NEXISTS det←wsid{''≡3⊃⎕NPARTS ⍺:⍺,⍵ ⋄ ⍺}'.dws'
-                          tmp←⍕DEBUG{(~⍺)/~⍺::'???' ⋄ (ListFiles ⍵)[1;2]}det
-                          Log'Saved as ',det,' (',tmp,' bytes)'
+                      :Trap DEBUG↓0  ⍝ paranoid, but want to avoid any bugs here to trigger the save again...
+                          :If ⎕NEXISTS det←wsid{''≡3⊃⎕NPARTS ⍺:⍺,⍵ ⋄ ⍺}'.dws'
+                              tmp←⍕DEBUG{(~⍺)/~⍺::'???' ⋄ (ListFiles ⍵)[1;2]}det
+                              Log'Saved as ',det,' (',tmp,' bytes)'
+                          :EndIf
+                      :EndTrap
+                      command←''
+                  :Case 11   ⍝ DOMAIN ERROR
+                      :If 0<102⌶#   ⍝ check most likely cause: links from ⎕SE to #
+                      :AndIf isWin
+                          ('Type' 'E')Log'Problem creating ',wsid,':',NL,(∊⎕DM,¨⊂NL),'There might still be references from "somewhere in ⎕SE" to "something in #".',NL,'Please contact support@dyalog.com to discuss & resolve this if the enqueued keystrokes did not create the desired result.'
+                      :Else
+                          ('Type' 'E')Log'Problem creating ',wsid,':',NL,(↑⎕DM),⊂NL
                       :EndIf
-                  :EndTrap
-                  command←''
-              :Case 11   ⍝ DOMAIN ERROR
-                  :If 0<102⌶#   ⍝ check most likely cause: links from ⎕SE to #
-                  :AndIf isWin
-                      ('Type' 'E')Log'Problem creating ',wsid,':',NL,(∊⎕DM,¨⊂NL),'There might still be references from "somewhere in ⎕SE" to "something in #".',NL,'Please contact support@dyalog.com to discuss & resolve this if the enqueued keystrokes did not create the desired result.'
-                  :Else
-                      ('Type' 'E')Log'Problem creating ',wsid,':',NL,(↑⎕DM),⊂NL
-                  :EndIf
-                  :If halt ⋄ (⎕LC[1]+2)⎕STOP 1⊃⎕SI
-                      ⎕←'Function halted.'
+                      :If halt ⋄ (⎕LC[1]+2)⎕STOP 1⊃⎕SI
+                          ⎕←'Function halted.'
                       ⍝ stop here
-                  :EndIf
-              :Else
-                  ('Type' 'E')Log'Problem creating ',wsid,':',,(↑⎕DM),⎕UCS 13
-              :EndTrap
-              :If ~0∊⍴command
-                  :If ⎕NEXISTS wsid,'.dws'
-                  :AndIf ~'.exe'≡3⊃⎕NPARTS wsid
-                      ⎕NDELETE wsid,'.dws'  ⍝ avoid prompts during )SAVE
-                  :EndIf
-                  :If isWin
-                      {sink←2 ⎕NQ ⎕SE'keypress'⍵}¨'  )RESET',⊂'ER'
-                      {sink←2 ⎕NQ ⎕SE'keypress'⍵}¨'  ',command,⊂'ER'
-                      NQed←1
-                      Log'Enqueued keypresses to automatically save after UCMD has completed: "',command,'"'
+                      :EndIf
                   :Else
-                      Log'Please execute the following command when the UCMD has finished:'
-                      Log command
+                      ('Type' 'E')Log'Problem creating ',wsid,':',,(↑⎕DM),⎕UCS 13
+                  :EndTrap
+                  :If ~0∊⍴command
+                      :If ⎕NEXISTS wsid,'.dws'
+                      :AndIf ~'.exe'≡3⊃⎕NPARTS wsid
+                          ⎕NDELETE wsid,'.dws'  ⍝ avoid prompts during )SAVE
+                      :EndIf
+                      :If isWin
+                          {sink←2 ⎕NQ ⎕SE'keypress'⍵}¨'  )RESET',⊂'ER'
+                          {sink←2 ⎕NQ ⎕SE'keypress'⍵}¨'  ',command,⊂'ER'
+                          NQed←1
+                          Log'Enqueued keypresses to automatically save after UCMD has completed: "',command,'"'
+                      :Else
+                          Log'Please execute the following command when the UCMD has finished:'
+                          Log command
+                      :EndIf
                   :EndIf
-              :EndIf
-              :If 0<≢rfs      ⍝ and created some refs
-                  :For (nam str) :In ↓rfs   ⍝ then restore them...
-                      ⍎nam,'←',str
-                  :EndFor
-              :EndIf
-          :EndFor
+                  :If 0<≢rfs      ⍝ and created some refs
+                      :For (nam str) :In ↓rfs   ⍝ then restore them...
+                          ⍎nam,'←',str
+                      :EndFor
+                  :EndIf
+              :EndFor
+          :EndIf
       :Else
           ('Type' 'W')Log'DBuild found errors during process',save/', workspace was not saved!'
           n←1  ⍝ need error-count

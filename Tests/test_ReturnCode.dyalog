@@ -7,7 +7,7 @@
  r←''
  :If ##._isWin
  :AndIf 18≤1⊃##._Version  ⍝ APLProcess was introduced with v16
-     rc←300 sub_RunAPLProcess((##.TESTSOURCE,'Executor')('CITATest=',##.TESTSOURCE,'test_retcode.dyalog mode=DTest ok=0 dtestmods="-off -loglvl=32',(##.halt/' -halt'),(##.verbose/' -verbose'),'"'))
+     rc←300 sub_RunAPLProcess((##.TESTSOURCE,'Executor')('CITATest=',##.TESTSOURCE,'test_retcode.dyalog mode=DTest ok=0 dtestmods="-off -loglvl=32',(##.verbose/' -verbose'),'"'))
      :If 21 Check rc
          →cleanExit Because'Failing test did not end with code 21 (returned ',(⍕rc),')' ⋄ :EndIf
      :If 1 Check ⎕NEXISTS ##.TESTSOURCE,'test_retcode.log'  ⍝ was a log-file written?
@@ -20,7 +20,7 @@
      1 ⎕NDELETE ##.TESTSOURCE,'test_retcode.log'  ⍝ wipe out that expected log-file
      1 ⎕NDELETE ##.TESTSOURCE,'test_retcode.log.json'
 
-     rc←300 sub_RunAPLProcess((##.TESTSOURCE,'Executor')('CITATest=',##.TESTSOURCE,'test_retcode.dyalog mode=DTest ok=1 dtestmods="-off -loglvl=32',(##.halt/' -halt'),(##.verbose/' -verbose'),'"'))
+     rc←300 sub_RunAPLProcess((##.TESTSOURCE,'Executor')('CITATest=',##.TESTSOURCE,'test_retcode.dyalog mode=DTest ok=1 dtestmods="-off -loglvl=32',(##.verbose/' -verbose'),'"'))
      :If 20 Check rc
          →cleanExit Because'Succeeding test did not end with code 20 (returned ',(⍕cr),')' ⋄ :EndIf
      :If 0 Check ⎕NEXISTS ##.TESTSOURCE,'test_ok.log'  ⍝ was a log-file written?
