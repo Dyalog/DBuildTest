@@ -12,7 +12,8 @@
  GetJSONlog←{⍝ read the log file and return a → target in r[1] and the log in r[2]
      a←(∊2↑⎕NPARTS ##.TESTSOURCE),(2⊃⎕nparts theTest),'.log.json'
      0::(cleanExit Because'Caught error processing ',a,':',(⎕UCS 13),(⎕JSON⍠'Compact' 0)⎕DMX)⍬
-     ⍬(⎕JSON 1⊃⎕NGET a)
+     res ← ⍬(⎕JSON 1⊃⎕NGET a)
+     res ⊣ 1⎕ndelete a
  }
 
  ClearLogs←{⍝ delete logfiles

@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.74
+﻿:Namespace DyalogBuild ⍝ V 1.75
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -7,7 +7,7 @@
 ⍝ 2017 06 05 Adam: typo
 ⍝ 2017 06 15 Adam: TOOLS → EXPERIMENTAL
 ⍝ 2017 06 18 MKrom: test for missing argument
-⍝ 2017 06 23 MKrom: get rid of empty fn names
+⍝ 2017 06 23 MKrom: get rid of empty function names
 ⍝ 2017 06 24 Brian: Allow commented lines in dyalogtest files, drop leading comma in args.tests, exit gracefully if no tests defined
 ⍝ 2017 06 27 Adam: Add disclaimer to help
 ⍝ 2017 07 24 MKrom: save exists state
@@ -30,7 +30,7 @@
 ⍝ 2019 02 01 Adam: help
 ⍝ 2019 02 13 Brian: allow commented lines in build scripts
 ⍝ 2019 03 14 MBaas: handle nested msgs
-⍝ 2020 01 21 MBaas: mostly backward-compatible with v12 (need to sort out ⎕R/⎕S,@)
+⍝ 2020 01 21 MBaas: mostly backward compatible with v12 (need to sort out ⎕R/⎕S,@)
 ⍝ 2020 01 22 MBaas: compatibility with Classic
 ⍝ 2020 01 23 MBaas: took care of ⎕R,⎕S,@
 ⍝ 2020 01 24 MBaas: DBuild: added switch -halt for "halt on error" as in DTest; fixed bugs found while testing under v12
@@ -40,37 +40,37 @@
 ⍝ 2020 03 23 MBaas: made TestClassic is a simple switch w/o values assigned; fixes dealing with -halt in -save in DBuild;various minor fixes
 ⍝ 2020 04 03 MBaas: added -clear to DTest to make sure that the ws is ⎕CLEARed before executing tests (simplifies repeated testing)
 ⍝ 2020 04 06 MBaas: ]DBuild 1.25 executes the content of secret variable ⎕SE.DBuild_postSave after saving the ws
-⍝ 2020 04 15 MBaas: ]DTest {file} now loads ALL fn present in folder of {file}, but only execute the test specified in file. (So test may use utils w/o bothering about loading them)
-⍝ 2020 04 21 MBaas: ]DTest - timestamp (adds ⎕TS to log-messages)
+⍝ 2020 04 15 MBaas: ]DTest {file} now loads ALL functions present in folder of {file}, but only execute the test specified in file. (So test may use utils w/o bothering about loading them)
+⍝ 2020 04 21 MBaas: ]DTest - timestamp (adds ⎕TS to log messages)
 ⍝ 2020 04 23 MBaas: ]DTest: renamed -timestamp to -ts; added -timeout
-⍝ 2020 04 29 MBaas: ]DTest -order=0|1|"NumVec". Default is random order when executing tests and setups. If tests fail, order will be accessible in *.rng.txt-files!
+⍝ 2020 04 29 MBaas: ]DTest -order=0|1|"NumVec". Default is random order when executing tests and setups. If tests fail, order will be accessible in *.rng.txt files!
 ⍝ 2020 05 19 MBaas: colon in arguments of the instructions (i.e. LX/EXEC/PROD/DEFAULTS with pathnames) caused trouble. Fixed.
-⍝ 2020 05 20 MBaas: variables with platform-info; typos fixed (in Help);]DBuild only creates logfile (with -off) if it found errors
-⍝ 2020 07 01 MBaas: ]DTest -init; fixed bugs when ]DBuild used -save-Modifier
-⍝ 2020 07 23 MBaas: v1.30 ]DTest -off;lots of small fixes & enhancements - see commit-msg for details
-⍝ 2020 07 24 MBaas: some fixes for compatibility with old Dyalog-Versions
+⍝ 2020 05 20 MBaas: variables with platform info; typos fixed (in Help);]DBuild only creates logfile (with -off) if it found errors
+⍝ 2020 07 01 MBaas: ]DTest -init; fixed bugs when ]DBuild used -save Modifier
+⍝ 2020 07 23 MBaas: v1.30 ]DTest -off;lots of small fixes & enhancements - see commit message for details
+⍝ 2020 07 24 MBaas: some fixes for compatibility with old Dyalog versions
 ⍝ 2020 08 05 AWS: Avoid calling ⎕USING if on AIX or using a classic interpreter - avoids extraneous errors on status window stream
-⍝ 2020 08 21 MBaas: v1.31 ]DTest accepts any # of arguments (can be useful for selection of Tests as in DUI-QAs)
+⍝ 2020 08 21 MBaas: v1.31 ]DTest accepts any # of arguments (can be useful for selection of Tests as in DUI QAs)
 ⍝ 2021 02 04 MBaas: v1.4 ]DBuild deals with ]LINKed files;fixed various bugs in Build & Test
 ⍝ 2021 01 10 Adam: v1.32 defer getting .NET Version until needed
-⍝ 2021 01 20 MBaas: v1.33 moved assignments into dedicated Init-fn to avoid running them when UCMD is loaded
-⍝ 2021 03 16 MBaas: v1.41 merging of various minor changes, mostly TACIT-related
+⍝ 2021 01 20 MBaas: v1.33 moved assignments into dedicated Init function to avoid running them when UCMD is loaded
+⍝ 2021 03 16 MBaas: v1.41 merging of various minor changes, mostly TACIT related
 ⍝ 2021 03 23 MBaas: v1.43 fixes: Classic compatibility, relative paths for tests & suites
 ⍝ 2021 03 30 MBaas: v1.44 fixes: more Classic compatibility - missed a few things with 1.43, but now it should be done.
 ⍝ 2021 04 22 MBaas: v1.45: improved loading of code (from .dyalog + .apln,.aplc,.aplf,.apli,.aplo);various fixes & cleanups
 ⍝ 2021 04 30 MBaas: v1.46 has a better workaround for saving (no need to go into the session);-save=0 can overwrite the option set with TARGET
-⍝ 2021 05 19 MBaas: v1.50 special handling of WS FULL in DTest and DBuild; allows specifying TARGET with .exe or .dll extension;handle multiple TARGET-Entries per file
+⍝ 2021 05 19 MBaas: v1.50 special handling of WS FULL in DTest and DBuild; allows specifying TARGET with .exe or .dll extension;handle multiple TARGET entries per file
 ⍝ 2021 06 02 MBaas: v1.51: v1.50 did not report ALL errors
 ⍝ 2021 06 24 MBaas: v1.52: minor details
 ⍝ 2021 07 26 MBaas: v1.53: fixed VALUE ERROR in ]DBuild
 ⍝ 2021 07 29 MBaas: v1.60: added switch to -coco to ]DTest to enable testing of Code Coverage (requires version ≥18.0)
-⍝ 2021 09 01 MBaas: v1.61: DTest -off=2 to create .log-file for failed tests, but not ⎕OFF (useful when called by other fns, as CITA does)
+⍝ 2021 09 01 MBaas: v1.61: DTest -off=2 to create .log file for failed tests, but not ⎕OFF (useful when called by other functions, as CITA does)
 ⍝                          -testlog also create {basename}.session.log ALWAYS (success or failure) with the entire session output of executing the test, launching a test shows current version of DyalogBuild
-⍝                          DTest: -trace switch will also trace into setup-fns, not only tests.
+⍝                          DTest: -trace switch will also trace into setup functions, not only tests.
 ⍝                          Help for DBuild or DTest will also show version number
 ⍝ 2021 12 17 MBaas, v1.62: new internal variable (available to tests): _isCITA - is set to 1 if running under control of CITA (Continous Integration Tool for APL)
 ⍝                   v1.62: streamlined logging and creation of logfiles (reporting errors and optionally info and warnings, too)
-⍝                   v1.62: it is also possible to get test results in a .json file (see loglvl): this file also has performance stats and collects various memory-related data
+⍝                   v1.62: it is also possible to get test results in a .json file (see loglvl): this file also has performance stats and collects various memory related data
 ⍝ 2022 01 10 MBaas, v1.63: DBuild: ⎕WSID will not be set if save=0 (use save=2 to not save, but set ⎕WSID). "-q" modifier suppresses ALL logging (only logs errors)
 ⍝ 2022 05 26 MBaas, v1.70: DBuild: DATA: support for .TXT files was mistakenly removed with 1.4 - fixed that. Also: DEFAULTS were never applied to # - now they are. New modifier -target to override TARGET.
 ⍝                          also incompatible change: to import *.APLA use the APL directive! DATA used to support this, but it now strictly reads file content and assigns it.
@@ -82,9 +82,10 @@
 ⍝                          The values for the setup and teardown modifiers are now optional, so you can avoid running any by using the modifier w/o value (so -setup will run NO setups)
 ⍝                          Added Assert for "lighter" tests (details: https://github.com/Dyalog/DBuildTest/wiki/Assert)
 ⍝ 2022 07 01 MBaas, v1.71: made Log less verbose when msg type is provided;PerfStats now contain "raw" (unformatted) data which makes it easier to analyse
-⍝ 2022 07 25 MBaas, v1.72: fixed issues with the workarounds of "0⎕SAVE-problem" (refs from ⎕SE to #)
+⍝ 2022 07 25 MBaas, v1.72: fixed issues with the workarounds of "0⎕SAVE problem" (refs from ⎕SE to #)
 ⍝ 2022 07 26 MBaas, v1.73: DBuild: dealt with error if wsid contains invalid path; minor addition to help for -prod flag
-⍝ 2022 08 15 MBaas, v1.74: DBuild: addressed #11 (if prod is set, -quiet will default to 1 and -save to 0); shorter log for loading of files to avoid linebreaks;added check for valence of setup/teardown/test fns
+⍝ 2022 08 15 MBaas, v1.74: DBuild: addressed #11 (if prod is set, -quiet will default to 1 and -save to 0); shorter log for loading of files to avoid linebreaks;added check for valence of setup/teardown/test functions
+⍝ 2022 08 26 MBaas, v1.75: DBuild & DTest: tweaked help texts. DBuild: the mechanism to use config parameters is more robust and supports alternate notations.
 ⍝
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessValue←''
@@ -95,7 +96,7 @@
 
     ∇ R←GetDOTNETVersion;vers;⎕IO;⎕USING
 ⍝ R[1] = 0/1/2: 0=nothing, 1=.net Framework, 2=NET CORE
-⍝ R[2] = Version (text-vector)
+⍝ R[2] = Version (text vector)
 ⍝ R[3] = Version (identifiable x.y within [2] in numerical form)
 ⍝ R[4] = Textual description of the framework
       ⎕IO←1
@@ -133,7 +134,7 @@
       :Access public
     ⍝ args primarily intended for internal use (giving the ns in which to setup DSL)
     ⍝ sets up ns "⎕se._cita' and define some tools for writing tests in it (and copy DSL into # or ns passed as argument)
-    ⍝ a few essential ⎕N-Covers and the tools for CITA to write a log and a status-file
+    ⍝ a few essential ⎕N* Covers and the tools for CITA to write a log and a status file
       Init 2
       :If 0=⎕SE.⎕NC'_cita'
           names←'SetupCompatibilityFns' 'DyaVersion' 'APLVersion' 'isChar' 'Split' 'Init' 'GetDOTNETVersion'
@@ -169,7 +170,7 @@
           GetNumParam←{⍺←ltack ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)
           where←⍎⎕UCS 9080
       :Else
-          eis←{1=≡⍵:⊂⍵ ⋄ ⍵}   ⍝ enclose if simple (can't use left-shoe underbar because of classic compatibility)
+          eis←{1=≡⍵:⊂⍵ ⋄ ⍵}   ⍝ enclose if simple (can't use left shoe underbar because of classic compatibility)
           table←{r←(⍴⍵),(1≥⍴⍴⍵)/1 ⋄ r←r[1],×/1↓⍴⍵ ⋄ r⍴⍵}
           ltack←{⍺}
           rtack←{⍵}
@@ -274,7 +275,7 @@
 
     ∇ {names}←{options}LoadCode file_target_mode;target;file;whatWeHave;f1;f2;f3;fl;fls;sep;sf;source;res;mode;larg
     ⍝ loads code from scriptfile (NB: file points to one existing file, no pattern etc.)
-    ⍝ Options defines SALT-Options
+    ⍝ Options defines SALT options
     ⍝ file_target_mode: (filename )
     ⍝ res: nested vector of names that were defined
       names←0⍴⊂''
@@ -295,9 +296,9 @@
       ⍝ filenames may contain wildcards - which isn't so useable with Link.Import.
       ⍝ So we resolve them and work through the list, processing every file as good as we can
       ⍝ but List may not be the right tool to do that because it does not give us a filename with extension - so we can't recognize -.apla!
-      ⍝ OTOH, a default DIR-Lister would not searcch the SALT-Libraries etc.
+      ⍝ OTOH, a default DIR lister would not search the SALT libraries etc.
      
-      ⍝ search the specified file in the source-folder and SALT's workdir  (emulate SALT.Load here)
+      ⍝ search the specified file in the source folder and SALT's workdir  (emulate SALT.Load here)
       sep←'∘',(1+isWin)⊃':' ';'     ⍝ separator for those paths...
      
       :For sf :In (⊂f1),sep Split ⎕SE.SALT.Settings'workdir'
@@ -307,7 +308,7 @@
           :If 0<⍬⍴⍴fls←(ListFiles sf,f2,f3)[;1]
               :For fl :In fls
                   :If 'data'≡lc mode
-                      res←⎕SE.SALT.Load fl,' -source'
+                      res←1⊃⎕NGET fl 1
                       names,←⊂fl res
                   :Else  ⍝ mode≡pl
                       :Select lc 3⊃⎕NPARTS fl
@@ -315,7 +316,7 @@
                           :Trap DEBUG↓0 ⍝↓↓↓↓ be sure to pass target as a ref, bad things may happen otherwise ()
                               res←0({0::⍵ ⋄ ⍎⍵}target)0 ⎕SE.SALT.Load fl,' ',options
      
-                              ⍝source←⎕SE.SALT.Load fl,' -source=no'  ⍝ unfortunately need two calls to establish fn & get source
+                              ⍝source←⎕SE.SALT.Load fl,' -source=no'  ⍝ unfortunately need two calls to establish function & get source
                               ⍝source←1⊃⎕NGET fl
                           :Else
                               res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',target,options,'": ',NL
@@ -395,10 +396,10 @@
     ∇
 
     ⍝ useful for CITA or DTest when dealing with WS FULL (from dfns):
-      refs←{                              ⍝ Vector of sub-space references for ⍵.
+      refs←{                              ⍝ Vector of sub space references for ⍵.
           ⍺←⍬ ⋄ (⍴,⍺)↓⍺{                  ⍝ default exclusion list.
               ⍵∊⍺:⍺                       ⍝ already been here: quit.
-              ⍵.(↑∇∘⍎⍨/⌽(⊂⍺∪⍵),↓⎕NL 9)    ⍝ recursively traverse any sub-spaces.
+              ⍵.(↑∇∘⍎⍨/⌽(⊂⍺∪⍵),↓⎕NL 9)    ⍝ recursively traverse any sub spaces.
           }⍵                              ⍝ for given starting ref.
       }
 
@@ -406,10 +407,10 @@
           ⍺⍺¨refs ⍵   ⍝ Apply to each space
       }
 
-    ⍝─── these fns are removed with v1.7 - but in this release we'll issue a DEPRECATED msg when they are called (so that anyone that uses them becomes aware of needed update...)
-    qNDELETE←qNEXISTS←qNGET←qMKDIR←qNPARTS←qJSON←qJSONi←qJSONe←qPUT←ListPre15←{((1⊃⎕SI),' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these')⎕SIGNAL 6}
+    ⍝─── these functions are removed with v1.7 - but in this release we'll issue a DEPRECATED msg when they are called (so that anyone that uses them becomes aware of needed update...)
+    qNDELETE←qNEXISTS←qNGET←qMKDIR←qNPARTS←qJSON←qJSONi←qJSONe←qPUT←ListPre15←{((1⊃⎕SI),' is deprecated with DBuildTest 1.7 - please use native functions instead or v1.33 which still supports these')⎕SIGNAL 6}
     ⍝ need to replace niladic _FindDefine with a tradfn:
-    ⎕fx'_FindDefine' '((1⊃⎕si),'' is deprecated with DBuildTest 1.7 - please use native fns instead or v1.33 which still supports these'')⎕signal 11'    ⍝ niladic fn...
+    ⎕fx'_FindDefine' '((1⊃⎕si),'' is deprecated with DBuildTest 1.7 - please use native functions instead or v1.33 which still supports these'')⎕signal 11'    ⍝ niladic function...
     :endSection Compatibility
 
     :Section ADOC
@@ -451,44 +452,27 @@
     ∇
 
     ∇ R←dVersion
-      ⍝ numeric version (maj.min) of DBuildTest (for comparison against the min. version given in the Dyalogtest-element of a .dyalogtest)
+      ⍝ numeric version (maj.min) of DBuildTest (for comparison against the min. version given in the Dyalogtest element of a .dyalogtest)
       R←2⊃⎕VFI{(2>+\⍵='.')/⍵}2⊃Version
     ∇
 
-    Split←{dlb¨1↓¨(1,⍵∊⍺)⊂(⊃⍺),⍵}                    ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
-    Splitb←{     1↓¨(1,⍺)⊂'.',⍵}                     ⍝ Split of ⍵ where ⍺=1 (no dlb)
-    SplitFirst←{dlb¨1↓¨(1,<\⍵=⍺)⊂⍺,⍵}                ⍝ Split ⍵ on first occurence of ⍺, and remove leading blanks from each segment
-    GetParam←{⍺←'' ⋄ (⌊/names⍳eis ⍵)⊃values,⊂⍺}      ⍝ Get value of parameter
-    dlb←{(∨\' '≠⍵)/⍵}                                ⍝ delete leading blanks
-    dtb←{(-{⍵⊥⍵}⍵=' ')↓⍵}                            ⍝ delete trailing blanks (DB)
-    null←0                                           ⍝ UCMD switch not specified
-    whiteout←{w←⍵ ⋄ ((w=⎕UCS 9)/w)←' ' ⋄ w}          ⍝ convert whitespace to space
-    isChar ←{0 2∊⍨10|⎕DR ⍵}                          ⍝ determine if argument's datatype is character
-    _hasBitSet←{t←8⍴2 ⋄ 0<+/(t⊤⍺)∧t⊤⍵}                ⍝ deal with bit-flags (hardcoded maximum is 8)
-
-    ∇ txt←ExpandEnvVars txt;p;z;i;nam;val
-   ⍝ Look for $EnvVar and replace with actual value
-   ⍝ naming convention: characters (any case) or "_" or digits (may not begin with a digit)
-      z←txt∊'_',⎕D,⎕A,lc ⎕A
-      :For p :In ⌽where(txt='$')∧1,⍨1↓txt∊'_',⎕A,lc ⎕A
-          i←+/∧\p↓z
-          i←i+' '=txt[p+i+1]  ⍝ consume the first (and only the first) space after the name
-          nam←txt[p+⍳i]~' '
-          val←2 ⎕NQ'.' 'GetEnvironment'nam
-          txt←txt[⍳p-1],val,(p+i)↓txt
-      :EndFor
-    ∇
-
-    ∇ w←WIN ⍝ running under Windows
-      :Trap 6
-          w←⎕SE.SALTUtils.WIN ⍝ ≥16.0
-      :Else
-          w←'Win'≡3↑⊃'.'⎕WG'APLVersion' ⍝ ≤15.0
-      :EndTrap
+    Split←{dlb¨1↓¨(1,⍵∊⍺)⊂(⊃⍺),⍵}                       ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
+    Splitb←{     1↓¨(1,⍺)⊂'.',⍵}                        ⍝ Split of ⍵ where ⍺=1 (no dlb)
+    SplitFirst←{dlb¨1↓¨(1,<\⍵=⍺)⊂⍺,⍵}                   ⍝ Split ⍵ on first occurence of ⍺, and remove leading blanks from each segment
+    GetParam←{⍺←'' ⋄ dtb dlb(⌊/names⍳eis ⍵)⊃values,⊂⍺}  ⍝ Get value of parameter
+    dlb←{(∨\' '≠⍵)/⍵}                                   ⍝ delete leading blanks
+    dtb←{(-{⍵⊥⍵}⍵=' ')↓⍵}                               ⍝ delete trailing blanks (DB)
+    null←0                                              ⍝ UCMD switch not specified
+    whiteout←{w←⍵ ⋄ ((w=⎕UCS 9)/w)←' ' ⋄ w}             ⍝ convert whitespace to space
+    isChar ←{0 2∊⍨10|⎕DR ⍵}                             ⍝ determine if argument's datatype is character
+    _hasBitSet←{t←8⍴2 ⋄ 0<+/(t⊤⍺)∧t⊤⍵}                  ⍝ deal with bit flags (hardcoded maximum is 8)
+    1
+    ∇ w←WIN ⍝ running under Windows1
+      w←⎕SE.SALTUtils.WIN
     ∇
 
     ∇ r←∆CSV args;z;file;encoding;coltypes;num
-    ⍝ Primitive ⎕CSV for pre-v16
+    ⍝ Primitive ⎕CSV for pre v16
     ⍝ No validation, no options
       :Trap 2 ⍝ Syntax Error if ⎕CSV not available
           r←⎕CSV args  ⍝ CompCheck: ignore
@@ -528,7 +512,7 @@
           NL←⎕UCS 10,⍨isWin/13
       :EndIf
       :If lvl≥2
-          SetupCompatibilityFns ⍝ dedicated fn avoid unneccessary execution of that code when loading the UCMD
+          SetupCompatibilityFns ⍝ dedicated function avoid unneccessary execution of that code when loading the UCMD
       :EndIf
     ∇
 
@@ -675,7 +659,7 @@
                       f←¯1↓TESTSOURCE ⋄ type←1 ⍝ Load contents of folder
                   :Else                          ⍝ Arg is a source file - load it
                       :If filter≢null
-                          LogTest'Can''t run test with file-argument AND -filter-switch!'
+                          LogTest'Can''t run test with file argument AND -filter switch!'
                           LOGSi←LOGS
                           →FAIL
                       :EndIf
@@ -696,9 +680,9 @@
               :EndIf
      
               :If 1=type  ⍝ deal with directories in f
-                  TESTSOURCE←f,(~'/\'∊⍨⊃⌽f)/⎕SE.SALTUtils.FS ⍝ use it accordingly! (and be sure it ends with dir-sep)
+                  TESTSOURCE←f,(~'/\'∊⍨⊃⌽f)/⎕SE.SALTUtils.FS ⍝ use it accordingly! (and be sure it ends with dir sep)
                   files←('*.dyalog'ListFiles f)[;1]
-                  files,←('*.aplf'ListFiles f)[;1]    ⍝ .aplf-extension!
+                  files,←('*.aplf'ListFiles f)[;1]    ⍝ .aplf extension!
                   'ns'⎕NS''
                   :For f :In files
                       :Trap (DEBUG∨halt)↓0
@@ -734,7 +718,7 @@
               :EndIf
           :Else
               :If args.init   ⍝ can we init it?
-              :AndIf ∧/0<∊⍴¨1↑¨(TESTSOURCE z extension)←1 ⎕NPARTS source  ⍝ did user give a file-spec? then try to create it!
+              :AndIf ∧/0<∊⍴¨1↑¨(TESTSOURCE z extension)←1 ⎕NPARTS source  ⍝ did user give a file spec? then try to create it!
                   :If ~⎕NEXISTS TESTSOURCE   ⍝ does directory exist?
                       {}3 ⎕MKDIR TESTSOURCE
                   :EndIf
@@ -748,10 +732,10 @@
                   →0
               :EndIf
               :If halt  ⍝ we found an error and need to stop
-                  ⎕←'"',source,'" is neither a namespace nor a folder or a .dyalogtest-file.'
+                  ⎕←'"',source,'" is neither a namespace nor a folder or a .dyalogtest file.'
                   (⎕LC[1]+1)⎕STOP 1⊃⎕SI
               :EndIf
-              LogTest'"',source,'" is neither a namespace nor a folder or a .dyalogtest-file.'
+              LogTest'"',source,'" is neither a namespace nor a folder or a .dyalogtest file.'
               (TESTSOURCE base)←2↑1 ⎕NPARTS source
               LOGSi←LOGS
               →FAIL
@@ -775,7 +759,7 @@
               :EndFor
               'args'⎕NS sargs ⍝ merge
               :If 0≠⍴overwritten
-                  0 Log'*** warning - test-suite overridden by modifiers: ',,⍕overwritten
+                  0 Log'*** warning - test suite overridden by modifiers: ',,⍕overwritten
               :EndIf
           :EndIf
       :EndIf
@@ -815,7 +799,7 @@
       :Else ⍝ No functions selected - run all named test_*
           fns←{⍵⌿⍨(⊂'test_')≡¨5↑¨⍵}ns.⎕NL-3
           :If 0=≢fns
-              LogError'*** Not a single fn matched pattern "test_*"'
+              LogError'*** Not a single function matched pattern "test_*"'
               LOGSi←LOGS
               →FAIL
           :EndIf
@@ -858,7 +842,7 @@
               :If ~setupok←(⊂f←setup)∊(,1)null
                   :If 3=ns.⎕NC f ⍝ function is there
                       :If 0=1 2⊃ns.⎕AT f
-                          LogError'setup fn "',f,'" must not be niladic!'
+                          LogError'setup function "',f,'" must not be niladic!'
                       :Else
                           :If verbose
                               0 Log'running setup: ',f
@@ -923,18 +907,18 @@
               :For f :In fns[order]
                   steps+←1
                   :If 0=1 2⊃ns.⎕AT f
-                      LogError'test fn "',f,'" must not be niladic!'
+                      LogError'test function "',f,'" must not be niladic!'
                   :Else
                       :If verbose
                           0 Log'running: ',f
                       :EndIf
                       (trace/1)ns.⎕STOP f
                       :Trap (~halt∨trace)/0
-                          f LogTest((ns⍎f)⍬)    ⍝ avoid additional line with title of fn
+                          f LogTest((ns⍎f)⍬)    ⍝ avoid additional line with title of function
                       :Case 777 ⍝ Assertion failed
                           f LogTest'Assertion failed: ',,∊⎕DM[⍳2],¨⊂NL
                       :Else
-                          en←⎕EN  ⍝ save error-no before it gets overwritten
+                          en←⎕EN  ⍝ save error no before it gets overwritten
                           msg←'Error executing test "',f,'": '
                           msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
                           :If WSFULL←en=1   ⍝ special handling for WS FULL
@@ -958,7 +942,7 @@
               :If null≢f←args.teardown
                   :If 3=ns.⎕NC f ⍝ function is there
                       :If 0=1 2⊃ns.⎕AT f
-                          LogError'teardown fn "',f,'" must not be niladic!'
+                          LogError'teardown function "',f,'" must not be niladic!'
                       :Else
                           :If verbose
                               0 Log'running teardown: ',f
@@ -986,7 +970,7 @@
               :EndFor
               :If 0∊⍴3⊃LOGS
                   r,←(quiet≡null)/⊂'   ',(((setup≢null)∧1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' passed in ',(1⍕0.001×⎕AI[3]-start),'s'
-                  1(⎕NDELETE ⎕OPT'Wildcard' 1)TESTSOURCE,'*.rng.txt' ⍝ delete memorized random-numbers when tests succeeded
+                  1(⎕NDELETE ⎕OPT'Wildcard' 1)TESTSOURCE,'*.rng.txt' ⍝ delete memorized random numbers when tests succeeded
               :Else
                   r,←⊂' Time spent: ',(1⍕0.001×⎕AI[3]-start),'s'
               :EndIf
@@ -1117,7 +1101,7 @@
           r←''
       :EndIf
       si←''
-      :If 0=≢fn←('([A-z_∆⍙]*)\[\d*]'⎕S'\1')msg  ⍝ anything looking like fn[lc] already in msg?
+      :If 0=≢fn←('([A-z_∆⍙]*)\[\d*]'⎕S'\1')msg  ⍝ anything looking like function[lc] already in msg?
       :AndIf ~3∊∊⎕NC¨fn                     ⍝ then do not include it again...
           si←(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: '
       :EndIf
@@ -1137,7 +1121,7 @@
           :If 200≥⎕SIZE'got'
               ⎕←'got=',,got
           :Else
-              ⎕←'got      ⍝ did not match right argument - examine variables or <Esc> into calling fn'
+              ⎕←'got      ⍝ did not match right argument - examine variables or <Esc> into calling function'
           :EndIf
           ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕SI
           (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
@@ -1167,8 +1151,8 @@
       :If 0=⎕NC'ctxt'
           ctxt←⎕SI[2 3]{(1⊃⍺),'_',(1⊃⍵),'_',(2⊃⍺),'_',2⊃⍵}⍕¨⎕LC[2 3]
       :EndIf  ⍝ use ⎕SI as indicator of context
-      rFile←TESTSOURCE,ctxt,'.rng.txt'    ⍝ name of rng-file
-      :If ⎕NEXISTS rFile         ⍝ found one - so re-use those numbers (instead of creating new series)
+      rFile←TESTSOURCE,ctxt,'.rng.txt'    ⍝ name of rng file
+      :If ⎕NEXISTS rFile         ⍝ found one - so reuse those numbers (instead of creating new series)
           r←∊1⊃⎕NGET rFile
           (((⎕UCS r)∊10 13)/r)←' '
           R←2⊃⎕VFI r
@@ -1192,7 +1176,7 @@
           :Else
               suite←∊1 ⎕NPARTS TESTSOURCE,suite
           :EndIf
-      :EndIf      ⍝ default path for a suite is the TESTSOURCE-folder
+      :EndIf      ⍝ default path for a suite is the TESTSOURCE folder
       :If ''≡3⊃⎕NPARTS suite
           suite←suite,'.dyalogtest'
       :EndIf   ⍝ default extension
@@ -1270,14 +1254,14 @@
 
     :Section BUILD
 
-    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;LOGS;logfile;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d;order;NQed;type;pars;det;loaded
+    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;LOGS;logfile;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d;order;NQed;type;pars;det;loaded;Target
     ⍝ Process a .dyalogbuild file
       Init 2
       oFFIssue←0    ⍝ set to 1 to repo MB's Keypress issue...
-      rc←0   ⍝ returncode (if possible)   0=ok, 1=errors during Build-process
+      rc←0   ⍝ returncode (if possible)   0=ok, 1=errors during Build process
       LOGS←3⍴⊂''
       r←''
-      :If isChar args  ⍝ also allow the fn to be called directly (not as a UCMD) with a simple string arg that we will then parse using DBuilds Parse rules:
+      :If isChar args  ⍝ also allow the function to be called directly (not as a UCMD) with a simple string arg that we will then parse using DBuilds Parse rules:
           lst←List
           lst←lst[lst.Name⍳⊂'DBuild']
           i←lst.Parse⍳' '
@@ -1325,7 +1309,7 @@
       (path name extn)←⎕NPARTS file
      
       0 Log'DyalogBuild version ',⍕dVersion
-      ('Build-File not found: ',file)⎕SIGNAL exists↓22
+      ('Build file not found: ',file)⎕SIGNAL exists↓22
      
       lines←1⊃⎕NGET file 1
      
@@ -1334,16 +1318,16 @@
       _description←''
       _defaults←'⎕ML←⎕IO←1'
       :If ~prod
-          ('Type' 'I')Log'NB: Loaded files will be linked to their source - use -prod to not link'
+          ('Type' 'I')Log'Note: Loaded files will be linked to their source - use -prod to not link'
       :EndIf
       :For i :In ⍳tally lines
-          :If ~':'∊line←i⊃lines                    ⍝ if the line does not have a name-value setting
+          :If ~':'∊line←i⊃lines                    ⍝ if the line does not have a name value setting
           :OrIf '⍝'=⊃{(⍵≠' ')/⍵}line     ⍝ or if it's a comment
               :Continue                       ⍝ skip it!
           :EndIf ⍝ Ignore blank lines
           line←{(∧\(~2|+\⍵='''')⍲⍵='⍝')/⍵}line
           (cmd params)←':'SplitFirst whiteout line
-          params←ExpandEnvVars params
+          params←⎕SE.Dyalog.Utils.ExpandConfig params
           (names values)←↓[1]↑¯2↑¨(⊂⊂''),¨'='Split¨','Split params
           cmd←lc cmd~' ' ⋄ names←lc names
           :If (i=1)∧'dyalogbuild'≢cmd
@@ -1494,7 +1478,7 @@
 ⍝                      fileContent←⊃fileContent
                       :Select fileType
                       :Case 'charvec'
-                          fileData←(-⍴eol)↓∊fileContent,¨⊂eol
+                          fileData←(-≢eol)↓∊fileContent,¨⊂eol
                       :Case 'charmat'
                           fileData←↑fileContent
                       :Case 'json'
@@ -1538,7 +1522,7 @@
               :If 0∊⍴tmp←GetParam'expression' ''
                   LogError'expression missing'
               :Else
-                  tmp←params ⍝ MBaas: use entire segment after ":" as argument (so that : and , can be used in these APL-Expressions!)
+                  tmp←params ⍝ MBaas: use entire segment after ":" as argument (so that : and , can be used in these APL Expressions!)
                   :If cmd≡'lx'
                       #.⎕LX←tmp
                       Log'Latent Expression set'
@@ -1556,9 +1540,9 @@
               :EndIf
      
           :Case 'target'
-              :If save=0
+              :If 0=2 args.Switch'save'
               :AndIf (('2'GetNumParam'save')∊0 1)
-                  Log'Found TARGET-Entry with SAVE-parameter, but commandline-switch save=',(⍕save),'overruled it'
+                  Log'Found TARGET-Entry with SAVE-parameter, but modifier save=',(⍕save),'overruled it'
               :ElseIf Target≡null
                   TargetList⍪←i line params names values
               :EndIf
@@ -1582,7 +1566,7 @@
               +∇¨(⊂⍵,'.'),¨(⍎⍵).⎕NL-2.1 3.1 9.1  ⍝ +∇ avoids crashes in 12.1...15
           }¨(⊂'#.'),¨#.⎕NL-2.1 3.1 3.2 9.1
           :If 0<⍴z
-              LogError('Classic-Test found incompatible characters in following functions/variables:',NL),¯2↓∊z{('- ',⍺,⍵)/⍨×,⍴⍺}⍥1 rtack NL
+              LogError('Classic test found incompatible characters in following functions/variables:',NL),¯2↓∊z{('- ',⍺,⍵)/⍨×,⍴⍺}⍥1 rtack NL
           :Else
               Log'Workspace seems to be compatible with Classic Edition ',⍕{⍵>1:⍵ ⋄ 12}TestClassic
           :EndIf
@@ -1590,8 +1574,8 @@
      
       n←tally 3⊃LOGS
       :If 0=n  ⍝ if no errors were found
-          :If (save≡1)∧0=1↑⍴TargetList   ⍝ save switch was set, but no target-instruction given
-                                    ⍝ pretend we had one which save under name of build-file
+          :If (save≡1)∧0=1↑⍴TargetList   ⍝ save switch was set, but no target instruction given
+                                    ⍝ pretend we had one which save under name of build file
               TargetList←1 5⍴0('target: ',name)('wsid=',name)(,⊂'wsid')(,⊂name)
           :EndIf
           :If save
@@ -1623,7 +1607,7 @@
                   :EndIf
                   :If off=2
                       off←1=GetNumParam'off' 0
-                  :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default-value of 2)
+                  :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default value of 2)
                   :If save∊0 2
                       :Continue
                   :EndIf
@@ -1658,9 +1642,10 @@
                       ⍝ So THIS documentation is purely informal and only describes CURRENT behaviour:
                       ⍝ <type>     is one of 'ActiveXControl' 'InProcessServer' 'Library' 'NativeExe' 'OutOfProcessServer' 'StandaloneNativeExe'
                       ⍝ <flags>    is the sum of zero or more of the following:
-                      ⍝
-                      ⍝
-                      ⍝
+                      ⍝ BOUND_CONSOLE 2
+                      ⍝ BOUND_USEDOTNET 4
+                      ⍝ BOUND_RUNTIME 8
+                      ⍝ BOUND_XPLOOK 32
                       ⍝
                       ⍝ <resource> is a filename the contents of which will be inserted as a resource in the bound file (used by ASP.NET)
                       ⍝ <icon>     is the name of an icon file, the contents of which are used as the main icon for the bound file
@@ -1677,7 +1662,7 @@
                               det←(⌽2,0.5×⍴det)⍴det
                               pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(GetParam'icon')(GetParam'cmdline')(det)
                               command←'2 ⎕NQ ',∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨¯1↓pars
-                              command←command,' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
+                              command←command,(0<≢det)/' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
                               2 #.⎕NQ pars
                           :Else
                               Log'Builds using "type" (to create something else than a DWS) are only supported on Windows!'
@@ -1728,10 +1713,12 @@
                       :EndFor
                   :EndIf
               :EndFor
+          :ElseIf 0<≢TargetList
+              ('Type' 'W')Log'TARGETs were not saved because -save Switch was not set!'
           :EndIf
       :Else
           ('Type' 'W')Log'DBuild found errors during process',save/', workspace was not saved!'
-          n←1  ⍝ need error-count
+          n←1  ⍝ need error count
           rc←1
       :EndIf
       ⍝:EndIf
@@ -1822,7 +1809,7 @@
     PrefixTS←{(,'ZI2,<:>,ZI2,<:>,ZI2,<.>,ZI4,⎕> ⎕'⎕FMT 1 4⍴3↓⎕TS),⍵}
 
     ∇ {r}←{f}LogTest msg;type;i
-    ⍝ this fn is mapped to fn "Log" that is defined in the ns in which tests are executed
+    ⍝ this function is mapped to function "Log" that is defined in the ns in which tests are executed
     ⍝ optional f is ('Type' 'I|W|E') (or 'Info|Warning|Error', 1st char matters) and/or ('Prefix' 'any text to prefix to the msg')
     ⍝ msg is the ReturnValue of a test, traditionally we expect a text vector there, but anything that matches "SuccessValue" (empty string)
     ⍝ will not be logged whereas anything different will be logged as an error, unless specified differently through 'Type'.
@@ -1888,7 +1875,7 @@
 
     ∇ {pre}Log msg;type;j
     ⍝ no ⍺ or  ⍺=1: prefix log with lineno.
-    ⍝ alternatively pre can also be a VTV with Name/Value-pairs ('Prefix' 'foo')('Type' 'I')
+    ⍝ alternatively pre can also be a VTV with Name/Value pairs ('Prefix' 'foo')('Type' 'I')
       type←1    ⍝ Info
       →(0=tally msg)/0
       :If 0=⎕NC'pre'
@@ -1959,7 +1946,7 @@
       r←⎕NS¨3⍴⊂''
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest' 'GetTools4CITA'
-      r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory' 'Load tools to run CITA-tests'
+      r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory' 'Load tools to run CITA tests'
       :If 14>1⊃_Version
           r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '1 -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -SuccessValue=' ''
       :Else
@@ -1986,52 +1973,46 @@
       :Select Cmd
       :Case 'DBuild'
           r←⊂'Run one or more DyalogBuild script files (.dyalogbuild) | Version ',2⊃Version
-          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet] [-halt] [-save=0|1|2] [-off=0|1] [-TestClassic]'
+          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet[=0|1|2]] [-halt] [-save[=0|1|2]] [-off[=0|1]] [-TestClassic] -target=Target'
           :Select level
           :Case 0
-              r,←⊂']',Cmd,' -?? ⍝ for more information'
+              r,←⊂']',Cmd,' -?? ⍝ for more details about command line and modifiers'
+              r,←⊂']',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
+              r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DBuild for more information'
           :Case 1
               r,←'' 'Argument is:'
-              r,←⊂'    files         name of one or more .dyalogbuild files'
+              r,←⊂'    files           name of one or more .dyalogbuild files'
               r,←'' 'Optional modifiers are:'
-              r,←⊂'    -clear[=NCs]              expunge all objects, optionally of specified nameclasses only'
-              r,←⊂'    -halt                     halt on error rather than log and continue'
-              r,←⊂'    -production               remove links to source files (and execute code given in PROD instructions in buildfile)'
-              r,←⊂'    -quiet                    only output actual errors (quiet=2 only writes them to log, not into session)'
-              r,←⊂'    -save=0|1|2               save the build workspace (overwrites TARGET''s save-option). NB: we only save if no errors were logged during Build-process!'
-              r,←⊂'                              save=2: do NOT save, but set ⎕WSID (according to TARGET-Instruction in buildfile)'
-              r,←⊂'    -off=0|1                  )OFF after completion (if errors were logged, logfile will be created)'
-              r,←⊂'    -TestClassic              check imported code for compatibility with classic editions (charset, not language-features!)'
+              r,←⊂'    -clear[=NCs]    expunge all objects, optionally of specified nameclasses only'
+              r,←⊂'    -halt           halt on error rather than log and continue'
+              r,←⊂'    -production     remove links to source files (and execute code given in PROD instructions in buildfile)'
+              r,←⊂'    -quiet[=n]      only output actual errors (quiet=2 only writes them to log, not into session)'
+              r,←⊂'    -save[=0|1|2]   save the build workspace (overwrites TARGET''s save option). Note: we only save if no errors were logged during Build process. save=2: do NOT save, but set ⎕WSID (according to TARGET Instruction in buildfile)'
+              r,←⊂'    -off[=0|1]      )OFF after completion (if errors were logged, logfile will be created)'
+              r,←⊂'    -target=Target  override target spec from dyalogbuild file'
+              r,←⊂'    -TestClassic    check imported code for compatibility with classic editions (character set, not language features)'
               r,←⊂''
               r,←⊂']',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
+              r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DBuild for more information'
           :Case 2
               r,←⊂''
-              r,←⊂'each non-empty line of a DyalogBuild script has the following syntax:'
-              r,←⊂'INSTRUCTION : argument, Parameter1=value1, Parameter2=value2,...'
-              r,←⊂'              Everything after INSTRUCTION: may reference environment-variables using syntax $EnvVar.'
-              r,←⊂'              You can continue with any non-alphabetic chars immediately following the name of the var, otherwise leave a blank.'
-              r,←⊂'              ie: with EnvVars FOO="C:\TEMP" and Git="c:\git\", you can do'
-              r,←⊂'                  "$Foo\Goo" => "C:\TEMP\Goo", "$Git MyDir" => "c:\git\MyDir", "$Git  MyDir" => "c:\git\ MyDir"'
+              r,←⊂'each non empty line of a DyalogBuild script has the following syntax:'
+              r,←⊂'INSTRUCTION:  argument[, Parameter1=value1, Parameter2=value2,...]'
+              r,←⊂'              Everything after "INSTRUCTION:" may reference configuration parameters using syntax $MyParam or %MyParam% or ${MyParam}.'
+              r,←⊂'              You can continue with any non alphabetic chars immediately following the name of the parameter, otherwise leave a blank. For example, with FOO="C:\TEMP" and Git="c:\git\", you can do'
+              r,←⊂'                  "$Foo\Goo" => "C:\TEMP\Goo", "$Git MyDir" => "c:\git\MyDir", "$Git MyDir" => "c:\git\ MyDir", "${Git}MyDir" => "c:\git\MyDir"'
               r,←⊂''
               r,←⊂'INSTRUCTION may be one of the following:'
-              r,←⊂'  DYALOGBUILD : nnn'
-              r,←⊂'    This instruction must be included and be the first one. "nnn" specifies the minimum version required to run this script.'
-              r,←⊂'  ID : name[, Version=nnn]'
-              r,←⊂'    This instruction is purely informational and causes a log entry of "Building name" or "Building name version nnn" where "nnn" is a number.'
-              r,←⊂'  COPY : path1, Target=path2'
-              r,←⊂'    Copies one or more files from path1 to path2.'
-              r,←⊂'  NS : pathname[, Target=namespace]'
-              r,←⊂'    Loads the APL object(s) defined in the file(s) matching the pattern "pathname" into "namespace" (default is #), establishing the namespace if it does not exist.'
-              r,←⊂'  {CLASS|APL} : pathname[, Target=namespace]'
-              r,←⊂'    Loads the APL object defined in "pathname" into "namespace" (default is #).'
-              r,←⊂'  LIB : name[, Target=namespace]'
-              r,←⊂'    Loads the library utility "name" into "namespace" (default is #).'
-              r,←⊂'  CSV : pathname, Target=matname[, ColTypes=spec]'
-              r,←⊂'    Loads the CSV file "pathname" as a matrix called "matname". "spec" corresponds to the third element of ⎕CSV''s right argument; for details, see ',⎕SE.UCMD'Help ⎕CSV -url' ⍝ CompCheck: ignore
-              r,←⊂'  DATA : pathname, Target=namespace[, Format=type[, SetEOL=nl]]'
-              r,←⊂'    Loads the contents of the file(s) matching the pattern "pathname" into one or more variables in "namespace" (default is #). The variable(s) will be named with the base filename(s). "type" dictates how the file content of each file is interpreted, and may be one of:'
+              r,←⊂'  DYALOGBUILD:  nnn                                                     This instruction must be included and be the first one. "nnn" specifies the minimum version required to run this script.'
+              r,←⊂'  ID:           name[, Version=nnn]                                     This instruction is purely informational and causes a log entry of "Building name" or "Building name version nnn" where "nnn" is a number.'
+              r,←⊂'  COPY:         path1, Target=path2                                     Copies one or more files from path1 to path2.'
+              r,←⊂'  NS:           pathname[, Target=namespace]                            Loads the APL object(s) defined in the file(s) matching the pattern "pathname" into "namespace" (default is #), establishing the namespace if it does not exist.'
+              r,←⊂'  {CLASS|APL}:  pathname[, Target=namespace]                            Loads the APL object defined in "pathname" into "namespace" (default is #).'
+              r,←⊂'  LIB:          name[, Target=namespa                                   Loads the library utility "name" into "namespace" (default is #).'
+              r,←⊂'  CSV:          pathname, Target=matname[, ColTypes=spec]               Loads the CSV file "pathname" as a matrix called "matname". "spec" corresponds to the third element of ⎕CSV''s right argument; for details, see ',⎕SE.UCMD'Tools.Help ⎕CSV -url' ⍝ CompCheck: ignore
+              r,←⊂'  DATA:         pathname, Target=namespace[, Format=type[, SetEOL=nl]]  Loads the contents of the file(s) matching the pattern "pathname" into one or more variables in "namespace" (default is #). The variable(s) will be named with the base filename(s). "type" dictates how the file content of each file is interpreted, and may be one of:'
               r,←⊂'      charvec   meaning as a simple character vector. If SetEOL=nl is specified, the lines will be separated by the chosen line ending sequence; one or more of the leftmost character codes or the corresponding decimal numbers of:'
-              r,←⊂'                  LF   Line Feed            ⎕UCS 10    (the default)'
+              r,←⊂'                  LF   Line Feed            ⎕UCS 10 (default)'
               r,←⊂'                  VT   Vertical Tab         ⎕UCS 11'
               r,←⊂'                  FF   Form Feed            ⎕UCS 12'
               r,←⊂'                  CR   Carriage Return      ⎕UCS 13'
@@ -2041,73 +2022,64 @@
               r,←⊂'      charvecs  meaning as a vector of character vectors'
               r,←⊂'      charmat   meaning as a character matrix'
               r,←⊂'      json      meaning as json. The variable will be a numeric scalar, a vector, or a namespace in accordance with the JSON code in the file.'
-              r,←⊂'  LX : expression'
-              r,←⊂'    Sets the workspace''s ⎕LX to "expression".'
-              r,←⊂'  EXEC : expression'
-              r,←⊂'    Executes the APL expression "expression".'
-              r,←⊂'  PROD : expression'
-              r,←⊂'    Executes the APL expression "expression" only if ]',Cmd,' was called with the -production modifier'
-              r,←⊂'  DEFAULTS : "expression"'
-              r,←⊂'    Executes the APL expression "expression" in each namespace created or accessed by the NS instruction.'
-              r,←⊂'  TARGET : wsname.dws'
-              r,←⊂'    Sets the WSID to "wsname.dws" so the workspace is ready to )SAVE.'
+              r,←⊂'  LX:           expression                                              Sets the workspace''s ⎕LX to "expression".'
+              r,←⊂'  EXEC:         expression                                              Executes the APL expression "expression".'
+              r,←⊂'  PROD:         expression                                              Executes the APL expression "expression" only if ]',Cmd,' was called with the -production modifier'
+              r,←⊂'  DEFAULTS:     expression                                              Executes the APL expression "expression" in each namespace created or accessed by the NS instruction.'
+              r,←⊂'  TARGET:       wsname.dws                                              Sets the WSID to wsname.dws so the workspace is ready to )SAVE.'
               r,←⊂'    Supports optional parameters:'
-              r,←⊂'    save=0|1 (Default 0): save the workspace after a successfull (=no errors were logged) build'
-              r,←⊂'    off=0|1  (Default=0): )OFF after completion of Build. If errors were logged, a logfile (same name as the .dyalogbuild-file with .log-extension)'
-              r,←⊂'                          will be created and exit code 1 will be set.'
+              r,←⊂'    save=0|1 (Default 0): save the workspace after a successful (=no errors were logged) build'
+              r,←⊂'    off=0|1  (Default=0): )OFF after completion of Build. If errors were logged, a logfile (same name as the .dyalogbuild file with .log extension) will be created and exit code 1 will be set.'
               r,←⊂''
-              r,←⊂'More info in the wiki!  → https://github.com/Dyalog/DBuildTest/wiki/DBuild'
+              r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DBuild for more information'
           :EndSelect
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory | Version ',2⊃Version
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup=[fn]] [-suite=file] [-teardown=[fn]] [-testlog=] [-tests=] [-ts] [-timeout=] [-trace] [-verbose] [-clear[=n]] [-init] [-order=]'
+          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup[=fn]] [-suite=file] [-teardown[=fn]] [-testlog=logfile] [-tests=] [-ts] [-timeout=t] [-trace] [-verbose] [-clear[=n]] [-init] [-order={0|1|"NumVec"}]'
           :Select level
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more info'
           :Case 1
               r,'' 'Argument is one of:'
-              r,←⊂'    ns                   namespace in the current workspace'
-              r,←⊂'    file                 .dyalog file containing a namespace or a test-fn'
-              r,←⊂'    path                 path to directory containing functions in .dyalog files'
+              r,←⊂'    ns                    namespace in the current workspace'
+              r,←⊂'    file                  .dyalog file containing a namespace or a test function'
+              r,←⊂'    path                  path to directory containing functions in .dyalog files'
               r,←'' 'Optional modifiers are:'
-              r,←⊂'    -clear[=n]           clear ws before running tests (optionally delete nameclass n only)'
-              r,←⊂'    -coverage            enable analysis of code coverage'
-              r,←⊂'    -filter=string       only run functions whose name start with filter'
-              r,←⊂'    -halt                halt on error rather than log and continue'
-              r,←⊂'    -init                if specified test-file wasn''t found, it will be initialised with a template'
-              r,←⊂'    -loglvl              control which log files we create (if value of "-off" > 0)'
-              r,←⊂'                           1={base}.log: errors'
-              r,←⊂'                           2={base}.warn.log warnings'
-              r,←⊂'                           4={base}.warn.log info'
-              r,←⊂'                           8={base}.session.log'
-              r,←⊂'                          16={base}.session.log ONLY if test failed'
-              r,←⊂'                          32={base}.log.json: machine-readable results'
-              r,←⊂'                             Creating such a log is the ONLY way to get data on performance and memory usage of tests!'
-              r,←⊂'                             (Values are bit flags and can be added)'
-              r,←⊂'    -order=0|1|"NumVec"  control sequence of tests (default 0: random; 1:sequential;"NumVec":order)'
-              r,←⊂'    -off[=0|1|2]         )off after running the tests'
-              r,←⊂'                           0=do not )OFF after test'
-              r,←⊂'                           1=)OFF after test'
-              r,←⊂'                             creates {base}.log if errors found'
-              r,←⊂'                             AND {warn|info}.log if warnings of info-msgs were created'
-              r,←⊂'                             (NB: depends on -loglvl!)'
-              r,←⊂'                           2=do not )OFF, but create .log-files (see loglvl)'
-              r,←⊂'    -quiet               qa mode: only output actual errors'
-              r,←⊂'    -repeat=n            repeat test n times'
-              r,←⊂'    -setup=[fn]          run the function fn before any tests'
-              r,←⊂'    -successvalue=string defines an alternate value that indicates successfull execution of test (default is empty string)'
-              r,←⊂'                          (NB: this can be tricky when you want to use 0 - see wiki for details!)'
-              r,←⊂'    -suite=file          run tests defined by a .dyalogtest file'
-              r,←⊂'    -teardown=[fn]       run the function fn after all tests'
-              r,←⊂'    -testlog=            force name of logfile(s) (default name of testfile)'
-              r,←⊂'    -tests=              comma-separated list of tests to run'
-              r,←⊂'    -timeout             sets a timeout. Seconds after which test(suite)s will be terminated. (Default=0 means: no timeout)'
-              r,←⊂'    -ts                  add timestamp (no date) to logged messages'
-              r,←⊂'    -trace               set stop on line 1 of each test function'
-              r,←⊂'    -verbose             display more status messages while running'
+              r,←⊂'    -clear[=n]            clear ws before running tests (optionally delete nameclass n only)'
+              r,←⊂'    -coverage             enable analysis of code coverage'
+              r,←⊂'    -filter=string        only run functions whose name start with filter'
+              r,←⊂'    -halt                 halt on error rather than log and continue'
+              r,←⊂'    -init                 if specified test file wasn''t found, it will be initialised with a template'
+              r,←⊂'    -loglvl               control which log files we create (if value of "-off" > 0)'
+              r,←⊂'                            1={base}.log: errors'
+              r,←⊂'                            2={base}.warn.log warnings'
+              r,←⊂'                            4={base}.warn.log info'
+              r,←⊂'                            8={base}.session.log'
+              r,←⊂'                           16={base}.session.log ONLY if test failed'
+              r,←⊂'                           32={base}.log.json: machine readable results'
+              r,←⊂'                              Creating such a log is the ONLY way to get data on performance and memory usage of tests!'
+              r,←⊂'                              (Values are bit flags and can be added)'
+              r,←⊂'    -order={0|1|"NumVec"}  control sequence of tests: 0:random (default); 1:sequential; "NumVec":given order'
+              r,←⊂'    -off[=0|1|2]          )OFF after running the tests'
+              r,←⊂'                            0=do not )OFF after tests'
+              r,←⊂'                            1=)OFF after tests - creates {base}.log if errors found AND {warn|info}.log if warnings of info msgs were created (Note: depends on -loglvl)'
+              r,←⊂'                            2=do not )OFF, but create .log files (see -loglvl)'
+              r,←⊂'    -quiet                QA mode: only output actual errors'
+              r,←⊂'    -repeat=n             repeat tests n times'
+              r,←⊂'    -setup[=fn]           run the function fn before any tests'
+              r,←⊂'    -successvalue=string  defines an alternate value that indicates successfull execution of test (default is empty string)'
+              r,←⊂'                           (Note: this can be tricky when you want to use 0 - see wiki for details.)'
+              r,←⊂'    -suite=file           run tests defined by a .dyalogtest file'
+              r,←⊂'    -teardown[=fn]        run the function fn after all tests'
+              r,←⊂'    -testlog=             force name of logfile(s) (default name of testfile)'
+              r,←⊂'    -tests=               comma separated list of tests to run'
+              r,←⊂'    -timeout[=t]          sets a timeout. Seconds after which test(suite)s will be terminated. (Default is 0: no timeout)'
+              r,←⊂'    -ts                   add timestamp (no date) to logged messages'
+              r,←⊂'    -trace                set stop on line 1 of each test function'
+              r,←⊂'    -verbose              display more status messages while running'
               r,←⊂''
-              r,←⊂'More info in the wiki!  → https://github.com/Dyalog/DBuildTest/wiki/DTest'
+              r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DBuild for more information'
           :Case 'GetTools4CITA'
               r←⊂'Primarily an internal tool for testing with CITA | Version ',2⊃Version
               r,←⊂'    ]',Cmd,' [ns]'
@@ -2115,19 +2087,19 @@
               :Case 0
                   r,←⊂']',Cmd,' -?? ⍝ for more info'
               :Case 1
-                  r,←⊂'This copies a few tools from the DTest-namespace into `⎕SE._cita` and some'
+                  r,←⊂'This copies a few tools from the DTest namespace into `⎕SE._cita` and some'
                   r,←⊂'into the namespace passed as argument (default is #)'
                   r,←⊂''
                   r,←⊂'- SetupCompatibilityFns'
-                  r,←⊂'- DyaVersion - numeric variable holding {major}.{minor} Version of current interpreter'
-                  r,←⊂'- APLVersion - actually identifies the platform with value *nix|Win|Mac'
-                  r,←⊂'- isChar ⍵   - returns boolean value if argument is char'
-                  r,←⊂'- isWin      - niladic fn returning boolean to indicate if running on Windows'
-                  r,←⊂'- ⍺ Split ⍵  - split string ⍵ on positions that have value ⍺'
-                  r,←⊂'- Init       - establishes additional fns'
+                  r,←⊂'- DyaVersion  numeric variable holding {major}.{minor} Version of current interpreter'
+                  r,←⊂'- APLVersion  actually identifies the platform with value *nix|Win|Mac'
+                  r,←⊂'- isChar ⍵    returns boolean value if argument is char'
+                  r,←⊂'- isWin       niladic function returning boolean to indicate if running on Windows'
+                  r,←⊂'- ⍺ Split ⍵   split string ⍵ on positions that have value ⍺'
+                  r,←⊂'- Init        establishes additional functions'
                   r,←⊂'- GetDOTNETVersion - returns 4 elements to describe .NET Version that is in use:'
                   r,←⊂'                     R[1] = 0/1/2: 0=nothing, 1=.net Framework, 2=NET CORE'
-                  r,←⊂'                     R[2] = Version (text-vector)'
+                  r,←⊂'                     R[2] = Version (text vector)'
                   r,←⊂'                     R[3] = Version (identifiable x.y within [2] in numerical form)'
                   r,←⊂'                     R[4] = Textual description of the framework'
                   r,←⊂'- _FileTime_to_TS - legacy from the days w/o ⎕NINFO'
@@ -2161,7 +2133,7 @@
 
         ∇ R←GetCITA_Log signal;z
         ⍝ signal: should we ⎕SIGNAL an error if no config file is found? (default=1)
-          :If 4=⍴R←_ExpandEnvVars'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
+          :If 4=⍴R←⎕SE.Dyalog.Utils.ExpandConfig'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
         ⍝   ⎕←2 ⎕NQ'.' 'GetCommandLine'   ⍝ spit out commandline into the session - maybe it help diagnosing the problem...
               :If 1∊z←∊⎕RSI{0::0 ⋄ 2=⍺.⎕NC ⍵:0<⍺⍎⍵ ⋄ 0}¨⊂'CITA_Log'    ⍝ CompCheck: ignore   / search calling environment for variable CITA_Log
                   R←((z⍳2)⊃⎕RSI).CITA_Log                                ⍝ CompCheck: ignore
@@ -2178,22 +2150,6 @@
           :EndIf
         ∇
 
-        ∇ R←_ExpandEnvVars R;i;j;var
-⍝ expands references to EnvVars in string R
-⍝ need to be enclosed either in % or []
-⍝ Warning: this fails utterly it you feed misconstructed strings...
-          :While 0<⍴i←{⍵/⍳⍴⍵}R∊'%['
-              i←⊃i
-              c←(1+R[⊃i]='[')⊃'%]'   ⍝ the closing character
-              :If 0<j←⊃{⍵/⍳⍴⍵}(i<⍳≢R)∧R=c
-                  var←i↓(j-1)↑R
-                  var←2 ⎕NQ'.' 'GetEnvironment'var  ⍝ replace with value
-                  R←R[⍳i-1],var,j↓R
-              :Else ⍝ closing char was not found
-                  'Invalid argument - not properly enclosed envvar'⎕SIGNAL 11
-              :EndIf
-          :EndWhile
-        ∇
         ∇ {file}←{msg}_LogStatus status;file;⎕ML
         ⍝ (⍳100)⎕trace 1⊃⎕si
 ⍝ A step (setup|test|teardown) is finished, report its status to the engine.
@@ -2205,7 +2161,7 @@
 ⍝ 0     | 1        |¯1         numeric codes for ⍵
 ⍝ bonus option: any other text passed as status will be used as file extension...
 ⍝
-⍝ logging a status will save the session-log AND ⎕OFF (returncode as given in status[2] OR 31=success, 32=failure, 33=error)
+⍝ logging a status will save the session log AND ⎕OFF (returncode as given in status[2] OR 31=success, 32=failure, 33=error)
 ⍝ returncode=¯42 will NOT off (but will write the log file!)
           ⎕ML←1
           :If 0=⎕NC'msg' ⋄ msg←'' ⋄ :EndIf
@@ -2214,7 +2170,7 @@
           :AndIf 0={⎕ML←0 ⋄ ∊⍵}2⊃status
               (status MYrc)←status
           :EndIf
-          :If isChar status  ⍝ decode status from character-string
+          :If isChar status  ⍝ decode status from string
             ⍝ translate known status into "standardized" extensions (that have a certain meaning in CITA)
               :If ∨/(⊂lc status){(0<''⍴⍴⍺)∧⍺≡(''⍴⍴⍺)↑⍵}¨'failure' 'no'
                   status←'fail' ⋄ rc←32

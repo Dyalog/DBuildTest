@@ -13,7 +13,7 @@ LIB: InitConga, Target=#.conga
 LIB: HttpCommand, Target=#.httpcommand
 
 EXEC: #.ProdFlag←'Test'
-EXEC: #.MyEnvVar←'$DB_EnvVar'
+EXEC: #.MyEnvVar←'%DB_EnvVar%'
 EXEC: #.Dollar←'$$foo'
 
 PROD: #.ProdFlag←'Production'
