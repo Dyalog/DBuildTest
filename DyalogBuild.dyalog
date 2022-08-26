@@ -162,23 +162,13 @@
     ∇ {sink}←SetupCompatibilityFns
       sink←⍬              ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
      
-      :If ~_isClassic
-          eis←⍎⎕UCS 8838
-          table←⍎⎕UCS 9066
-          ltack←⍎⎕UCS 8867
-          rtack←⍎⎕UCS 8866
-          GetNumParam←{⍺←ltack ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)
-          where←⍎⎕UCS 9080
-      :Else
-          eis←{1=≡⍵:⊂⍵ ⋄ ⍵}   ⍝ enclose if simple (can't use left shoe underbar because of classic compatibility)
-          table←{r←(⍴⍵),(1≥⍴⍴⍵)/1 ⋄ r←r[1],×/1↓⍴⍵ ⋄ r⍴⍵}
-          ltack←{⍺}
-          rtack←{⍵}
-          GetNumParam←{⍺←'0' ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)
-          where←{(,⍵)/,⍳⍴⍵}
-      :EndIf
-     
-      tally←≢    ⍝ CompCheck: ignore
+      eis←⊆
+      table←⍪
+      ltack←⊣
+      rtack←⊢
+      GetNumParam←{⍺←'0' ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)
+      where←⍸
+      tally←≢                                         ⍝ CompCheck: ignore
       lc←¯1∘⎕C                                              ⍝ lower case ⍝ CompCheck: ignore
       uc←1∘⎕C                                               ⍝ upper case ⍝ CompCheck: ignore
      
@@ -466,10 +456,8 @@
     whiteout←{w←⍵ ⋄ ((w=⎕UCS 9)/w)←' ' ⋄ w}             ⍝ convert whitespace to space
     isChar ←{0 2∊⍨10|⎕DR ⍵}                             ⍝ determine if argument's datatype is character
     _hasBitSet←{t←8⍴2 ⋄ 0<+/(t⊤⍺)∧t⊤⍵}                  ⍝ deal with bit flags (hardcoded maximum is 8)
-    1
-    ∇ w←WIN ⍝ running under Windows1
-      w←⎕SE.SALTUtils.WIN
-    ∇
+
+    WIN←⎕SE.SALTUtils.WIN                               ⍝ running under Windows1
 
     ∇ r←∆CSV args;z;file;encoding;coltypes;num
     ⍝ Primitive ⎕CSV for pre v16
@@ -799,7 +787,7 @@
       :Else ⍝ No functions selected - run all named test_*
           fns←{⍵⌿⍨(⊂'test_')≡¨5↑¨⍵}ns.⎕NL-3
           :If 0=≢fns
-              LogError'*** Not a single function matched pattern "test_*"'
+              LogError'*** no functions match pattern "test_*"'
               LOGSi←LOGS
               →FAIL
           :EndIf
@@ -1282,10 +1270,10 @@
      
       file←∊1 ⎕NPARTS 1⊃args.Arguments
       :If args.production  ⍝ #11: if prod is set, quiet←1 and save←0 (unless set differently on the commandline)
-          :If 999=999 args.Switch'quiet'
+          :If 0≡args.Switch'quiet'
               args.quiet←1
           :EndIf
-          :If 999=999 args.Switch'save'
+          :If 0≡args.Switch'save'
               args.save←0
           :EndIf
       :EndIf
@@ -1512,8 +1500,6 @@
                       Log{(uc 1↑⍵),1↓⍵}fileType,cmd,' ',source,' loaded as ',⍕⊃loaded
                   :Else     ⍝ many names: -verbose shows complete list always, otherwise limit to ⎕PW
                       Log((⍕⍴,loaded),' ',fileType,' names loaded from ',source,' into ',(⍕target),'.'){⎕PW>12+≢⍺,⍵:⍺,⍵ ⋄ ⍺,(⎕UCS 13),(⎕UCS 13)@(' '∘=)⍵}{1=≡⍵:⍵ ⋄ '(',(¯1↓∊⍕¨⍵,¨' '),')'}loaded
-                      ⍝:else
-                    ⍝   Log((⍕⍴,loaded),' ',fileType,' names loaded from ',source,' into ',(⍕target),'.'){⎕pw>12+≢⍺,⍵:  ⍺,⍵ ⋄ ⍺,(((0⌈⎕pw-12+≢⍺)↑⍵)),'...)' }{1=≡⍵:⍵ ⋄ '(',(¯1↓∊⍕¨⍵,¨' '),')'}loaded
                   :EndIf
               :EndIf
      
@@ -1540,7 +1526,7 @@
               :EndIf
      
           :Case 'target'
-              :If 0=2 args.Switch'save'
+              :If (,0)≡2 args.Switch'save'
               :AndIf (('2'GetNumParam'save')∊0 1)
                   Log'Found TARGET-Entry with SAVE-parameter, but modifier save=',(⍕save),'overruled it'
               :ElseIf Target≡null
