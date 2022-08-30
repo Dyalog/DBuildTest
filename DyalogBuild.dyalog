@@ -904,7 +904,7 @@
                       :Trap (~halt∨trace)/0
                           f LogTest((ns⍎f)⍬)    ⍝ avoid additional line with title of function
                       :Case 777 ⍝ Assertion failed
-                          f LogTest'Assertion failed: ',,∊⎕DM[⍳2],¨⊂NL
+                          f LogTest'Assertion failed: ',,∊⎕DMX.DM[⍳2],¨⊂NL
                       :Else
                           en←⎕EN  ⍝ save error no before it gets overwritten
                           msg←'Error executing test "',f,'": '
@@ -917,7 +917,7 @@
                                   res←res[(20⌊1↑⍴res)↑⍒res[;2];]
                                   msg←msg,∊((↑res[;1]),'CI18'⎕FMT res[;,2]),⊂NL
                               :Else
-                                  msg,←'Error while generating that report: ',NL,,↑⎕DM,⊂NL
+                                  msg,←'Error while generating that report: ',NL,,∊⎕DMX.DM,¨⊂NL
                               :EndTrap
      
                           :EndIf
@@ -1089,7 +1089,7 @@
           r←''
       :EndIf
       si←''
-      :If 0=≢fn←('([A-z_∆⍙]*)\[\d*]'⎕S'\1')msg  ⍝ anything looking like function[lc] already in msg?
+      :If 0=≢fn←('([A-Z_a-zÀ-ÖØ-Ýßà-öø-üþ∆⍙\x{24b6}-\x{24cf}][\wÀ-ÖØ-Ýßà-öø-üþ∆⍙\x{24b6}-\x{24cf}]*)\[\d+]'⎕S'\1')msg  ⍝ anything looking like function[lc] already in msg? (rx by AB)
       :AndIf ~3∊∊⎕NC¨fn                     ⍝ then do not include it again...
           si←(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: '
       :EndIf
@@ -1270,10 +1270,10 @@
      
       file←∊1 ⎕NPARTS 1⊃args.Arguments
       :If args.production  ⍝ #11: if prod is set, quiet←1 and save←0 (unless set differently on the commandline)
-          :If 0≡args.Switch'quiet'
+          :If 0≡args.quiet
               args.quiet←1
           :EndIf
-          :If 0≡args.Switch'save'
+          :If 0≡args.save
               args.save←0
           :EndIf
       :EndIf
@@ -1350,7 +1350,7 @@
                   :Trap 0
                       3 ⎕MKDIR path,target ⍝ /// needs error trapping
                   :Else
-                      LogError'Error while creating "',path,target,'":',∊⎕DM,¨⊂NL
+                      LogError'Error while creating "',path,target,'":',∊⎕DMX.DM,¨⊂NL
                   :EndTrap
               :EndIf
      
@@ -1483,7 +1483,7 @@
                               :Continue
                           :EndIf
                       :Else
-                          LogError'Error trying to assign "',target,'.',targetName,'": ',NL,⍕⎕DM,¨⊂NL
+                          LogError'Error trying to assign "',target,'.',targetName,'": ',NL,∊⎕DMX.DM,¨⊂NL
                           d←1
                           :Continue
                       :EndTrap
@@ -1516,7 +1516,7 @@
                       :Trap halt↓0
                           #⍎tmp
                       :Else
-                          LogError,⍕⎕DM,¨⊂NL
+                          LogError,∊⎕DMX.DM,¨⊂NL
                       :EndTrap
                       :If cmd≡'defaults'
                           _defaults←_defaults,'⋄',tmp ⋄ Log'Set defaults ',tmp
@@ -1587,10 +1587,7 @@
                           :EndIf
                       :EndIf
                   :EndIf
-                  save←⍬⍴99~⍨(99 args.Switch'save'),bld←1,⍨'99'GetNumParam'save'
-                  :If save<1=⊃bld~99
-                      Log'Target not saved because of switch -save=0'
-                  :EndIf
+
                   :If off=2
                       off←1=GetNumParam'off' 0
                   :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default value of 2)
@@ -1667,16 +1664,16 @@
                   :Case 11   ⍝ DOMAIN ERROR
                       :If 0<102⌶#   ⍝ check most likely cause: links from ⎕SE to #
                       :AndIf isWin
-                          ('Type' 'E')Log'Problem creating ',wsid,':',NL,(∊⎕DM,¨⊂NL),'There might still be references from "somewhere in ⎕SE" to "something in #".',NL,'Please contact support@dyalog.com to discuss & resolve this if the enqueued keystrokes did not create the desired result.'
+                          ('Type' 'E')Log'Problem creating ',wsid,':',NL,(∊⎕DMX.DM,¨⊂NL),'There might still be references from "somewhere in ⎕SE" to "something in #".',NL,'Please contact support@dyalog.com to discuss & resolve this if the enqueued keystrokes did not create the desired result.'
                       :Else
-                          ('Type' 'E')Log'Problem creating ',wsid,':',NL,(↑⎕DM),⊂NL
+                          ('Type' 'E')Log'Problem creating ',wsid,':',NL,∊⎕DMX.DM,¨⊂NL
                       :EndIf
                       :If halt ⋄ (⎕LC[1]+2)⎕STOP 1⊃⎕SI
                           ⎕←'Function halted.'
                       ⍝ stop here
                       :EndIf
                   :Else
-                      ('Type' 'E')Log'Problem creating ',wsid,':',,(↑⎕DM),⎕UCS 13
+                      ('Type' 'E')Log'Problem creating ',wsid,':',,⎕DMX.DM,¨⊂NL
                   :EndTrap
                   :If ~0∊⍴command
                       :If ⎕NEXISTS wsid,'.dws'
@@ -1792,8 +1789,7 @@
     ∇
 
     LineNo←{    '[',(,'ZI3'⎕FMT ⊃,⍵),']'    }  ⍝ m19572 deals with Edit|Reformat not removing the blanks in the dfn!
-    PrefixTS←{(,'ZI2,<:>,ZI2,<:>,ZI2,<.>,ZI4,⎕> ⎕'⎕FMT 1 4⍴3↓⎕TS),⍵}
-
+    PrefixTS← {(⊃'hh:mm:ss.fff"> "'(1200⌶)1⎕DT'J'),⍵}
     ∇ {r}←{f}LogTest msg;type;i
     ⍝ this function is mapped to function "Log" that is defined in the ns in which tests are executed
     ⍝ optional f is ('Type' 'I|W|E') (or 'Info|Warning|Error', 1st char matters) and/or ('Prefix' 'any text to prefix to the msg')
@@ -2065,7 +2061,7 @@
               r,←⊂'    -trace                set stop on line 1 of each test function'
               r,←⊂'    -verbose              display more status messages while running'
               r,←⊂''
-              r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DBuild for more information'
+              r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DTest for more information'
           :Case 'GetTools4CITA'
               r←⊂'Primarily an internal tool for testing with CITA | Version ',2⊃Version
               r,←⊂'    ]',Cmd,' [ns]'
@@ -2073,8 +2069,7 @@
               :Case 0
                   r,←⊂']',Cmd,' -?? ⍝ for more info'
               :Case 1
-                  r,←⊂'This copies a few tools from the DTest namespace into `⎕SE._cita` and some'
-                  r,←⊂'into the namespace passed as argument (default is #)'
+                  r,←⊂'This copies a few tools from the DTest namespace into `⎕SE._cita` and some into the namespace passed as argument (default is #)'
                   r,←⊂''
                   r,←⊂'- SetupCompatibilityFns'
                   r,←⊂'- DyaVersion  numeric variable holding {major}.{minor} Version of current interpreter'
