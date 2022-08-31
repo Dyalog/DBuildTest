@@ -32,7 +32,6 @@
          →0 Because'EnvironmentVariable was not retrieved with correct value' ⋄ :EndIf
  :EndIf
 
-
  :If 2 Check #.⎕ML
      →0 Because'DEFAULTS did not correctly process ⎕ML' ⋄ :EndIf
  :If 0 Check #.⎕IO

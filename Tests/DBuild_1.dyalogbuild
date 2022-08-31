@@ -10,7 +10,7 @@ DEFAULTS: ⎕IO←0 ⋄ ⎕ML←2
 DEFAULTS: ⎕CT←1E¯11 ⋄ ⎕PP←11
 
 EXEC: #.ProdFlag←'Test'
-EXEC: #.MyEnvVar←'$DB_EnvVar'
+EXEC: #.MyEnvVar←'${DB_EnvVar}'
 EXEC: #.Dollar←'$$foo'
 
 PROD: #.ProdFlag←'Production'

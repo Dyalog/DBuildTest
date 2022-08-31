@@ -5,4 +5,5 @@ ID: BuildTest2
 APL: ./files/*.apln
 DATA: ./files/*.apla
 DATA: ./files/london1*.txt
+DATA: ./files/london2.ff, format=charvec, SetEOL=ff
 CSV: ./files/array.csv, Target=array
