@@ -917,7 +917,7 @@
                                   res←res[(20⌊1↑⍴res)↑⍒res[;2];]
                                   msg←msg,∊((↑res[;1]),'CI18'⎕FMT res[;,2]),⊂NL
                               :Else
-                                  msg,←'Error while generating that report: ',NL,,∊⎕DMX.DM,¨⊂NL
+                                  msg,←'Error while generating that report: ',NL,∊⎕DMX.DM,¨⊂NL
                               :EndTrap
      
                           :EndIf
@@ -1089,7 +1089,7 @@
           r←''
       :EndIf
       si←''
-      :If 0=≢fn←('([A-Z_a-zÀ-ÖØ-Ýßà-öø-üþ∆⍙\x{24b6}-\x{24cf}][\wÀ-ÖØ-Ýßà-öø-üþ∆⍙\x{24b6}-\x{24cf}]*)\[\d+]'⎕S'\1')msg  ⍝ anything looking like function[lc] already in msg? (rx by AB)
+      :If 0=≢fn←('((?!\d)[\wÀ-ÖØ-Ýßà-öø-üþ∆⍙Ⓐ-Ⓩ]+)\[\d+]'⎕S'\1')msg  ⍝ anything looking like function[lc] already in msg? (rx by AB)
       :AndIf ~3∊∊⎕NC¨fn                     ⍝ then do not include it again...
           si←(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: '
       :EndIf
@@ -1673,7 +1673,7 @@
                       ⍝ stop here
                       :EndIf
                   :Else
-                      ('Type' 'E')Log'Problem creating ',wsid,':',,⎕DMX.DM,¨⊂NL
+                      ('Type' 'E')Log'Problem creating ',wsid,':',∊⎕DMX.DM,¨⊂NL
                   :EndTrap
                   :If ~0∊⍴command
                       :If ⎕NEXISTS wsid,'.dws'
