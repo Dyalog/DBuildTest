@@ -1089,7 +1089,7 @@
           r←''
       :EndIf
       si←''
-      :If 0=≢fn←('((?!\d)[\wÀ-ÖØ-Ýßà-öø-üþ∆⍙x{24b6}-\x{24cf}]+)\[\d+]'⎕S'\1')msg  ⍝ anything looking like function[lc] already in msg? (rx by AB)
+      :If 0=≢fn←('((?!\d)[\wÀ-ÖØ-Ýßà-öø-üþ∆⍙\x{24b6}-\x{24cf}]+)\[\d+]'⎕S'\1')msg  ⍝ anything looking like function[lc] already in msg? (rx by AB)
       :AndIf ~3∊∊⎕NC¨fn                     ⍝ then do not include it again...
           si←(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: '
       :EndIf
