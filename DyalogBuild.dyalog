@@ -541,7 +541,7 @@
           ⎕←cl
       :EndIf
       →(l Check b)↓r←0
-      t←nr[(≢nr)⌊⎕LC[2]-0 1 ¯1]     ⍝ search exactly these 3 lines!
+      t←nr[(⍳≢nr)∩⎕LC[2]-0 1 ¯1]     ⍝ search exactly these 3 lines, avoiding INDEX ERRORs
       t←('⍝(.*)'⎕S'\1'⎕OPT('Mode' 'L'))t  ⍝ search for text of comments
       cc←(¯1+cl⍳'⍝')↑cl
       :If ∨/z←cc=⎕AV[60]  ⍝ look for right tack as separator between reason & test (not using symbol directly )
@@ -767,7 +767,7 @@
       :Else
           'ns'⎕NS'Check'
       :EndIf
-      'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Assert' 'IfNot' 'base64' 'base64dec' 'base64enc'
+      'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Assert' 'IfNot' 'base64' 'base64dec' 'base64enc' 'verbose'
       ns.Log←{⍺←{⍵} ⋄ ⍺ ##.LogTest ⍵}  ⍝ ⍺←rtack could cause problems with classic...
       :If args.tests≢0
           orig←fns←(','Split args.tests)~⊂''
@@ -1587,7 +1587,7 @@
                           :EndIf
                       :EndIf
                   :EndIf
-
+     
                   :If off=2
                       off←1=GetNumParam'off' 0
                   :EndIf ⍝ only process this one if the modifier was not provided (and therefore has its default value of 2)
@@ -1802,6 +1802,7 @@
       :AndIf (⎕DR∊msg)∊80 82 160
           f←''
           r←msg
+          type←3
       :Else
           :If 2≤|≡f
               :If 2=|≡f ⍝ ONE name & value
