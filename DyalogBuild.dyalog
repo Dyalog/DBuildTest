@@ -537,7 +537,7 @@
     ∇ r←l Assert b;cl;cc;t
       nr←1↓⎕NR 2⊃⎕SI
       cl←⎕LC[2]⊃nr  ⍝ the current line
-      :If verbose
+      :If {6::##⍎⍵ ⋄ ⍎⍵}'verbose' ⍝ look for "verbose" in current ns or its parent
           ⎕←cl
       :EndIf
       →(l Check b)↓r←0
@@ -767,7 +767,7 @@
       :Else
           'ns'⎕NS'Check'
       :EndIf
-      'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Assert' 'IfNot' 'base64' 'base64dec' 'base64enc' 'verbose'
+      'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Assert' 'IfNot' 'base64' 'base64dec' 'base64enc' 
       ns.Log←{⍺←{⍵} ⋄ ⍺ ##.LogTest ⍵}  ⍝ ⍺←rtack could cause problems with classic...
       :If args.tests≢0
           orig←fns←(','Split args.tests)~⊂''
@@ -1227,7 +1227,7 @@
                   args.alertifcoveragebelow←2⊃⎕VFI params
               :Case 'successvalue'
                   args.SuccessValue←params
-                  ⎕←'args.SuccessValue was set to ',params
+                ⍝   ⎕←'args.SuccessValue was set to ',params
               :Else
                   Log'Invalid keyword: "',cmd,'"'
               :EndSelect
