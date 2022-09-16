@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.75
+:Namespace DyalogBuild ⍝ V 1.75
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -168,7 +168,7 @@
       rtack←⊢
       GetNumParam←{⍺←'0' ⋄ ⊃2⊃⎕VFI ⍺ GetParam ⍵}    ⍝ Get numeric parameter (0 if not set)
       where←⍸
-      tally←≢                                         ⍝ CompCheck: ignore
+      tally←≢                                         ⍝ CompCheck: ignore - leave it here for compatibility with old tests...
       lc←¯1∘⎕C                                              ⍝ lower case ⍝ CompCheck: ignore
       uc←1∘⎕C                                               ⍝ upper case ⍝ CompCheck: ignore
      
@@ -269,8 +269,8 @@
     ⍝ file_target_mode: (filename )
     ⍝ res: nested vector of names that were defined
       names←0⍴⊂''
-      →(0=tally file_target_mode)/0  ⍝ gracefully treatment of empty calls
-      :If 2=tally file_target_mode ⋄ file_target_mode←file_target_mode,⊂'apl' ⋄ :EndIf
+      →(0=≢ file_target_mode)/0  ⍝ gracefully treatment of empty calls
+      :If 2=≢ file_target_mode ⋄ file_target_mode←file_target_mode,⊂'apl' ⋄ :EndIf
       (file target mode)←file_target_mode
       :If 0=⎕NC'options'
           options←''
@@ -684,7 +684,7 @@
                   ⍝ args.tests←ns.⎕nl¯3
                   ⍝ :endif
                   :If verbose
-                      0 Log(⍕1↑⍴files),' file',('s'/⍨1<tally files),' loaded from ',source
+                      0 Log(⍕1↑⍴files),' file',('s'/⍨1<≢ files),' loaded from ',source
                   :EndIf
                   :If null≡args.suite  ⍝ if no suite is given
                       :If null≡args.setup
@@ -807,11 +807,11 @@
       start0←⎕AI[3]
       :Select ,order
       :Case ,0  ⍝ order=0: random (or reproduce random from file)
-          order←(('order',⍕tally fns)RandomVal 2⍴tally fns)∩⍳tally fns
+          order←(('order',⍕≢fns)RandomVal 2⍴≢ fns)∩⍳≢ fns
       :Case ,1
-          order←⍳tally fns   ⍝ 1: sequential
+          order←⍳≢ fns   ⍝ 1: sequential
       :Else
-          order←order{(⍺∩⍵),⍵~⍺}⍳tally fns  ⍝ numvec: validate and use that order (but make sure every test gets executed!)
+          order←order{(⍺∩⍵),⍵~⍺}⍳≢ fns  ⍝ numvec: validate and use that order (but make sure every test gets executed!)
       :EndSelect
       LOGSi←LOGS
       :For run :In ⍳repeat
@@ -889,7 +889,7 @@
      
      
               :If verbose
-              :AndIf 1<tally fns
+              :AndIf 1<≢ fns
                   0 Log'running ',(⍕1↑⍴fns),' tests'↓⍨¯1×1=↑⍴fns
               :EndIf
               :For f :In fns[order]
@@ -964,7 +964,7 @@
               :EndIf
           :EndFor ⍝ Setup
       :EndFor ⍝ repeat
-      r,←((1<tally setups)∧quiet≡null)/⊂'Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
+      r,←((1<≢ setups)∧quiet≡null)/⊂'Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
       :If ~0∊⍴3⊃LOGS
       :AndIf ~0∊⍴order
           r,←⊂'-order="',(⍕order),'"'
@@ -1093,7 +1093,7 @@
       :AndIf ~3∊∊⎕NC¨fn                     ⍝ then do not include it again...
           si←(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: '
       :EndIf
-      r←r,((~0∊tally r)/⎕UCS 10),si,msg
+      r←r,((~0∊≢ r)/⎕UCS 10),si,msg
     ∇
 
     ∇ r←expect Check got
@@ -1156,7 +1156,7 @@
 
 
     ∇ res←LoadTestSuite suite;setups;lines;i;cmd;params;names;values;tmp;f;args
-      :If 0=tally 1⊃⎕NPARTS suite
+      :If 0=≢ 1⊃⎕NPARTS suite
           suite←TESTSOURCE,suite
       :ElseIf '.'≡1⊃1⊃⎕NPARTS suite ⍝ deal with relative paths
           :If '.'≡1⊃1⊃⎕NPARTS TESTSOURCE   ⍝ if suite and source are relative, ignore suite's relative folder and use SOURCE's...
@@ -1308,7 +1308,7 @@
       :If ~prod
           ('Type' 'I')Log'Note: Loaded files will be linked to their source - use -prod to not link'
       :EndIf
-      :For i :In ⍳tally lines
+      :For i :In ⍳≢ lines
           :If ~':'∊line←i⊃lines                    ⍝ if the line does not have a name value setting
           :OrIf '⍝'=⊃{(⍵≠' ')/⍵}line     ⍝ or if it's a comment
               :Continue                       ⍝ skip it!
@@ -1421,9 +1421,9 @@
               :If cmd≡'lib'   ⍝ find path of library...(only if >17, so we'll be using ]LINK which needs path)
                   lib←⊃0(⎕NINFO ⎕OPT('Wildcard' 1)('Recurse' 1))((2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'),'/Library/',source,'.dyalog')  ⍝ CompCheck: ignore
                   lib←eis lib
-                  :If 1=tally lib  ⍝ CompCheck: ignore
+                  :If 1=≢ lib  ⍝ CompCheck: ignore
                       tmpPath←⊃lib
-                  :ElseIf 1<tally lib  ⍝ CompCheck: ignore
+                  :ElseIf 1<≢ lib  ⍝ CompCheck: ignore
                       LogError'too many matches searching library "',source,'": ',⍕lib
                       :Continue
                   :Else
@@ -1452,9 +1452,9 @@
                   tmpExt,⍨←'='/⍨0≠⍴tmpExt
                   :If wild
                       targetNames←2⊃¨⎕NPARTS,eis(⎕SE.SALT.List tmpPath,' -extension',tmpExt,' -raw')[;2]
-                  :ElseIf 1=tally loaded
+                  :ElseIf 1=≢ loaded
                       targetNames←2⊃⎕NPARTS tmpPath
-                  :ElseIf 0=tally loaded
+                  :ElseIf 0=≢ loaded
                       LogError'LoadCode  "',tmpPath,'" did not return anything - does the file even exist?'
                       :Continue
                   :Else
@@ -1534,7 +1534,7 @@
               :EndIf
           :Else
               :If '⍝'≠⊃cmd ⍝ ignore commented lines
-              :AndIf 0<tally cmd
+              :AndIf 0<≢ cmd
                   LogError'Invalid keyword: ',cmd
               :EndIf
           :EndSelect
@@ -1558,7 +1558,7 @@
           :EndIf
       :EndIf
      
-      n←tally 3⊃LOGS
+      n←≢ 3⊃LOGS
       :If 0=n  ⍝ if no errors were found
           :If (save≡1)∧0=1↑⍴TargetList   ⍝ save switch was set, but no target instruction given
                                     ⍝ pretend we had one which save under name of build file
@@ -1580,7 +1580,7 @@
                           :Continue
                       :EndIf
                       :If (⊂lc 3⊃⎕NPARTS wsid)∊'' '.dws'
-                      :OrIf 0=tally GetParam'type'    ⍝ if type is not set, we're building a workspace
+                      :OrIf 0=≢ GetParam'type'    ⍝ if type is not set, we're building a workspace
                           :If (save∊⍳2)∨99='99'GetNumParam'save'
                               ⎕WSID←wsid
                               Log'WSID set to ',wsid
@@ -1709,11 +1709,11 @@
      endSave:
       ('Type' 'I')Log'DyalogBuild: ',(⍕⍴lines),' lines processed in ',(1⍕0.001×⎕AI[3]-start),' seconds.'
      
-      :If 0<n←tally 3⊃LOGS
+      :If 0<n←≢ 3⊃LOGS
           ('Type' 'I')Log(0≠n)/' ',(⍕n),' error',((n>1)/'s'),' encountered.'
       :EndIf
       :For i :In ⍳3
-          :If 0<n←tally i⊃LOGS
+          :If 0<n←≢ i⊃LOGS
               r,←⊂((i⍴'*'),' ',((n>1)/⍕n),' ',i⊃'Info' 'Warning' 'Error'),((n>1)/'s'),':'
               r,←i⊃LOGS
           :EndIf
@@ -1809,7 +1809,7 @@
                   f←⊂f
               :EndIf
               f←,f
-              :If (tally f)≥i←(,1↑¨f)⍳⊂,⊂'Type'
+              :If (≢ f)≥i←(,1↑¨f)⍳⊂,⊂'Type'
                   type←'IWE'⍳⊃2⊃i⊃f
               :EndIf
               :If (tally f)≥i←(,1↑¨f)⍳⊂,⊂'Prefix'
@@ -1860,7 +1860,7 @@
     ⍝ no ⍺ or  ⍺=1: prefix log with lineno.
     ⍝ alternatively pre can also be a VTV with Name/Value pairs ('Prefix' 'foo')('Type' 'I')
       type←1    ⍝ Info
-      →(0=tally msg)/0
+      →(0=≢ msg)/0
       :If 0=⎕NC'pre'
       :OrIf pre≡1
           pre←⊂'Prefix'(LineNo i)
@@ -1871,10 +1871,10 @@
                   pre←⊂pre
               :EndIf
               pre←,pre
-              :If (tally pre)≥j←(,1↑¨pre)⍳⊂,⊂'Type'
+              :If (≢ pre)≥j←(,1↑¨pre)⍳⊂,⊂'Type'
                   type←'IWE'⍳⊃2⊃j⊃pre
               :EndIf
-              :If (tally pre)≥j←(,1↑¨pre)⍳⊂,⊂'Prefix'
+              :If (≢ pre)≥j←(,1↑¨pre)⍳⊂,⊂'Prefix'
                   pre←2⊃j⊃pre
               :Else
                   pre←''
