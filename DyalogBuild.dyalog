@@ -86,7 +86,7 @@
 ⍝ 2022 07 26 MBaas, v1.73: DBuild: dealt with error if wsid contains invalid path; minor addition to help for -prod flag
 ⍝ 2022 08 15 MBaas, v1.74: DBuild: addressed #11 (if prod is set, -quiet will default to 1 and -save to 0); shorter log for loading of files to avoid linebreaks;added check for valence of setup/teardown/test functions
 ⍝ 2022 08 26 MBaas, v1.75: DBuild & DTest: tweaked help texts. DBuild: the mechanism to use config parameters is more robust and supports alternate notations.
-⍝ 2022 09 16 MBaas, v1.76: DTest: rearrenged code setup of "ns" for .dyalogest files (##.verbose; setup/test/teardown fns can also ne niladic now; result of setup was not tested against SuccessValue
+⍝ 2022 09 16 MBaas, v1.76: DTest: rearrenged code setup of "ns" for .dyalogest files (##.verbose; setup/test/teardown fns can also ne niladic now; result of setup was not tested against SuccessValue; fixed handling of CodeCoverage_Subject in test suites.
 ⍝
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessValue←''
@@ -868,7 +868,6 @@
                     subj←¯1↓subj
                   :EndIf
                   CoCo←⎕NEW CodeCoverage(,⊂subj)
-                  ⎕←'subj=',subj
                   CoCo.Info←'Report created by DTest ',(2⊃Version),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
                   :If 1<≢args.coverage
                   :AndIf (⎕DR' ')=⎕DR args.coverage
