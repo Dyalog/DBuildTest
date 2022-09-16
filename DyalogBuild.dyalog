@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.76
+﻿:Namespace DyalogBuild ⍝ V 1.76
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -731,8 +731,8 @@
      
       :If null≢suite←args.suite ⍝ Is a test suite defined?
           ⍝ Merge settings
-          overwritten←⍬
-          v←LoadTestSuite suite
+          overwritten←⍬        
+          v←LoadTestSuite suite    
           :If ~1⊃v
               LogError'*** error loading suite "',suite,'": ',2⊃v
           :Else
@@ -860,7 +860,7 @@
               :AndIf 0=⎕NC'CoCo'   ⍝ only neccessary if we don't have an instance yet...
                   home←1⊃⎕NPARTS SALT_Data.SourceFile  ⍝ CompCheck: ignore
                   LoadCode(home,'aplteam-CodeCoverage-0.9.1/CodeCoverage.aplc')(⍕⎕THIS)  ⍝ we should use some other to bring this in ideally...()
-                  :If 0≡subj←args.coverage_subj
+                  :If 0≡≢subj←args.coverage_subj
                       :If 0<≢subj←#.⎕NL ¯9
                           subj←∊(⊂'#.'),¨subj,¨','
                       :EndIf
@@ -1159,7 +1159,7 @@
     ∇
 
 
-    ∇ res←LoadTestSuite suite;setups;lines;i;cmd;params;names;values;tmp;f;args
+    ∇ res←LoadTestSuite suite;setups;lines;i;cmd;params;names;values;tmp;f;args;path
       :If 0=≢ 1⊃⎕NPARTS suite
           suite←TESTSOURCE,suite
       :ElseIf '.'≡1⊃1⊃⎕NPARTS suite ⍝ deal with relative paths
