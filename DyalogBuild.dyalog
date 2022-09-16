@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.75
+:Namespace DyalogBuild ⍝ V 1.76
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -86,6 +86,7 @@
 ⍝ 2022 07 26 MBaas, v1.73: DBuild: dealt with error if wsid contains invalid path; minor addition to help for -prod flag
 ⍝ 2022 08 15 MBaas, v1.74: DBuild: addressed #11 (if prod is set, -quiet will default to 1 and -save to 0); shorter log for loading of files to avoid linebreaks;added check for valence of setup/teardown/test functions
 ⍝ 2022 08 26 MBaas, v1.75: DBuild & DTest: tweaked help texts. DBuild: the mechanism to use config parameters is more robust and supports alternate notations.
+⍝ 2022 09 16 MBaas, v1.76: DTest: rearrenged code setup of "ns" for .dyalogest files (##.verbose; setup/test/teardown fns can also ne niladic now; result of setup was not tested against SuccessValue
 ⍝
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessValue←''
@@ -537,7 +538,7 @@
     ∇ r←l Assert b;cl;cc;t
       nr←1↓⎕NR 2⊃⎕SI
       cl←⎕LC[2]⊃nr  ⍝ the current line
-      :If {6::##⍎⍵ ⋄ ⍎⍵}'verbose' ⍝ look for "verbose" in current ns or its parent
+      :If verbose ⍝ look for "verbose" in current ns or its parent
           ⎕←cl
       :EndIf
       →(l Check b)↓r←0
@@ -590,7 +591,7 @@
       :EndIf
     ∇
 
-    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog
+    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog;file
       i←quiet←0
       ⍝ Not used here, but we define them test scripts that need to locate data:
       ∆OldLog←⎕SE ⎕WG'Log'
@@ -624,7 +625,6 @@
           r←'An argument is required - see ]dtest -? for more information.' ⋄ →0
       :ElseIf 9=#.⎕NC source←1⊃args.Arguments ⍝ It's a namespace
           ns←#⍎source
-          {}(⍕ns.##)⎕NS'verbose' 'filter' 'halt' 'quiet' 'trace' 'timestamp' 'order' 'off'
           TESTSOURCE←⊃1 ⎕NPARTS''
           base←source
       :Else                               ⍝ Not a namespace
@@ -639,6 +639,7 @@
               file←f  ⍝ assign this variable which is needed by LogError
               (TESTSOURCE z extension)←1 ⎕NPARTS f
               base←z
+              'ns'⎕NS''    ⍝ create temporary namespace to run tests in
               :If 2=type←GetFilesystemType f  ⍝ it's a file
                   :If '.dyalogtest'≡lc extension ⍝ That's a suite
                       :If null≡args.suite
@@ -651,8 +652,6 @@
                           LOGSi←LOGS
                           →FAIL
                       :EndIf
-                      'ns'⎕NS'verbose' 'filter' 'halt' 'quiet' 'trace' 'timestamp' 'order' 'off'
-     
                       :Trap (DEBUG∨halt)↓0
                           filter←∊LoadCode source ns
                           :If args.tests≡0
@@ -671,7 +670,6 @@
                   TESTSOURCE←f,(~'/\'∊⍨⊃⌽f)/⎕SE.SALTUtils.FS ⍝ use it accordingly! (and be sure it ends with dir sep)
                   files←('*.dyalog'ListFiles f)[;1]
                   files,←('*.aplf'ListFiles f)[;1]    ⍝ .aplf extension!
-                  'ns'⎕NS''
                   :For f :In files
                       :Trap (DEBUG∨halt)↓0
                           LoadCode f ns
@@ -767,7 +765,10 @@
       :Else
           'ns'⎕NS'Check'
       :EndIf
-      'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Assert' 'IfNot' 'base64' 'base64dec' 'base64enc' 
+      'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Assert' 'IfNot' 'base64' 'base64dec' 'base64enc'
+      ⍝ transfer some status vars into ns
+      'ns'⎕NS'verbose' 'filter' 'halt' 'quiet' 'trace' 'timestamp' 'order' 'off'
+     
       ns.Log←{⍺←{⍵} ⋄ ⍺ ##.LogTest ⍵}  ⍝ ⍺←rtack could cause problems with classic...
       :If args.tests≢0
           orig←fns←(','Split args.tests)~⊂''
@@ -818,7 +819,7 @@
           :If verbose∧repeat>1
               0 Log'run #',(⍕run),' of ',⍕repeat
           :EndIf
-          :For setup :In (,setups)[('setups',⍕tally setups)RandomVal 2⍴tally setups]   ⍝ randomize order of setups
+          :For setup :In (,setups)[('setups',⍕≢ setups)RandomVal 2⍴≢ setups]   ⍝ randomize order of setups
               steps←0
               start←⎕AI[3]
               LOGS←3⍴⊂''
@@ -829,43 +830,45 @@
               :EndIf
               :If ~setupok←(⊂f←setup)∊(,1)null
                   :If 3=ns.⎕NC f ⍝ function is there
-                      :If 0=1 2⊃ns.⎕AT f
-                          LogError'setup function "',f,'" must not be niladic!'
-                      :Else
-                          :If verbose
-                              0 Log'running setup: ',f
-                          :EndIf
-                          (trace/1)ns.⎕STOP f
-                          :Trap halt↓0
-                              f LogTest z←(ns⍎f)⍬
-                              setupok←0=1↑⍴z
-                          :Else
-                              msg←'Error executing setup "',f,'": '
-                              msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
-                              LogError msg
-                              setupok←0
-                          :EndTrap
+                      :If verbose
+                          0 Log'running setup: ',f
                       :EndIf
+                      (trace/1)ns.⎕STOP f
+                      :Trap (~halt∨trace)/0
+                          :If 0=1 2⊃ns.⎕AT f   ⍝ niladic setup
+                              f LogTest z←ns⍎f
+                          :Else
+                              f LogTest z←(ns⍎f)⍬
+                          :EndIf
+                          setupok←z≡SuccessValue
+                      :Else
+                          msg←'Error executing setup "',f,'": '
+                          msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
+                          LogError msg
+                          setupok←0
+                      :EndTrap
                   :Else
                       LogTest'-setup function not found: ',f
                       setupok←0
                   :EndIf
               :EndIf
-     
+    
               →setupok↓END
             ⍝ after setup, make sure to start CodeCoverage (if modifier is set) - once only...
               :If null≢args.coverage ⍝ if switch is set
-              :AndIf (1↑1⊃⎕VFI⍕args.coverage)∨1<tally args.coverage  ⍝ and we have either numeric value for switch or a longer string
+              :AndIf (1↑1⊃⎕VFI⍕args.coverage)∨1<≢ args.coverage  ⍝ and we have either numeric value for switch or a longer string
               :AndIf 0=⎕NC'CoCo'   ⍝ only neccessary if we don't have an instance yet...
                   home←1⊃⎕NPARTS SALT_Data.SourceFile  ⍝ CompCheck: ignore
                   LoadCode(home,'aplteam-CodeCoverage-0.9.1/CodeCoverage.aplc')(⍕⎕THIS)  ⍝ we should use some other to bring this in ideally...()
-                  :If 0=≢subj←args.coverage_subj
+                  :If 0≡subj←args.coverage_subj
                       :If 0<≢subj←#.⎕NL ¯9
                           subj←∊(⊂'#.'),¨subj,¨','
                       :EndIf
-                      subj,←⍕ns
+                    ⍝   subj,←⍕ns
+                    subj←¯1↓subj
                   :EndIf
                   CoCo←⎕NEW CodeCoverage(,⊂subj)
+                  ⎕←'subj=',subj
                   CoCo.Info←'Report created by DTest ',(2⊃Version),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
                   :If 1<≢args.coverage
                   :AndIf (⎕DR' ')=⎕DR args.coverage
@@ -894,56 +897,56 @@
               :EndIf
               :For f :In fns[order]
                   steps+←1
-                  :If 0=1 2⊃ns.⎕AT f
-                      LogError'test function "',f,'" must not be niladic!'
-                  :Else
-                      :If verbose
-                          0 Log'running: ',f
-                      :EndIf
-                      (trace/1)ns.⎕STOP f
-                      :Trap (~halt∨trace)/0
-                          f LogTest((ns⍎f)⍬)    ⍝ avoid additional line with title of function
-                      :Case 777 ⍝ Assertion failed
-                          f LogTest'Assertion failed: ',,∊⎕DMX.DM[⍳2],¨⊂NL
-                      :Else
-                          en←⎕EN  ⍝ save error no before it gets overwritten
-                          msg←'Error executing test "',f,'": '
-                          msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
-                          :If WSFULL←en=1   ⍝ special handling for WS FULL
-                              msg,←NL,'⎕WA=',(⍕⎕WA)
-                              msg,←NL,'The 20 largets objects found in the workspace:',NL
-                              :Trap 1
-                                  res←⊃⍪/{((⊂⍕⍵),¨'.',¨↓nl),[1.5]⍵.⎕SIZE nl←⍵.⎕NL⍳9}swise ns  ⍝ CompCheck: ignore
-                                  res←res[(20⌊1↑⍴res)↑⍒res[;2];]
-                                  msg←msg,∊((↑res[;1]),'CI18'⎕FMT res[;,2]),⊂NL
-                              :Else
-                                  msg,←'Error while generating that report: ',NL,∊⎕DMX.DM,¨⊂NL
-                              :EndTrap
-     
-                          :EndIf
-                      ⍝ LogError msg
-                          f LogTest msg
-                      :EndTrap
+                  :If verbose
+                      0 Log'running: ',f
                   :EndIf
+                  (trace/1)ns.⎕STOP f
+                  :Trap (~halt∨trace)/0
+                      :If 0=1 2⊃ns.⎕AT f
+                          f LogTest(ns⍎f)
+                      :Else
+                          f LogTest((ns⍎f)⍬)    ⍝ avoid additional line with title of function
+                      :EndIf
+                  :Case 777 ⍝ Assertion failed
+                      f LogTest'Assertion failed: ',,∊⎕DMX.DM[⍳2],¨⊂NL
+                  :Else
+                      en←⎕EN  ⍝ save error no before it gets overwritten
+                      msg←'Error executing test "',f,'": '
+                      msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
+                      :If WSFULL←en=1   ⍝ special handling for WS FULL
+                          msg,←NL,'⎕WA=',(⍕⎕WA)
+                          msg,←NL,'The 20 largets objects found in the workspace:',NL
+                          :Trap 1
+                              res←⊃⍪/{((⊂⍕⍵),¨'.',¨↓nl),[1.5]⍵.⎕SIZE nl←⍵.⎕NL⍳9}swise ns  ⍝ CompCheck: ignore
+                              res←res[(20⌊1↑⍴res)↑⍒res[;2];]
+                              msg←msg,∊((↑res[;1]),'CI18'⎕FMT res[;,2]),⊂NL
+                          :Else
+                              msg,←'Error while generating that report: ',NL,∊⎕DMX.DM,¨⊂NL
+                          :EndTrap
+     
+                      :EndIf
+                      ⍝ LogError msg
+                      f LogTest msg
+                  :EndTrap
               :EndFor
      
               :If null≢f←args.teardown
                   :If 3=ns.⎕NC f ⍝ function is there
-                      :If 0=1 2⊃ns.⎕AT f
-                          LogError'teardown function "',f,'" must not be niladic!'
-                      :Else
-                          :If verbose
-                              0 Log'running teardown: ',f
-                          :EndIf
-                          (trace/1)ns.⎕STOP f
-                          :Trap (~halt∨trace)/0 777
-                              f LogTest(ns⍎f)⍬
-                          :Else
-                              msg←'Error executing teardown "',f,'" :'
-                              msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
-                              LogError msg
-                          :EndTrap
+                      :If verbose
+                          0 Log'running teardown: ',f
                       :EndIf
+                      (trace/1)ns.⎕STOP f
+                      :Trap (~halt∨trace)/0 777
+                          :If 0=1 2⊃ns.⎕AT f
+                              f LogTest(ns⍎f)
+                          :Else
+                              f LogTest(ns⍎f)⍬
+                          :EndIf
+                      :Else
+                          msg←'Error executing teardown "',f,'" :'
+                          msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX             ⍝ CompCheck: ignore
+                          LogError msg
+                      :EndTrap
                   :Else
                       LogError'-teardown function not found: ',f
                   :EndIf
@@ -973,10 +976,11 @@
           :If 9=⎕NC'CoCo'
               :If 0=CoCo.⎕NC'NoStop'
               :OrIf CoCo.NoStop=0
+              ⎕←'coco.stop'
                   CoCo.Stop ⍬
               :EndIf
-              r1←CoCo.Finalise ⍬
-              r2←CoCo.(1 ProcessDataAndCreateReport filename)
+              ⎕←r1←CoCo.Finalise ⍬
+              ⎕←r2←CoCo.(1 ProcessDataAndCreateReport filename)
               tie←r1 ⎕FSTIE 0
               tab←⎕FREAD tie,10
               ⎕FUNTIE tie
@@ -1145,7 +1149,7 @@
           (((⎕UCS r)∊10 13)/r)←' '
           R←2⊃⎕VFI r
       :Else
-          :If 1<tally arg
+          :If 1<≢ arg
               R←arg[2]?arg[1]
           :Else
               R←?arg
