@@ -270,8 +270,8 @@
     ⍝ file_target_mode: (filename )
     ⍝ res: nested vector of names that were defined
       names←0⍴⊂''
-      →(0=≢ file_target_mode)/0  ⍝ gracefully treatment of empty calls
-      :If 2=≢ file_target_mode ⋄ file_target_mode←file_target_mode,⊂'apl' ⋄ :EndIf
+      →(0=≢file_target_mode)/0  ⍝ gracefully treatment of empty calls
+      :If 2=≢file_target_mode ⋄ file_target_mode←file_target_mode,⊂'apl' ⋄ :EndIf
       (file target mode)←file_target_mode
       :If 0=⎕NC'options'
           options←''
@@ -591,7 +591,7 @@
       :EndIf
     ∇
 
-    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog;file
+    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog;file;res
       i←quiet←0
       ⍝ Not used here, but we define them test scripts that need to locate data:
       ∆OldLog←⎕SE ⎕WG'Log'
@@ -682,7 +682,7 @@
                   ⍝ args.tests←ns.⎕nl¯3
                   ⍝ :endif
                   :If verbose
-                      0 Log(⍕1↑⍴files),' file',('s'/⍨1<≢ files),' loaded from ',source
+                      0 Log(⍕1↑⍴files),' file',('s'/⍨1<≢files),' loaded from ',source
                   :EndIf
                   :If null≡args.suite  ⍝ if no suite is given
                       :If null≡args.setup
@@ -731,8 +731,8 @@
      
       :If null≢suite←args.suite ⍝ Is a test suite defined?
           ⍝ Merge settings
-          overwritten←⍬        
-          v←LoadTestSuite suite    
+          overwritten←⍬
+          v←LoadTestSuite suite
           :If ~1⊃v
               LogError'*** error loading suite "',suite,'": ',2⊃v
           :Else
@@ -808,18 +808,18 @@
       start0←⎕AI[3]
       :Select ,order
       :Case ,0  ⍝ order=0: random (or reproduce random from file)
-          order←(('order',⍕≢fns)RandomVal 2⍴≢ fns)∩⍳≢ fns
+          order←(('order',⍕≢fns)RandomVal 2⍴≢fns)∩⍳≢fns
       :Case ,1
-          order←⍳≢ fns   ⍝ 1: sequential
+          order←⍳≢fns   ⍝ 1: sequential
       :Else
-          order←order{(⍺∩⍵),⍵~⍺}⍳≢ fns  ⍝ numvec: validate and use that order (but make sure every test gets executed!)
+          order←order{(⍺∩⍵),⍵~⍺}⍳≢fns  ⍝ numvec: validate and use that order (but make sure every test gets executed!)
       :EndSelect
       LOGSi←LOGS
       :For run :In ⍳repeat
           :If verbose∧repeat>1
               0 Log'run #',(⍕run),' of ',⍕repeat
           :EndIf
-          :For setup :In (,setups)[('setups',⍕≢ setups)RandomVal 2⍴≢ setups]   ⍝ randomize order of setups
+          :For setup :In (,setups)[('setups',⍕≢setups)RandomVal 2⍴≢setups]   ⍝ randomize order of setups
               steps←0
               start←⎕AI[3]
               LOGS←3⍴⊂''
@@ -852,21 +852,29 @@
                       setupok←0
                   :EndIf
               :EndIf
-    
+     
               →setupok↓END
             ⍝ after setup, make sure to start CodeCoverage (if modifier is set) - once only...
+            ⎕←'args.coverage='
+            ⎕se.Dyalog.Utils.display args.coverage
+            ⎕←'⎕NC CoCo=',⎕nc'CoCo'
               :If null≢args.coverage ⍝ if switch is set
-              :AndIf (1↑1⊃⎕VFI⍕args.coverage)∨1<≢ args.coverage  ⍝ and we have either numeric value for switch or a longer string
+              :AndIf (1↑1⊃⎕VFI⍕args.coverage)∨1<≢args.coverage  ⍝ and we have either numeric value for switch or a longer string
               :AndIf 0=⎕NC'CoCo'   ⍝ only neccessary if we don't have an instance yet...
                   home←1⊃⎕NPARTS SALT_Data.SourceFile  ⍝ CompCheck: ignore
-                  LoadCode(home,'aplteam-CodeCoverage-0.9.1/CodeCoverage.aplc')(⍕⎕THIS)  ⍝ we should use some other to bring this in ideally...()
-                  :If 0≡≢subj←args.coverage_subj
+                  :If 0≠⊃z←home _cita.LoadCodeCoverage(⍕⎕THIS)
+                      LogError'Problem loading CodeCoverage: ',2⊃z
+                      setupok←0
+                      →END
+                  :EndIf
+                  :If null≡subj←args.coverage_subj
                       :If 0<≢subj←#.⎕NL ¯9
                           subj←∊(⊂'#.'),¨subj,¨','
                       :EndIf
-                    ⍝   subj,←⍕ns
-                    subj←¯1↓subj
+                      subj,←(⍕ns),','
+                      subj←¯1↓subj
                   :EndIf
+                  ⎕←'CoCo.subj=',subj
                   CoCo←⎕NEW CodeCoverage(,⊂subj)
                   CoCo.Info←'Report created by DTest ',(2⊃Version),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
                   :If 1<≢args.coverage
@@ -875,11 +883,13 @@
                           CoCo.filename←args.coverage
                       :Else                  ⍝ otherwise we assume it is the name of the instance of an already running coverag-analysis
                           CoCo.filename←(⍎args.coverage).filename
-                          CoCo.NoStop←1
                       :EndIf
+                      CoCo.NoStop←1
                   :Else
                       CoCo.filename←(739⌶0),,'</CoCoDTest_>,ZI4,ZI2,ZI2,ZI2,ZI2,ZI3'⎕FMT 1 6⍴⎕TS
+                      CoCo.NoStop←0
                   :EndIf
+                  ⎕←'CoCo.filename=',CoCo.filename
                   :If 0=≢ignore←args.coverage_ignore
                           ⍝ignore←∊(⊂⍕⎕THIS),¨'.',¨(⎕THIS.⎕NL ¯3 4),¨','
                       ignore←∊{(⊂⍕⍵),¨'.',¨(⍵.⎕NL ¯3 4),¨','}⎕SE.input.c
@@ -891,7 +901,7 @@
      
      
               :If verbose
-              :AndIf 1<≢ fns
+              :AndIf 1<≢fns
                   0 Log'running ',(⍕1↑⍴fns),' tests'↓⍨¯1×1=↑⍴fns
               :EndIf
               :For f :In fns[order]
@@ -966,27 +976,30 @@
               :EndIf
           :EndFor ⍝ Setup
       :EndFor ⍝ repeat
-      r,←((1<≢ setups)∧quiet≡null)/⊂'Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
+      r,←((1<≢setups)∧quiet≡null)/⊂'Total Time spent: ',(1⍕0.001×⎕AI[3]-start0),'s'
       :If ~0∊⍴3⊃LOGS
       :AndIf ~0∊⍴order
           r,←⊂'-order="',(⍕order),'"'
       :EndIf
       :If args.coverage≢null
           :If 9=⎕NC'CoCo'
-              :If 0=CoCo.⎕NC'NoStop'
-              :OrIf CoCo.NoStop=0
-              ⎕←'coco.stop'
-                  CoCo.Stop ⍬
+            ⍝   :If 0=CoCo.⎕NC'NoStop'
+            ⍝   :OrIf CoCo.NoStop=0
+              CoCo.Stop ⍬ ⍝ must stop anyway, as this would gather data and write it to file
+            ⍝   :EndIf
+              r1←CoCo.Finalise ⍬
+              ⎕EX'r2'
+              :If args.coverage≡1    ⍝ if we had a "simple run" (not collected into a file)
+                  r2←CoCo.(1 ProcessDataAndCreateReport filename)   ⍝ we can now process data from that run-...
               :EndIf
-              ⎕←r1←CoCo.Finalise ⍬
-              ⎕←r2←CoCo.(1 ProcessDataAndCreateReport filename)
               tie←r1 ⎕FSTIE 0
               tab←⎕FREAD tie,10
               ⎕FUNTIE tie
-              res←≢¨tab[;2 4]    ⍝ CompCheck: ignore
-              CoCo.res←res←0.1×⌊0.05+1000×÷/+⌿res
-              r,←⊂'Coverage = ',(3 0⍕res),'%'
-              r,←⊂']open ',r2,'     ⍝ to see coverage details...'
+              CoCo.res←res←⌊0.5+100×÷/+⌿≢¨tab[;2 4]
+              r,←⊂⎕←'Coverage = ',(⍕res),'%'
+              :If 2=⎕NC'r2'    ⍝ if we have processed data
+                  r,←⊂']open ',r2,'     ⍝ to see coverage details...'    ⍝ let the user see it!
+              :EndIf   ⍝ otherwise the calling environment will have tu use shared CoCo.AggregateCoverageDataAndCreateReport
           :EndIf
       :EndIf
       →FAIL2  ⍝ skip adding LOGS to r (we've done that before already and only need the code below if something made us →FAIL)
@@ -1096,7 +1109,7 @@
       :AndIf ~3∊∊⎕NC¨fn                     ⍝ then do not include it again...
           si←(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: '
       :EndIf
-      r←r,((~0∊≢ r)/⎕UCS 10),si,msg
+      r←r,((~0∊≢r)/⎕UCS 10),si,msg
     ∇
 
     ∇ r←expect Check got
@@ -1148,7 +1161,7 @@
           (((⎕UCS r)∊10 13)/r)←' '
           R←2⊃⎕VFI r
       :Else
-          :If 1<≢ arg
+          :If 1<≢arg
               R←arg[2]?arg[1]
           :Else
               R←?arg
@@ -1159,7 +1172,7 @@
 
 
     ∇ res←LoadTestSuite suite;setups;lines;i;cmd;params;names;values;tmp;f;args;path
-      :If 0=≢ 1⊃⎕NPARTS suite
+      :If 0=≢1⊃⎕NPARTS suite
           suite←TESTSOURCE,suite
       :ElseIf '.'≡1⊃1⊃⎕NPARTS suite ⍝ deal with relative paths
           :If '.'≡1⊃1⊃⎕NPARTS TESTSOURCE   ⍝ if suite and source are relative, ignore suite's relative folder and use SOURCE's...
@@ -1311,7 +1324,7 @@
       :If ~prod
           ('Type' 'I')Log'Note: Loaded files will be linked to their source - use -prod to not link'
       :EndIf
-      :For i :In ⍳≢ lines
+      :For i :In ⍳≢lines
           :If ~':'∊line←i⊃lines                    ⍝ if the line does not have a name value setting
           :OrIf '⍝'=⊃{(⍵≠' ')/⍵}line     ⍝ or if it's a comment
               :Continue                       ⍝ skip it!
@@ -1424,9 +1437,9 @@
               :If cmd≡'lib'   ⍝ find path of library...(only if >17, so we'll be using ]LINK which needs path)
                   lib←⊃0(⎕NINFO ⎕OPT('Wildcard' 1)('Recurse' 1))((2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'),'/Library/',source,'.dyalog')  ⍝ CompCheck: ignore
                   lib←eis lib
-                  :If 1=≢ lib  ⍝ CompCheck: ignore
+                  :If 1=≢lib  ⍝ CompCheck: ignore
                       tmpPath←⊃lib
-                  :ElseIf 1<≢ lib  ⍝ CompCheck: ignore
+                  :ElseIf 1<≢lib  ⍝ CompCheck: ignore
                       LogError'too many matches searching library "',source,'": ',⍕lib
                       :Continue
                   :Else
@@ -1455,9 +1468,9 @@
                   tmpExt,⍨←'='/⍨0≠⍴tmpExt
                   :If wild
                       targetNames←2⊃¨⎕NPARTS,eis(⎕SE.SALT.List tmpPath,' -extension',tmpExt,' -raw')[;2]
-                  :ElseIf 1=≢ loaded
+                  :ElseIf 1=≢loaded
                       targetNames←2⊃⎕NPARTS tmpPath
-                  :ElseIf 0=≢ loaded
+                  :ElseIf 0=≢loaded
                       LogError'LoadCode  "',tmpPath,'" did not return anything - does the file even exist?'
                       :Continue
                   :Else
@@ -1537,7 +1550,7 @@
               :EndIf
           :Else
               :If '⍝'≠⊃cmd ⍝ ignore commented lines
-              :AndIf 0<≢ cmd
+              :AndIf 0<≢cmd
                   LogError'Invalid keyword: ',cmd
               :EndIf
           :EndSelect
@@ -1561,7 +1574,7 @@
           :EndIf
       :EndIf
      
-      n←≢ 3⊃LOGS
+      n←≢3⊃LOGS
       :If 0=n  ⍝ if no errors were found
           :If (save≡1)∧0=1↑⍴TargetList   ⍝ save switch was set, but no target instruction given
                                     ⍝ pretend we had one which save under name of build file
@@ -1583,7 +1596,7 @@
                           :Continue
                       :EndIf
                       :If (⊂lc 3⊃⎕NPARTS wsid)∊'' '.dws'
-                      :OrIf 0=≢ GetParam'type'    ⍝ if type is not set, we're building a workspace
+                      :OrIf 0=≢GetParam'type'    ⍝ if type is not set, we're building a workspace
                           :If (save∊⍳2)∨99='99'GetNumParam'save'
                               ⎕WSID←wsid
                               Log'WSID set to ',wsid
@@ -1712,11 +1725,11 @@
      endSave:
       ('Type' 'I')Log'DyalogBuild: ',(⍕⍴lines),' lines processed in ',(1⍕0.001×⎕AI[3]-start),' seconds.'
      
-      :If 0<n←≢ 3⊃LOGS
+      :If 0<n←≢3⊃LOGS
           ('Type' 'I')Log(0≠n)/' ',(⍕n),' error',((n>1)/'s'),' encountered.'
       :EndIf
       :For i :In ⍳3
-          :If 0<n←≢ i⊃LOGS
+          :If 0<n←≢i⊃LOGS
               r,←⊂((i⍴'*'),' ',((n>1)/⍕n),' ',i⊃'Info' 'Warning' 'Error'),((n>1)/'s'),':'
               r,←i⊃LOGS
           :EndIf
@@ -1812,7 +1825,7 @@
                   f←⊂f
               :EndIf
               f←,f
-              :If (≢ f)≥i←(,1↑¨f)⍳⊂,⊂'Type'
+              :If (≢f)≥i←(,1↑¨f)⍳⊂,⊂'Type'
                   type←'IWE'⍳⊃2⊃i⊃f
               :EndIf
               :If (tally f)≥i←(,1↑¨f)⍳⊂,⊂'Prefix'
@@ -1863,7 +1876,7 @@
     ⍝ no ⍺ or  ⍺=1: prefix log with lineno.
     ⍝ alternatively pre can also be a VTV with Name/Value pairs ('Prefix' 'foo')('Type' 'I')
       type←1    ⍝ Info
-      →(0=≢ msg)/0
+      →(0=≢msg)/0
       :If 0=⎕NC'pre'
       :OrIf pre≡1
           pre←⊂'Prefix'(LineNo i)
@@ -1874,10 +1887,10 @@
                   pre←⊂pre
               :EndIf
               pre←,pre
-              :If (≢ pre)≥j←(,1↑¨pre)⍳⊂,⊂'Type'
+              :If (≢pre)≥j←(,1↑¨pre)⍳⊂,⊂'Type'
                   type←'IWE'⍳⊃2⊃j⊃pre
               :EndIf
-              :If (≢ pre)≥j←(,1↑¨pre)⍳⊂,⊂'Prefix'
+              :If (≢pre)≥j←(,1↑¨pre)⍳⊂,⊂'Prefix'
                   pre←2⊃j⊃pre
               :Else
                   pre←''
@@ -2271,6 +2284,33 @@
 
         NrOfCommonLines←{+/∧\{⍵=⍵[1]+¯1+⍳≢⍵}⍺{((≢⍺)⍴⍋⍋⍺⍳⍺⍪⍵)⍳(≢⍵)⍴⍋⍋⍺⍳⍵⍪⍺}⍵}
 
+        ∇ R←home LoadCodeCoverage ref;f;t;ccv
+⍝ loads CodeCoverage from home[/folder] into ns "ref"
+⍝ name of folder must contain "aplteam-CodeCoverage-" and a version number that is configured below
+⍝ (if we find apl-dependencies.txt, we search it for "aplteam-CodeCoverage" and use version given there.
+⍝  But currently it is not required to be there)
+          R←0 ''
+          :Trap 0
+              ccv←'0.9.2'   ⍝ version of CodeCoverage
+              home←{⍵,(~∨/'\/\'=⊢/⍵)/⎕SE.SALT.FS}home  ⍝ make it is a folder
+              :If ⎕NEXISTS f←home,'apl-dependencies.txt'
+                  t←1⊃⎕NGET f
+                  ccv←⊃('aplteam-CodeCoverage-(.*)$'⎕S'\1')t
+              :EndIf
+              homeccv←home,'aplteam-CodeCoverage-',ccv
+              :If {0 2∊⍨10|⎕DR ⍵}ref  ⍝ this is "isChar", but we can't use that (dunno where it might be...)
+                  ref←⍎ref
+              :EndIf
+              :If ~⎕NEXISTS f←homeccv,'/CodeCoverage.aplc'   ⍝ look for it in a subfolder
+              :AndIf ~⎕NEXISTS f←home,'/CodeCoverage.aplc'   ⍝ or in the home folder
+                  R←0('Could not find CodeCoverage source in "',f,'"')
+              :EndIf
+              2 ref.⎕FIX'file://',f
+          :Else
+              R←1(⎕←,1(⎕JSON⍠'Compact' 0)⎕DMX)
+              (⎕LC[1]+1)⎕STOP 1⊃⎕SI
+          :EndTrap
+        ∇
     :EndNamespace
     :EndSection
 
