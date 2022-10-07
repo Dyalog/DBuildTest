@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.76
+﻿:Namespace DyalogBuild ⍝ V 1.77
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -87,7 +87,8 @@
 ⍝ 2022 08 15 MBaas, v1.74: DBuild: addressed #11 (if prod is set, -quiet will default to 1 and -save to 0); shorter log for loading of files to avoid linebreaks;added check for valence of setup/teardown/test functions
 ⍝ 2022 08 26 MBaas, v1.75: DBuild & DTest: tweaked help texts. DBuild: the mechanism to use config parameters is more robust and supports alternate notations.
 ⍝ 2022 09 16 MBaas, v1.76: DTest: rearrenged code setup of "ns" for .dyalogest files (##.verbose; setup/test/teardown fns can also ne niladic now; result of setup was not tested against SuccessValue; fixed handling of CodeCoverage_Subject in test suites.
-⍝
+⍝ 2022 10 07 MBaas: v1.77: DTest: CodeCoverage tweaks
+
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessValue←''
 
@@ -855,9 +856,6 @@
      
               →setupok↓END
             ⍝ after setup, make sure to start CodeCoverage (if modifier is set) - once only...
-            ⎕←'args.coverage='
-            ⎕se.Dyalog.Utils.display args.coverage
-            ⎕←'⎕NC CoCo=',⎕nc'CoCo'
               :If null≢args.coverage ⍝ if switch is set
               :AndIf (1↑1⊃⎕VFI⍕args.coverage)∨1<≢args.coverage  ⍝ and we have either numeric value for switch or a longer string
               :AndIf 0=⎕NC'CoCo'   ⍝ only neccessary if we don't have an instance yet...
@@ -874,7 +872,6 @@
                       subj,←(⍕ns),','
                       subj←¯1↓subj
                   :EndIf
-                  ⎕←'CoCo.subj=',subj
                   CoCo←⎕NEW CodeCoverage(,⊂subj)
                   CoCo.Info←'Report created by DTest ',(2⊃Version),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
                   :If 1<≢args.coverage
@@ -889,7 +886,6 @@
                       CoCo.filename←(739⌶0),,'</CoCoDTest_>,ZI4,ZI2,ZI2,ZI2,ZI2,ZI3'⎕FMT 1 6⍴⎕TS
                       CoCo.NoStop←0
                   :EndIf
-                  ⎕←'CoCo.filename=',CoCo.filename
                   :If 0=≢ignore←args.coverage_ignore
                           ⍝ignore←∊(⊂⍕⎕THIS),¨'.',¨(⎕THIS.⎕NL ¯3 4),¨','
                       ignore←∊{(⊂⍕⍵),¨'.',¨(⍵.⎕NL ¯3 4),¨','}⎕SE.input.c
@@ -1837,16 +1833,16 @@
           :If type=0  ⍝ only add this information if Log came w/o explicit type
               type←3   ⍝ and the default message type is "Error"
               :If (⎕DR msg)=326
-                  msg←'fn returned data with unsupported ⎕DR=326'
+                  msg←'code returned data with unsupported ⎕DR=326'
               :ElseIf ~(⎕DR∊msg)∊80 82 160
-                  msg←'fn returned numeric ',((0 1⍳⍴⍴msg)⊃'scalar' 'vector'),' = ',⍕msg
+                  msg←'code returned numeric ',((0 1⍳⍴⍴msg)⊃'scalar' 'vector'),' = ',⍕msg
                   :If SuccessValue≢''
                       msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ ((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
                   :Else
                       msg,←' when DTest expected an empty charvec to indicate success'
                   :EndIf
               :Else
-                  msg←'fn returned character value = "',msg,'"'
+                  msg←'code returned character value = "',msg,'"'
                   :If SuccessValue≢''
                       msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
                   :Else
@@ -2308,7 +2304,6 @@
               2 ref.⎕FIX'file://',f
           :Else
               R←1(⎕←,1(⎕JSON⍠'Compact' 0)⎕DMX)
-              (⎕LC[1]+1)⎕STOP 1⊃⎕SI
           :EndTrap
         ∇
     :EndNamespace

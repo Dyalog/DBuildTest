@@ -408,7 +408,7 @@
       ⎕FUNTIE tno
     ∇
 
-    ∇ r←Finalise dummy;names;details;i;name;row;linesCovered;body;lines;bool;regExPattern;filename;tno;d;buff;crF;crX;crT;crN
+    ∇ r←Finalise dummy;names;details;i;name;row;linesCovered;body;lines;bool;regExPattern;filename;tno;d;buff;crF;crX;crT;crN;fileM;bodyC;t∆
     ⍝ Call this once all the code you want to check on has been executed`.\\
     ⍝ It investigates all functions and operators that are only partly covered, and saves the lines that
     ⍝ have been executed as well as the lines that could have been executed.\\
@@ -419,6 +419,7 @@
     ⍝ again, for example.
       :Access Public Instance
       r←⍬
+      {Stop ⍵}⍣(~⊃∆STOPPED)⊣⍬
       _data←_data[;1]{(⊃⍺)(∪⊃,/⍵)}⌸_data[;2]
       names←CollectDataForCoverageReport _watch
       details←0 4⍴⍬
@@ -458,7 +459,11 @@
               :EndIf
               :If crX
                   :If (⊂name)∊crN
-                      :If body CompareCR ⎕FREAD crT,1+crN⍳⊂name
+                      :If ~body CompareCR bodyC←⎕FREAD crT,1+crN⍳⊂name
+                          fileM←(∊2↑⎕NPARTS _filename),'_mismatches'
+                          t∆←{0::⍵ ⎕FCREATE 0 ⋄ ⍵ ⎕FTIE 0}fileM
+                          (body bodyC)⎕FAPPEND t∆
+                          ⎕FUNTIE t∆
                           ⎕←'Current definition of function "',name,'" does not match the one we captured earlier - do not trust the results!'    ⍝ maybe this should be ⎕SIGNALed?
                       :EndIf
                   :Else
@@ -542,6 +547,7 @@
       r←⍬
       ⎕PROFILE'clear'
       ⎕PROFILE'start' 'coverage'
+      ∆STOPPED←0
     ∇
 
     ∇ {r}←Stop dummy;buff
@@ -552,6 +558,7 @@
       ⎕PROFILE'clear'
       buff←(buff[;2]≢¨⊂⍬)⌿buff                                 ⍝ Fns as such are not of any interest, only lines
       _data⍪←(⊃∨/watch{((1+≢¨⍺)↑¨¨⊂⍵)∊¨⊂¨⍺,¨'.'}buff[;1])⌿buff ⍝ Drop everthing that's not watched
+      ∆STOPPED←1
     ∇
 
 ⍝ ------------------------ Private stuff
@@ -862,6 +869,12 @@
     ∇ z←a CompareCR b;args;i;m;l
       ⍝ compare two CRs taking into account that some symbols are replaced with ⎕Uxxxx when loaded into classic
       ⍝ z=1: match, 0: did not match
+      ⍝--> this means that the final run which creates the report must be run on a Unicode interpreter, otherwise
+      ⍝    it will crash with errors because it can't deal with these characters...
+      :If {0::1 ⋄ 0⊣⎕ucs ⍵}8838  ⍝ do not even attempt to execute this on Classic!
+          z←1
+          →0
+      :EndIf
       :If a≠⍥≢b   ⍝ no of lines must match
           z←0
           →0
@@ -869,14 +882,30 @@
           args←{1=≡⍵:↓⍵ ⋄ ⍵}¨a b
           :For i :In ⍳2
               :For m :In ('(⎕u\d*)'⎕S 2⍠'IC' 1)i⊃args
-                  l←m⊃i⊃args
-                  l←('⎕u(\d*)'⎕R{⎕UCS 2⊃⎕VFI 2↓⍵.Match}⍠'IC' 1)l
-                  (m⊃i⊃args)←l
+                  :If m≢0
+                      l←(⎕IO+m)⊃i⊃args
+                      l←('⎕u(\d*.)'⎕R{{(⎕UCS dec ¯1↓⍵),(' '≢⍥,¯1↑⍵)/¯1↑⍵}2↓⍵.Match}⍠'IC' 1)l
+                      ((⎕IO+m)⊃i⊃args)←l
+                  :EndIf
               :EndFor
           :EndFor
-          z←a≡b
+          z←≡/args
       :EndIf
     ∇
 
+      ⍝ from dfns
+      dec←{⎕IO ⎕ML←0 1                                ⍝ Decimal from hexadecimal
+          ⍺←0                                         ⍝ unsigned by default.
+          1<⍴⍴⍵:⍺∘∇⍤1⊢⍵                               ⍝ vector-wise:
+          0=≢⍵:0                                      ⍝ dec'' → 0.
+          1≠≡,⍵:⍺ ∇¨⍵                                 ⍝ simple-array-wise:
+          ws←∊∘(⎕UCS 9 10 13 32 160)                  ⍝ white-space?
+          ws⊃⍵:⍺ ∇ 1↓⍵                                ⍝ ignoring leading and
+          ws⊃⌽⍵:⍺ ∇ ¯1↓⍵                              ⍝ ... trailing blanks.
+          ∨/ws ⍵:⍺ ∇¨(1+ws ⍵)⊆⍵                       ⍝ white-space-separated:
+          v←16|'0123456789abcdef0123456789ABCDEF'⍳⍵   ⍝ hex digits.
+          11::'Too big'⎕SIGNAL 11                     ⍝ number too big.
+          (16⊥v)-⍺×(8≤⊃v)×16*≢v                       ⍝ (signed) decimal number.
+      }
 
 :EndClass
