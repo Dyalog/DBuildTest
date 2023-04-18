@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.77
+﻿:Namespace DyalogBuild ⍝ V 1.80
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -88,6 +88,10 @@
 ⍝ 2022 08 26 MBaas, v1.75: DBuild & DTest: tweaked help texts. DBuild: the mechanism to use config parameters is more robust and supports alternate notations.
 ⍝ 2022 09 16 MBaas, v1.76: DTest: rearrenged code setup of "ns" for .dyalogest files (##.verbose; setup/test/teardown fns can also ne niladic now; result of setup was not tested against SuccessValue; fixed handling of CodeCoverage_Subject in test suites.
 ⍝ 2022 10 07 MBaas: v1.77: DTest: CodeCoverage tweaks
+⍝ 2023 02 01 MBaas, v1.78: Assert: fixed bug if a failing test is not surrounded by documenting code; result is optional now; error logs also include details of .NET Exceptions
+⍝ 2023 02 03 MBaas, v1.79: Assert also shows ⍺ and ⍵ (if their tally is 60 or below)
+⍝ 2023 02 04 MBaas, v1.80: _cita._LogStatus ensures its ⍵ is scalar when it is numeric
+
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessValue←''
@@ -449,6 +453,7 @@
     ∇
 
     Split←{dlb¨1↓¨(1,⍵∊⍺)⊂(⊃⍺),⍵}                       ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
+    sSplit←{dlb¨1↓¨(1,(0=2|+\⍵='"')∧⍵∊⍺)⊂(⊃⍺),⍵}                  ⍝ string safe split (does not confused by stuff enclosed in quotes)
     Splitb←{     1↓¨(1,⍺)⊂'.',⍵}                        ⍝ Split of ⍵ where ⍺=1 (no dlb)
     SplitFirst←{dlb¨1↓¨(1,<\⍵=⍺)⊂⍺,⍵}                   ⍝ Split ⍵ on first occurence of ⍺, and remove leading blanks from each segment
     GetParam←{⍺←'' ⋄ dtb dlb(⌊/names⍳eis ⍵)⊃values,⊂⍺}  ⍝ Get value of parameter
@@ -536,7 +541,7 @@
 
     :Section TEST "DSL" FUNCTIONS
 
-    ∇ r←l Assert b;cl;cc;t
+    ∇ {r}←l Assert b;cl;cc;t;v
       nr←1↓⎕NR 2⊃⎕SI
       cl←⎕LC[2]⊃nr  ⍝ the current line
       :If verbose ⍝ look for "verbose" in current ns or its parent
@@ -546,17 +551,24 @@
       t←nr[(⍳≢nr)∩⎕LC[2]-0 1 ¯1]     ⍝ search exactly these 3 lines, avoiding INDEX ERRORs
       t←('⍝(.*)'⎕S'\1'⎕OPT('Mode' 'L'))t  ⍝ search for text of comments
       cc←(¯1+cl⍳'⍝')↑cl
+      v←''
+      :If 60≥≢⍕l
+      :AndIf 60≥≢⍕b
+          v←((⎕UCS 10),' left ',{'arg = "',(⍕⍵),'", ⎕DR=',(⍕⎕DR ⍵),', rho=',⍕⍴⍵}l),⎕UCS 10
+          v,←('right ',{'arg = "',(⍕⍵),'", ⎕DR=',(⍕⎕DR ⍵),', rho=',⍕⍴⍵}b),⎕UCS 10
+      :EndIf
       :If ∨/z←cc=⎕AV[60]  ⍝ look for right tack as separator between reason & test (not using symbol directly )
       :OrIf ∨/z←'IfNot'⍷cc
           t←(¯1+⊃##.where z)↑cc
           t←(1⊃⎕RSI)⍎t
-          t ⎕SIGNAL 777
-      :ElseIf ∨/(1⊃t)⍷cl  ⍝ don't add comment if it is on the line of the test!
-          ⎕SIGNAL 777
+          (t,v)⎕SIGNAL 777
+      :ElseIf 0=≢t   ⍝ no comment found on or around the crashing line
+      :OrIf ∨/(1⊃t)⍷cl  ⍝ don't add comment if it is on the line of the test!
+          v ⎕SIGNAL 777
       :ElseIf 0<≢1⊃t
-          (1⊃t)⎕SIGNAL 777
+          ((1⊃t),v)⎕SIGNAL 777
       :Else
-          ⎕SIGNAL 777
+          v ⎕SIGNAL 777
       :EndIf
     ∇
 
@@ -688,6 +700,7 @@
                   :If null≡args.suite  ⍝ if no suite is given
                       :If null≡args.setup
                           v←('setup_'⍷↑nl)[;1]/nl←ns.⎕NL-3
+                          (⎕lc[1]+1)⎕stop 1⊃⎕si
                           :If ~0∊⍴v
                               args.setup←¯1↓∊v,¨' '
                               :If 2=GetFilesystemType f   ⍝ single file given
@@ -845,6 +858,11 @@
                       :Else
                           msg←'Error executing setup "',f,'": '
                           msg,←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
+                          :If 90=⎕EN
+                              :Trap 0
+                                  msg,'** Exception details: ',⍕⎕EXCEPTION
+                              :EndTrap
+                          :EndIf
                           LogError msg
                           setupok←0
                       :EndTrap
@@ -1328,7 +1346,7 @@
           line←{(∧\(~2|+\⍵='''')⍲⍵='⍝')/⍵}line
           (cmd params)←':'SplitFirst whiteout line
           params←⎕SE.Dyalog.Utils.ExpandConfig params
-          (names values)←↓[1]↑¯2↑¨(⊂⊂''),¨'='Split¨','Split params
+          (names values)←↓[1]↑¯2↑¨(⊂⊂''),¨'='sSplit¨','sSplit params
           cmd←lc cmd~' ' ⋄ names←lc names
           :If (i=1)∧'dyalogbuild'≢cmd
               'First line of file must define DyalogBuild version'⎕SIGNAL 11
@@ -1654,8 +1672,12 @@
                       ⍝            For .NET assemblies, look at https://msdn.microsoft.com/en-us/library/system.reflection(v=vs.110).aspx;
                       ⍝            any of the classes listed which has a constructor which takes a single string value as its argument should be definable.
                               det←⊃,/':'Split¨';'Split GetParam'details'
-                              det←(⌽2,0.5×⍴det)⍴det
-                              pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(GetParam'icon')(GetParam'cmdline')(det)
+                              :If 0<≢∊det
+                                  det←(⌽2,0.5×⍴det)⍴det
+                              :Else
+                                  det←0 2⍴''
+                              :EndIf
+                              pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(GetParam'icon')('"'~⍨GetParam'cmdline')(det)
                               command←'2 ⎕NQ ',∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨¯1↓pars
                               command←command,(0<≢det)/' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
                               2 #.⎕NQ pars
@@ -1676,7 +1698,7 @@
                   :Case 11   ⍝ DOMAIN ERROR
                       :If 0<102⌶#   ⍝ check most likely cause: links from ⎕SE to #
                       :AndIf isWin
-                          ('Type' 'E')Log'Problem creating ',wsid,':',NL,(∊⎕DMX.DM,¨⊂NL),'There might still be references from "somewhere in ⎕SE" to "something in #".',NL,'Please contact support@dyalog.com to discuss & resolve this if the enqueued keystrokes did not create the desired result.'
+                          ('Type' 'E')Log'Problem creating ',wsid,':',NL,(∊⎕DMX.DM,¨⊂NL),'There might still be references from "somewhere in ⎕SE" to "something in #".',NL,'Please contact support@dyalog.com to discuss & resolve this if the enqueued keystrokes did not create the desired result.',NL,command,' ⍝ command we executed',NL
                       :Else
                           ('Type' 'E')Log'Problem creating ',wsid,':',NL,∊⎕DMX.DM,¨⊂NL
                       :EndIf
@@ -2186,15 +2208,26 @@
           :EndIf
     ⍝ we're intentionally not passing ⍵[2]as 1 to force overwrite - because this is supposed to be called once only!
     ⍝ So if it crashes...that is well deserved...
+    ⍝ write status file
           file←file,'.',status
-          (⊂msg)⎕NPUT file
+          ⎕←'"',msg,'"_LogStatus"',status,'"'
+          ⎕←'called by ',(2⊃⎕SI),'[',(⍕2⊃⎕LC),']'
+          ⎕←'file=',file
+          :If ⎕NEXISTS file
+              ⎕←'exists, writing '
+              (⊂msg)⎕NPUT ⎕←file,'-exists',⍕1+≢⊃0(⎕NINFO ⎕OPT'Wildcard' 1)(file,'*')
+          :Else
+              (⊂msg)⎕NPUT file
+          :EndIf
+         
           :If 2=⎕NC'⎕se._cita._memStats'
-              t←{0::⍵ ⎕FCREATE 0 ⋄ ⍵ ⎕FSTIE 0}(1⊃⎕NPARTS file),'MemRep'
+              t←{0::((1 3⍴0 ¯1 0)⎕FSTAC t)⊢t←⍵ ⎕FCREATE 0 ⋄ ⍵ ⎕FSTIE 0}(1⊃⎕NPARTS file),'MemRep'
               ⎕SE._cita._memStats ⎕FAPPEND t
               ⎕SE._cita.∆cpu ⎕FAPPEND t
               ⎕FUNTIE t
           :EndIf
          
+        ⍝ write the logfile
           :Trap 0
               log←⎕SE ⎕WG'Log'
               :Trap 1
@@ -2233,11 +2266,11 @@
               ⎕←'log=',log
               ⎕←'si' ⋄ ⎕←⍕⎕SI,[1.5]⎕LC
           :EndTrap
-          :If rc≠¯42
-              ⎕←'Wrote the log, now we will call ⎕OFF ',rc
-              ⎕←'⎕tnums=',⎕TNUMS
-              ⎕←'on this line!' ⋄ ⎕OFF rc
-          :EndIf
+      ⍝    :If rc≠¯42
+          ⎕←'Wrote the log (file="',file,'"), now we will call ⎕OFF ',⍕|rc
+          ⎕←'⎕tnums=',⎕TNUMS
+          ⎕←'on this line!' ⋄ ⎕OFF|rc
+       ⍝   :EndIf
           ⍝1300⌶77  ⍝ Andy
         ∇
 
