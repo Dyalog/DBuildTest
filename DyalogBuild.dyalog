@@ -91,6 +91,7 @@
 ⍝ 2023 02 01 MBaas, v1.78: Assert: fixed bug if a failing test is not surrounded by documenting code; result is optional now; error logs also include details of .NET Exceptions
 ⍝ 2023 02 03 MBaas, v1.79: Assert also shows ⍺ and ⍵ (if their tally is 60 or below)
 ⍝ 2023 02 04 MBaas, v1.80: _cita._LogStatus ensures its ⍵ is scalar when it is numeric
+⍝ 2032 04 28 MBaas, v1.81: Check: additional context info in msgs of failing checks - if -halt is set, we also display the calling line
 
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
@@ -315,7 +316,7 @@
                               ⍝source←⎕SE.SALT.Load fl,' -source=no'  ⍝ unfortunately need two calls to establish function & get source
                               ⍝source←1⊃⎕NGET fl
                           :Else
-                              res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',target,options,'": ',NL
+                              res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',(⍕target,options),'": ',NL
                               res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')   ⍝ CompCheck: ignore
                           :EndTrap
                           res ⎕SIGNAL('***'≡3↑⍕res)/11
@@ -1141,7 +1142,10 @@
           :Else
               ⎕←'got      ⍝ did not match right argument - examine variables or <Esc> into calling function'
           :EndIf
-          ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕SI
+          :trap 3
+            ⍝ INDEX ERROR possible if we can't get the ⎕NR (for example, if called by a class member) - though this should be fixed now...
+               ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',##.dtb(1+2⊃⎕LC)⊃↓(2⊃⎕RSI).(180⌶(2⊃⎕SI))
+          :endtrap
           (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
           ⍝ test failed! Execution suspended so that you can examine the problem...
       :EndIf
@@ -2197,7 +2201,7 @@
               :Else  ⍝ otherwise just use the value given...
               :EndIf
           :Else
-         
+              status←1⊃1↑status  ⍝ ensure we have a numeric scalar
               status←status×status∊¯1 1
               rc←(2+status)⊃33 32 31
               status←(2+status)⊃'err' 'fail' 'ok'
