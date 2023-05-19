@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.80
+:Namespace DyalogBuild ⍝ V 1.80
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -92,6 +92,7 @@
 ⍝ 2023 02 03 MBaas, v1.79: Assert also shows ⍺ and ⍵ (if their tally is 60 or below)
 ⍝ 2023 02 04 MBaas, v1.80: _cita._LogStatus ensures its ⍵ is scalar when it is numeric
 ⍝ 2032 04 28 MBaas, v1.81: Check: additional context info in msgs of failing checks - if -halt is set, we also display the calling line
+⍝ 2032 05 10 MBaas, v1.82: DTest now counts and reports the number of "Checks" that were executed (calls of function Check)
 
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
@@ -631,7 +632,7 @@
       args.coverage_subj←null
       args.coverage_ignore←⍕⎕THIS
       WSFULL←0  ⍝ indicates if we were hit by WS FULL
-     
+      ⎕SE.DTEST_COUNTER_OF_CALLS_TO_CHECK←0
      
      
       :If 0∊⍴args.Arguments
@@ -701,8 +702,7 @@
                   :If null≡args.suite  ⍝ if no suite is given
                       :If null≡args.setup
                           v←('setup_'⍷↑nl)[;1]/nl←ns.⎕NL-3
-                          (⎕lc[1]+1)⎕stop 1⊃⎕si
-                          :If ~0∊⍴v
+                          :If 1<≢v  ⍝ are there even multiple setups?
                               args.setup←¯1↓∊v,¨' '
                               :If 2=GetFilesystemType f   ⍝ single file given
                                   Log'No -suite nor -setup selected - running test against all setups!'
@@ -775,11 +775,11 @@
           ⍵
       }SuccessValue
     ⍝ Establish test DSL in the namespace
-      :If halt=0
-          ns.Check←≢   ⍝ CompCheck: ignore
-      :Else
-          'ns'⎕NS'Check'
-      :EndIf
+    ⍝   :If halt=0
+    ⍝       ns.Check←≢   ⍝ CompCheck: ignore
+    ⍝   :Else
+      'ns'⎕NS'Check'
+    ⍝   :EndIf
       'ns'⎕NS'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Assert' 'IfNot' 'base64' 'base64dec' 'base64enc'
       ⍝ transfer some status vars into ns
       'ns'⎕NS'verbose' 'filter' 'halt' 'quiet' 'trace' 'timestamp' 'order' 'off'
@@ -984,7 +984,7 @@
                   :EndIf
               :EndFor
               :If 0∊⍴3⊃LOGS
-                  r,←(quiet≡null)/⊂'   ',(((setup≢null)∧1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' passed in ',(1⍕0.001×⎕AI[3]-start),'s'
+                  r,←(quiet≡null)/⊂'   ',(((setup≢null)∧1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' (=',(⍕⎕SE.DTEST_COUNTER_OF_CALLS_TO_CHECK),' calls to "Check" or "Assert") passed in ',(1⍕0.001×⎕AI[3]-start),'s'
                   1(⎕NDELETE ⎕OPT'Wildcard' 1)TESTSOURCE,'*.rng.txt' ⍝ delete memorized random numbers when tests succeeded
               :Else
                   r,←⊂' Time spent: ',(1⍕0.001×⎕AI[3]-start),'s'
@@ -1128,6 +1128,7 @@
     ∇
 
     ∇ r←expect Check got
+      ⎕SE.DTEST_COUNTER_OF_CALLS_TO_CHECK+←1
       :If r←expect≢got
       :AndIf ##.halt
           ⎕←' TEST SUSPENDED! ───────────────────────────────────────────────────────────'
@@ -1142,10 +1143,10 @@
           :Else
               ⎕←'got      ⍝ did not match right argument - examine variables or <Esc> into calling function'
           :EndIf
-          :trap 3
+          :Trap 3
             ⍝ INDEX ERROR possible if we can't get the ⎕NR (for example, if called by a class member) - though this should be fixed now...
-               ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',##.dtb(1+2⊃⎕LC)⊃↓(2⊃⎕RSI).(180⌶(2⊃⎕SI))
-          :endtrap
+              ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',##.dtb(1+2⊃⎕LC)⊃↓(2⊃⎕RSI).(180⌶(2⊃⎕SI))
+          :EndTrap
           (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
           ⍝ test failed! Execution suspended so that you can examine the problem...
       :EndIf
