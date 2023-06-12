@@ -1,0 +1,28 @@
+ r←test_nosource;n;sw;z;ch;bl
+
+ :For sw :In 0  1 ''  ⍝ testing switch values
+     :For n :In 1 0  ⍝ and values for nosource as TARGET parameter
+         log←##.Build txt←##.TESTSOURCE,'nosource/test_nosource',(⍕n),'.dyalogbuild -q -c',((sw≢'')∧sw≢n)/' -nosource=',⍕sw
+         :If ''≡log
+             ~0 Because'non-empty log after building "',txt,'"' ⋄ :EndIf
+
+         z←(sw≡1)∨n≡1
+         :For ch :In 'fnWithBlanks' 'SourceHasBlanks'  ⍝ functions to analyze
+             bl←+/∊'  '⍷,#.⎕VR ch
+         :EndFor
+         :If z   ⍝ if blanks should have been remoced
+             :If 0<bl    ⍝ and we found some...
+                 →0 Because'No blanks expected after building with arg "',txt,'"'
+             :Else
+                 ⎕←txt,' ',ch,' ',bl
+             :EndIf
+         :Else
+             :If 0=bl   ⍝ we did not remove blanks and there were none in the fn
+                 (⎕LC[1]+1)⎕STOP 1⊃⎕SI
+                 →0 Because'No extraneous blanks found in test fns after building with arg "',txt,'"'
+             :Else
+                 ⎕←txt,' ',ch,' ',bl
+             :EndIf
+         :EndIf
+     :EndFor
+ :EndFor

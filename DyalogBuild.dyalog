@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.80
+﻿:Namespace DyalogBuild ⍝ V 1.84
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -93,6 +93,8 @@
 ⍝ 2023 02 04 MBaas, v1.80: _cita._LogStatus ensures its ⍵ is scalar when it is numeric
 ⍝ 2032 04 28 MBaas, v1.81: Check: additional context info in msgs of failing checks - if -halt is set, we also display the calling line
 ⍝ 2032 05 10 MBaas, v1.82: DTest now counts and reports the number of "Checks" that were executed (calls of function Check)
+⍝ 2023 05 20 MBaas, v1.83: DBuild: the icon-parameter of the target-directivy may use "./" to indicate path relative to the location of the .dyalogbuild file
+⍝ 2023 06 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
 
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
@@ -1277,7 +1279,7 @@
 
     :Section BUILD
 
-    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;LOGS;logfile;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d;order;NQed;type;pars;det;loaded;Target
+    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;LOGS;logfile;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d;order;NQed;type;pars;det;loaded;Target;nosource
     ⍝ Process a .dyalogbuild file
       Init 2
       oFFIssue←0    ⍝ set to 1 to repo MB's Keypress issue...
@@ -1290,7 +1292,7 @@
           i←lst.Parse⍳' '
           synt←(i↓lst.Parse)('nargs=',i↑lst.Parse)
           args←(⎕NEW ⎕SE.Parser synt).Parse args
-          args.(quiet save production halt)←{2⊃⎕VFI⍕⍵}¨args.(quiet save production halt)  ⍝ saw a string here when we went through the Parsing above - so let's ensure these vars are numeric...
+          args.(quiet save production halt nosource)←{2⊃⎕VFI⍕⍵}¨args.(quiet save production halt nosource)  ⍝ saw a string here when we went through the Parsing above - so let's ensure these vars are numeric...
       :EndIf
       start←⎕AI[3]
       extension←'.dyalogbuild' ⍝ default extension
@@ -1316,6 +1318,7 @@
      
       (TestClassic prod save)←{2⊃⎕VFI⍕⍵}¨TestClassic prod save  ⍝ these get passed as char (but could also be numeric in case we're being called directly. So better be paranoid and ensure that we have a number)
       off←2 args.Switch'off'
+      nosource←¯1 args.Switch'nosource'  ⍝ ¯1 indicates "not set"
      
       :If Target≡null
           TargetList←0 5⍴''    ⍝ List of Targets we have to build ([;1]=lineno, [;2]=params names values)
@@ -1563,8 +1566,12 @@
           :Case 'target'
               :If (,0)≡2 args.Switch'save'
               :AndIf (('2'GetNumParam'save')∊0 1)
-                  Log'Found TARGET-Entry with SAVE-parameter, but modifier save=',(⍕save),'overruled it'
+              ('Type' 'I')    Log'Found TARGET-Entry with SAVE-parameter, but modifier -save=',(⍕save),' overruled it'
               :ElseIf Target≡null
+              :if (,2)≠2 args.Switch'nosource'
+              :andif ('2'GetNumParam'nosource')≠arg.Switch'nosource'
+              ('Type' 'I')Log'Found TARGET-Entry with nosource=',(GetParam'nosource'),', but modifier -nosource=',(),' overruled it'
+              :endif
                   TargetList⍪←i line params names values
               :EndIf
           :Else
@@ -1600,6 +1607,10 @@
               TargetList←1 5⍴0('target: ',name)('wsid=',name)(,⊂'wsid')(,⊂name)
           :EndIf
           :If save
+              :If 1=GetNumParam'nosource'
+              :orif 1=2 args.Switch'nosource'
+                  5171⌶#
+              :EndIf
               :For (i line params names values) :In ↓TargetList
                   :If 0∊⍴tmp←GetParam'wsid' ''
                       LogError'wsid missing'
@@ -1682,7 +1693,11 @@
                               :Else
                                   det←0 2⍴''
                               :EndIf
-                              pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(GetParam'icon')('"'~⍨GetParam'cmdline')(det)
+                              icon←GetParam'icon'
+                              :If (⊂2↑icon)∊'./' '.\'
+                                  icon←path,2↓icon
+                              :EndIf
+                              pars←'.' 'Bind'wsid(type)(GetNumParam'flags')(GetParam'resource')(icon)('"'~⍨GetParam'cmdline')(det)
                               command←'2 ⎕NQ ',∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨¯1↓pars
                               command←command,(0<≢det)/' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
                               2 #.⎕NQ pars
@@ -1969,10 +1984,12 @@
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest' 'GetTools4CITA'
       r.Desc←'Run one or more DyalogBuild script files (.dyalogbuild)' 'Run (a selection of) functions named test_* from a namespace, file or directory' 'Load tools to run CITA tests'
-      :If 14>1⊃_Version
+      :If 14>1⊃DyaVersion
           r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '1 -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -SuccessValue=' ''
-      :Else
+      :ElseIf 19>DyaVersion
           r.Parse←'1S -production -quiet[∊]0 1 2 -halt -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coverage[=]  -SuccessValue=' ''
+      :Else
+          r.Parse←'1S -production -quiet[∊]0 1 2 -halt -nosource[∊]0 1 2 -save[∊]0 1 2 -off[=]0 1 -clear[=] -target= -testclassic' '999s -clear[=] -tests= -testlog[=] -filter= -setup[=] -teardown[=] -suite= -verbose -quiet -halt -loglvl= -trace -ts -timeout= -repeat= -order= -init -off[=]0 1 2 -coverage[=]  -SuccessValue=' ''
       :EndIf
     ∇
 
@@ -1995,7 +2012,7 @@
       :Select Cmd
       :Case 'DBuild'
           r←⊂'Run one or more DyalogBuild script files (.dyalogbuild) | Version ',2⊃Version
-          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet[=0|1|2]] [-halt] [-save[=0|1|2]] [-off[=0|1]] [-TestClassic] -target=Target'
+          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet[=0|1|2]] [-halt] ',((19≤DyaVersion)/'[-nosource[=0|1]] '),'[-save[=0|1|2]] [-off[=0|1]] [-TestClassic] -target=Target'
           :Select level
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more details about command line and modifiers'
