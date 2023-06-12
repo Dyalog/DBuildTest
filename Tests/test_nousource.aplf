@@ -6,12 +6,12 @@
          :If ''≡log
              ~0 Because'non-empty log after building "',txt,'"' ⋄ :EndIf
 
-         z←(sw≡1)∨n≡1
+         z←(sw∊1 '')∨(sw≢0)∧n=1
          :For ch :In 'fnWithBlanks' 'SourceHasBlanks'  ⍝ functions to analyze
              bl←+/∊'  '⍷,#.⎕VR ch
          :EndFor
          :If z   ⍝ if blanks should have been remoced
-             :If 0<bl    ⍝ and we found some...
+             :If 0 Check 0<bl    ⍝ and we found some...
                  →0 Because'No blanks expected after building with arg "',txt,'"'
              :Else
                  ⎕←txt,' ',ch,' ',bl
