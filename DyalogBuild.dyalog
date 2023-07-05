@@ -94,7 +94,7 @@
 ⍝ 2032 04 28 MBaas, v1.81: Check: additional context info in msgs of failing checks - if -halt is set, we also display the calling line
 ⍝ 2032 05 10 MBaas, v1.82: DTest now counts and reports the number of "Checks" that were executed (calls of function Check)
 ⍝ 2023 05 20 MBaas, v1.83: DBuild: the icon-parameter of the target-directivy may use "./" to indicate path relative to the location of the .dyalogbuild file
-⍝ 2023 06 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
+⍝ 2023 07 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
 
 
     DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
@@ -273,7 +273,7 @@
       :EndIf
     ∇
 
-    ∇ {names}←{options}LoadCode file_target_mode;target;file;whatWeHave;f1;f2;f3;fl;fls;sep;sf;source;res;mode;larg
+    ∇ {names}←{options}LoadCode file_target_mode;target;file;whatWeHave;f1;f2;f3;fl;fls;sep;sf;source;res;mode;larg;ref
     ⍝ loads code from scriptfile (NB: file points to one existing file, no pattern etc.)
     ⍝ Options defines SALT options
     ⍝ file_target_mode: (filename )
@@ -314,10 +314,16 @@
                       :Select lc 3⊃⎕NPARTS fl
                       :CaseList '.dyalog' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
                           :Trap DEBUG↓0 ⍝↓↓↓↓ be sure to pass target as a ref, bad things may happen otherwise ()
-                              res←0({0::⍵ ⋄ ⍎⍵}target)0 ⎕SE.SALT.Load fl,' ',options
-     
-                              ⍝source←⎕SE.SALT.Load fl,' -source=no'  ⍝ unfortunately need two calls to establish function & get source
-                              ⍝source←1⊃⎕NGET fl
+                              source←1⊃⎕NGET fl 1
+                              :If {(1=≢⍵)∧⊃1↑,⍵}~(⎕NC ⍕target)∊0 9  ⍝ deal with name clashes
+                              :andif (,'#')≢,⍕target
+                                  ('target="',(⍕target),'" exists already with ⎕NC=',(⍕⎕NC target),' and is protected')⎕SIGNAL(∨/' -protect'⍷options)/11
+                                  ⎕EX target
+                              :EndIf
+                              ref←{0::⍵ ⋄ ⍎⍵}target
+                              ref.⍙src⍙←source
+                              ⍝ res←ref⍎'2⎕fix ⍙src⍙'
+                              res←2 ref.⎕FIX'file://',fl
                           :Else
                               res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',(⍕target,options),'": ',NL
                               res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')   ⍝ CompCheck: ignore
@@ -1566,12 +1572,8 @@
           :Case 'target'
               :If (,0)≡2 args.Switch'save'
               :AndIf (('2'GetNumParam'save')∊0 1)
-              ('Type' 'I')    Log'Found TARGET-Entry with SAVE-parameter, but modifier -save=',(⍕save),' overruled it'
+                  ('Type' 'I')Log'Found TARGET-Entry with SAVE-parameter, but modifier -save=',(⍕save),' overruled it'
               :ElseIf Target≡null
-              :if (,2)≠2 args.Switch'nosource'
-              :andif ('2'GetNumParam'nosource')≠arg.Switch'nosource'
-              ('Type' 'I')Log'Found TARGET-Entry with nosource=',(GetParam'nosource'),', but modifier -nosource=',(),' overruled it'
-              :endif
                   TargetList⍪←i line params names values
               :EndIf
           :Else
@@ -1601,16 +1603,29 @@
       :EndIf
      
       n←≢3⊃LOGS
+      :If DyaVersion≥19
+          :If nosource>¯1  ⍝ if this is set
+          :AndIf 0<≢GetParam'nosource'      ⍝ and the TARGET instruction also has a nosource param
+          :AndIf ('2'GetNumParam'nosource')≠nosource   ⍝ and they are different
+              ('Type' 'W')Log'Found TARGET-Entry with nosource=',(GetParam'nosource'),', but modifier -nosource=',(⍕nosource),' overruled it'
+          :EndIf
+          :If (1=GetNumParam'nosource')∧0≠2 args.Switch'nosource'
+          :OrIf 1=2 args.Switch'nosource'
+              {}5171⌶#
+              {}5172⌶0
+          :EndIf
+      :Else
+          :If 0<≢GetParam'nosource'
+          :OrIf nosoure>¯1
+              ('Type' 'W')Log'Using "nosource" requires at least Version 19'
+          :EndIf
+      :EndIf
       :If 0=n  ⍝ if no errors were found
           :If (save≡1)∧0=1↑⍴TargetList   ⍝ save switch was set, but no target instruction given
                                     ⍝ pretend we had one which save under name of build file
               TargetList←1 5⍴0('target: ',name)('wsid=',name)(,⊂'wsid')(,⊂name)
           :EndIf
           :If save
-              :If 1=GetNumParam'nosource'
-              :orif 1=2 args.Switch'nosource'
-                  5171⌶#
-              :EndIf
               :For (i line params names values) :In ↓TargetList
                   :If 0∊⍴tmp←GetParam'wsid' ''
                       LogError'wsid missing'
@@ -1640,6 +1655,7 @@
                   :If save∊0 2
                       :Continue
                   :EndIf
+     
              ⍝ Apr 21-research found these vars referencing # (or elements of it) - get them out of the way temporarily
                   rfs←0 2⍴''
                   ⎕EX¨'⎕SE.'∘,¨'SALTUtils.spc.z' 'SALTUtils.spc.res'
@@ -1884,7 +1900,7 @@
                       msg,←' when DTest expected an empty charvec to indicate success'
                   :EndIf
               :Else
-                  msg←'code returned character value = "',msg,'"'
+                  msg←'code returned character value = "',(¯1↓,msg,⎕UCS 10),'"'
                   :If SuccessValue≢''
                       msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
                   :Else
@@ -2024,6 +2040,10 @@
               r,←'' 'Optional modifiers are:'
               r,←⊂'    -clear[=NCs]    expunge all objects, optionally of specified nameclasses only'
               r,←⊂'    -halt           halt on error rather than log and continue'
+              :If 19≤DyaVersion
+                  r,←⊂'    -nosource       do not preserve "source-as-typed" (neccessary if you want to create workspaces'
+                  r,←⊂'                    that can be used on Classic and Unicode Editions!)'
+              :EndIf
               r,←⊂'    -production     remove links to source files (and execute code given in PROD instructions in buildfile)'
               r,←⊂'    -quiet[=n]      only output actual errors (quiet=2 only writes them to log, not into session)'
               r,←⊂'    -save[=0|1|2]   save the build workspace (overwrites TARGET''s save option). Note: we only save if no errors were logged during Build process. save=2: do NOT save, but set ⎕WSID (according to TARGET Instruction in buildfile)'
@@ -2243,10 +2263,15 @@
           :EndIf
          
           :If 2=⎕NC'⎕se._cita._memStats'
-              t←{0::((1 3⍴0 ¯1 0)⎕FSTAC t)⊢t←⍵ ⎕FCREATE 0 ⋄ ⍵ ⎕FSTIE 0}(1⊃⎕NPARTS file),'MemRep'
-              ⎕SE._cita._memStats ⎕FAPPEND t
-              ⎕SE._cita.∆cpu ⎕FAPPEND t
-              ⎕FUNTIE t
+              :Trap 0
+                  t←{0::((1 3⍴0 ¯1 0)⎕FSTAC t)⊢t←⍵ ⎕FCREATE 0 ⋄ ⍵ ⎕FSTIE 0}(1⊃⎕NPARTS file),'MemRep'
+                  ⎕SE._cita._memStats ⎕FAPPEND t
+                  ⎕SE._cita.∆cpu ⎕FAPPEND t
+                  ⎕FUNTIE t
+              :Else
+                  ⎕←'Caught error writing mem stats into ',(1⊃⎕NPARTS file),'MemRep:'
+                  ⎕←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
+              :EndTrap
           :EndIf
          
         ⍝ write the logfile
