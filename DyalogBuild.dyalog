@@ -93,7 +93,7 @@
 ⍝ 2023 02 04 MBaas, v1.80: _cita._LogStatus ensures its ⍵ is scalar when it is numeric
 ⍝ 2032 04 28 MBaas, v1.81: Check: additional context info in msgs of failing checks - if -halt is set, we also display the calling line
 ⍝ 2032 05 10 MBaas, v1.82: DTest now counts and reports the number of "Checks" that were executed (calls of function Check)
-⍝ 2023 05 20 MBaas, v1.83: DBuild: the icon-parameter of the target-directivy may use "./" to indicate path relative to the location of the .dyalogbuild file
+⍝ 2023 05 20 MBaas, v1.83: DBuild: the icon-parameter of the target-directive may use "./" to indicate path relative to the location of the .dyalogbuild file
 ⍝ 2023 07 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
 
 
@@ -321,8 +321,6 @@
                                   ⎕EX target
                               :EndIf
                               ref←{0::⍵ ⋄ ⍎⍵}target
-                              ref.⍙src⍙←source
-                              ⍝ res←ref⍎'2⎕fix ⍙src⍙'
                               res←2 ref.⎕FIX'file://',fl
                           :Else
                               res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',(⍕target,options),'": ',NL
@@ -1616,7 +1614,7 @@
           :EndIf
       :Else
           :If 0<≢GetParam'nosource'
-          :OrIf nosoure>¯1
+          :OrIf nosource>¯1
               ('Type' 'W')Log'Using "nosource" requires at least Version 19'
           :EndIf
       :EndIf
