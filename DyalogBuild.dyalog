@@ -91,15 +91,17 @@
 ⍝ 2023 02 01 MBaas, v1.78: Assert: fixed bug if a failing test is not surrounded by documenting code; result is optional now; error logs also include details of .NET Exceptions
 ⍝ 2023 02 03 MBaas, v1.79: Assert also shows ⍺ and ⍵ (if their tally is 60 or below)
 ⍝ 2023 02 04 MBaas, v1.80: _cita._LogStatus ensures its ⍵ is scalar when it is numeric
-⍝ 2032 04 28 MBaas, v1.81: Check: additional context info in msgs of failing checks - if -halt is set, we also display the calling line
-⍝ 2032 05 10 MBaas, v1.82: DTest now counts and reports the number of "Checks" that were executed (calls of function Check)
+⍝ 2023 04 28 MBaas, v1.81: Check: additional context info in msgs of failing checks - if -halt is set, we also display the calling line
+⍝ 2023 05 10 MBaas, v1.82: DTest now counts and reports the number of "Checks" that were executed (calls of function Check)
 ⍝ 2023 05 20 MBaas, v1.83: DBuild: the icon-parameter of the target-directive may use "./" to indicate path relative to the location of the .dyalogbuild file
 ⍝ 2023 07 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
 
 
-    DEBUG←⎕se.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     SuccessValue←''
-
+    ⍝ does not get in as a var with v19s startup
+    ∇ R←DEBUG
+      R←⎕SE.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
+    ∇
     :Section Compatibility
     ⎕IO←1
     ⎕ML←1
@@ -172,7 +174,7 @@
     ∇ {sink}←SetupCompatibilityFns
       sink←⍬              ⍝ need dummy result here, otherwise getting VALUE ERROR when ⎕FX'ing namespace
      
-      eis←⊆
+      eis←{⊆⍵}
       table←⍪
       ltack←⊣
       rtack←⊢
@@ -217,7 +219,7 @@
       :OrIf pattern≡''
           pattern←''
       :Else
-          path,←(~path[tally path]∊'\/')/'/'
+          path,←(~path[≢path]∊'\/')/'/'
       :EndIf
       r←⍉↑0 2 9 1(⎕NINFO ⎕OPT 1)(path,pattern) ⍝ CompCheck: ignore
       r[;4]←r[;4]=1
@@ -315,8 +317,8 @@
                       :CaseList '.dyalog' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
                           :Trap DEBUG↓0 ⍝↓↓↓↓ be sure to pass target as a ref, bad things may happen otherwise ()
                               source←1⊃⎕NGET fl 1
-                              :If {(1=≢⍵)∧⊃1↑,⍵}~(⎕NC ⍕target)∊0 9  ⍝ deal with name clashes
-                              :andif (,'#')≢,⍕target
+                              :If {(1=≢⍵)∧⊃1↑,⍵}~(⎕NC⍕target)∊0 9  ⍝ deal with name clashes
+                              :AndIf (,'#')≢,⍕target
                                   ('target="',(⍕target),'" exists already with ⎕NC=',(⍕⎕NC target),' and is protected')⎕SIGNAL(∨/' -protect'⍷options)/11
                                   ⎕EX target
                               :EndIf
@@ -510,7 +512,7 @@
           _is32bit←~_is64bit←∨/'64'⍷aplv1←1⊃'.'⎕WG'APLVersion'
           _OS←3↑aplv1  ⍝ 12.1 does not know it...
           (_isWin _isLinux _isAIX _isMacOS _isSolaris)←'Win' 'Lin' 'AIX' 'Mac' 'Sol'∊⊂3↑_OS
-          _isCITA←~0∊⍴2 ⎕NQ'.' 'GetEnvironment' 'CITATest'
+          _isCITA←~0∊⍴2 ⎕NQ'.' 'GetEnvironment' 'CITATEST'
           _DotNet←1⊃GetDOTNETVersion
           NL←⎕UCS 10,⍨isWin/13
       :EndIf
@@ -549,7 +551,7 @@
 
     :Section TEST "DSL" FUNCTIONS
 
-    ∇ {r}←l Assert b;cl;cc;t;v
+    ∇ {r}←l Assert b;cl;cc;t;v;nr;z
       nr←1↓⎕NR 2⊃⎕SI
       cl←⎕LC[2]⊃nr  ⍝ the current line
       :If verbose ⍝ look for "verbose" in current ns or its parent
@@ -612,7 +614,7 @@
       :EndIf
     ∇
 
-    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog;file;res
+    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog;file;res;subj;j;pre;rc
       i←quiet←0
       ⍝ Not used here, but we define them test scripts that need to locate data:
       ∆OldLog←⎕SE ⎕WG'Log'
@@ -620,7 +622,7 @@
       WSFOLDER←⊃⎕NPARTS ⎕WSID
       ThisTestID←(,'ZI4,<->,ZI2,<->,ZI2,<->,ZI2,<:>,ZI2,<:>,ZI3'⎕FMT 1 6⍴⎕TS),' *** DTest ',2⊃Version
       LOGSi←LOGS←3⍴⊂''   ⍝ use distinct variables for initial logs and test logs
-     
+
       (verbose filter halt quiet trace timestamp order)←args.(verbose filter halt quiet trace ts order)
       :If (,quiet)≢(,1)
           ⎕←ThisTestID  ⍝ this MUST go into the session because it marks the start of this test (useful to capture session.log later!)
@@ -825,7 +827,7 @@
           setups←' 'Split args.setup
       :EndIf
      
-      r←''
+      r←''  ⍝ must be global here, is localized in the calling fn
       start0←⎕AI[3]
       :Select ,order
       :Case ,0  ⍝ order=0: random (or reproduce random from file)
@@ -884,7 +886,11 @@
               :If null≢args.coverage ⍝ if switch is set
               :AndIf (1↑1⊃⎕VFI⍕args.coverage)∨1<≢args.coverage  ⍝ and we have either numeric value for switch or a longer string
               :AndIf 0=⎕NC'CoCo'   ⍝ only neccessary if we don't have an instance yet...
-                  home←1⊃⎕NPARTS SALT_Data.SourceFile  ⍝ CompCheck: ignore
+                  :If 9=⎕NC'SALT_Data'
+                      home←1⊃⎕NPARTS SALT_Data.SourceFile  ⍝ CompCheck: ignore
+                  :Else
+                      home←1⊃⎕NPARTS 50 ⎕ATX 1⊃⎕SI
+                  :EndIf
                   :If 0≠⊃z←home _cita.LoadCodeCoverage(⍕⎕THIS)
                       LogError'Problem loading CodeCoverage: ',2⊃z
                       setupok←0
@@ -1063,6 +1069,7 @@
               ⍝ use progressive iota to find new log in old log and remove the common parts (simple ∊ is not good enough...)
             ⍝   z←+/∧\{⍵=⍵[1]+0,⍳¯1+≢⍵}∆OldLog{((≢⍺)⍴⍋⍋⍺⍳⍺⍪⍵)⍳(≢⍵)⍴⍋⍋⍺⍳⍵⍪⍺}log
               z←∆OldLog _cita.NrOfCommonLines log
+              log,←⊂⎕←'old log and new log have ',(⍕z)' common lines that should be ignored!!'
               log←z↓log
               log←∊log,¨⊂NL
      
@@ -1120,7 +1127,7 @@
       msg ⎕SIGNAL(1∊value)/777
     ∇
 
-    ∇ line←line Because msg;si
+    ∇ line←line Because msg;si;fn
      ⍝ set global "r", return branch label
       :If 0=⎕NC'r'
           r←''
@@ -1283,7 +1290,7 @@
 
     :Section BUILD
 
-    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;LOGS;logfile;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d;order;NQed;type;pars;det;loaded;Target;nosource
+    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;LOGS;logfile;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d;order;NQed;type;pars;det;loaded;Target;nosource;lib;icon;rc;oFFIssue
     ⍝ Process a .dyalogbuild file
       Init 2
       oFFIssue←0    ⍝ set to 1 to repo MB's Keypress issue...
@@ -1296,6 +1303,9 @@
           i←lst.Parse⍳' '
           synt←(i↓lst.Parse)('nargs=',i↑lst.Parse)
           args←(⎕NEW ⎕SE.Parser synt).Parse args
+          :If 19>DyaVersion
+             args.nosource←0   ⍝ avoid VALUE ERROR (Parse only allow for nosource from 19 onwards...)
+          :EndIf
           args.(quiet save production halt nosource)←{2⊃⎕VFI⍕⍵}¨args.(quiet save production halt nosource)  ⍝ saw a string here when we went through the Parsing above - so let's ensure these vars are numeric...
       :EndIf
       start←⎕AI[3]
@@ -1880,7 +1890,7 @@
               :If (≢f)≥i←(,1↑¨f)⍳⊂,⊂'Type'
                   type←'IWE'⍳⊃2⊃i⊃f
               :EndIf
-              :If (tally f)≥i←(,1↑¨f)⍳⊂,⊂'Prefix'
+              :If (≢f)≥i←(,1↑¨f)⍳⊂,⊂'Prefix'
                   f←2⊃i⊃f
               :Else
                   f←''
@@ -2144,7 +2154,7 @@
               :Case 0
                   r,←⊂']',Cmd,' -?? ⍝ for more info'
               :Case 1
-                  r,←⊂'This copies a few tools from the DTest namespace into `⎕SE._cita` and some into the namespace passed as argument (default is #)'
+                  r,←⊂'This copies a few tools from the DTest namespace into `⎕se._cita` and some into the namespace passed as argument (default is #)'
                   r,←⊂''
                   r,←⊂'- SetupCompatibilityFns'
                   r,←⊂'- DyaVersion  numeric variable holding {major}.{minor} Version of current interpreter'
@@ -2189,24 +2199,24 @@
 
         ∇ R←GetCITA_Log signal;z
         ⍝ signal: should we ⎕SIGNAL an error if no config file is found? (default=1)
-          :If 4=⍴R←⎕SE.Dyalog.Utils.ExpandConfig'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_Log'
-        ⍝   ⎕←2 ⎕NQ'.' 'GetCommandLine'   ⍝ spit out commandline into the session - maybe it help diagnosing the problem...
-              :If 1∊z←∊⎕RSI{0::0 ⋄ 2=⍺.⎕NC ⍵:0<⍺⍎⍵ ⋄ 0}¨⊂'CITA_Log'    ⍝ CompCheck: ignore   / search calling environment for variable CITA_Log
-                  R←((z⍳2)⊃⎕RSI).CITA_Log                                ⍝ CompCheck: ignore
+          :If 4=⍴R←⎕SE.Dyalog.Utils.ExpandConfig'.log',⍨2 ⎕NQ'.' 'GetEnvironment' 'CITA_LOG'
+            ⍝   ⎕←2 ⎕NQ'.' 'GetCommandLineArgs'   ⍝ spit out commandline into the session - maybe it help diagnosing the problem...
+              :If 1∊z←∊⎕RSI{0::0 ⋄ 2=⍺.⎕NC ⍵:0<⍺⍎⍵ ⋄ 0}¨⊂'CITA_LOG'    ⍝ CompCheck: ignore   / search calling environment for variable CITA_LOG
+                  R←((z⍳2)⊃⎕RSI).CITA_LOG                                ⍝ CompCheck: ignore
               :Else
               ⍝ alternatively use name of test
-                  :If 0<≢R←2 ⎕NQ'.' 'GetEnvironment' 'CITATest'
+                  :If 0<≢R←2 ⎕NQ'.' 'GetEnvironment' 'CITATEST'
                       R←∊(2↑⎕NPARTS R),'.CITA.log'
                   :Else
                       :If signal
-                          'Found no CITA_Log in Environment - this dws is supposed to be called from CITA which should have passed the right commandline'⎕SIGNAL 11
+                          'Found no CITA_LOG in Environment - this dws is supposed to be called from CITA which should have passed the right commandline'⎕SIGNAL 11
                       :EndIf
                   :EndIf
               :EndIf
           :EndIf
         ∇
 
-        ∇ {file}←{msg}_LogStatus status;file;⎕ML
+        ∇ {file}←{msg}_LogStatus status;file;⎕ML;rc;t;log;z;l2
         ⍝ (⍳100)⎕trace 1⊃⎕si
 ⍝ A step (setup|test|teardown) is finished, report its status to the engine.
 ⍝ msg allows inject of a message into the file, otherwise an empty file will be created.
@@ -2241,7 +2251,6 @@
               status←status×status∊¯1 1
               rc←(2+status)⊃33 32 31
               status←(2+status)⊃'err' 'fail' 'ok'
-         
           :EndIf
           :If 2=⎕NC'MYrc'
               rc←MYrc
@@ -2278,8 +2287,11 @@
               :Trap 1
                   :If 2=⎕SE.⎕NC'RunCITA∆OldLog'
                       z←⎕SE.RunCITA∆OldLog NrOfCommonLines log
+                      log,←⊂'Old log and new log have ',(⍕z),' common lines that were ignored!'
+⍝                      z←0  ⍝ TODO: remove this
                   :Else
                       z←0
+                      ⎕←log,←⊂'Did not find ⎕se.RunCITA∆OldLog - not ignoring anything from the old log'
                   :EndIf
                   log←z↓log
                   log←∊log,¨⊂NL
@@ -2314,7 +2326,7 @@
       ⍝    :If rc≠¯42
           ⎕←'Wrote the log (file="',file,'"), now we will call ⎕OFF ',⍕|rc
           ⎕←'⎕tnums=',⎕TNUMS
-          ⎕←'on this line!' ⋄ ⎕OFF|rc
+          ⎕OFF(|rc)
        ⍝   :EndIf
           ⍝1300⌶77  ⍝ Andy
         ∇
@@ -2325,7 +2337,7 @@
         Error←_LogStatus∘¯1
 
 
-        ∇ {R}←{AddPerf}RecordMemStats suffix;facts;pFmt;r
+        ∇ {R}←{AddPerf}RecordMemStats suffix;facts;pFmt;r;f
 ⍝ AddPerf=0 or missing: don't care about performance
 ⍝         1           : remember ⎕AI[2 3]
 ⍝         2           : report ∆ of ⎕AI[2 3]
@@ -2358,7 +2370,7 @@
 
         NrOfCommonLines←{+/∧\{⍵=⍵[1]+¯1+⍳≢⍵}⍺{((≢⍺)⍴⍋⍋⍺⍳⍺⍪⍵)⍳(≢⍵)⍴⍋⍋⍺⍳⍵⍪⍺}⍵}
 
-        ∇ R←home LoadCodeCoverage ref;f;t;ccv
+        ∇ R←home LoadCodeCoverage ref;f;t;ccv;homeccv
 ⍝ loads CodeCoverage from home[/folder] into ns "ref"
 ⍝ name of folder must contain "aplteam-CodeCoverage-" and a version number that is configured below
 ⍝ (if we find apl-dependencies.txt, we search it for "aplteam-CodeCoverage" and use version given there.
@@ -2386,5 +2398,4 @@
         ∇
     :EndNamespace
     :EndSection
-
 :EndNamespace ⍝ DyalogBuild  $Revision$
