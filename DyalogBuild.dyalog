@@ -1290,7 +1290,7 @@
 
     :Section BUILD
 
-    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;LOGS;logfile;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d;order;NQed;type;pars;det;loaded;Target;nosource;lib;icon;rc;oFFIssue
+    ∇ {r}←Build args;file;prod;path;lines;extn;name;exists;extension;i;cmd;params;values;names;_description;_id;_version;id;v;target;source;wild;options;z;tmp;types;start;_defaults;f;files;n;quiet;save;ts;tmpPath;chars;nums;fileType;targetNames;targetName;fileContent;fileData;tmpExt;eol;halt;off;LOGS;logfile;TestClassic;production;ClassicVersion;j;synt;rfs;nam;str;wsid;command;line;TargetList;d;order;NQed;type;pars;det;loaded;Target;nosource;lib;icon;rc;oFFIssue;lst
     ⍝ Process a .dyalogbuild file
       Init 2
       oFFIssue←0    ⍝ set to 1 to repo MB's Keypress issue...
