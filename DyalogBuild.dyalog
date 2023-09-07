@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.84
+﻿:Namespace DyalogBuild ⍝ V 1.85
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -95,7 +95,7 @@
 ⍝ 2023 05 10 MBaas, v1.82: DTest now counts and reports the number of "Checks" that were executed (calls of function Check)
 ⍝ 2023 05 20 MBaas, v1.83: DBuild: the icon-parameter of the target-directive may use "./" to indicate path relative to the location of the .dyalogbuild file
 ⍝ 2023 07 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
-
+⍝ 2023 09 03 MBaas, v1.85: DBuild: now supports building StandaloneNativeExe on macOS and Linux as well (from v19.0 onwards). ]DTest -f= supports wildcards * and ?
 
     SuccessValue←''
     ⍝ does not get in as a var with v19s startup
@@ -316,7 +316,6 @@
                       :Select lc 3⊃⎕NPARTS fl
                       :CaseList '.dyalog' '.aplc' '.aplf' '.apln' '.aplo' '.apli'
                           :Trap DEBUG↓0 ⍝↓↓↓↓ be sure to pass target as a ref, bad things may happen otherwise ()
-                              source←1⊃⎕NGET fl 1
                               :If {(1=≢⍵)∧⊃1↑,⍵}~(⎕NC⍕target)∊0 9  ⍝ deal with name clashes
                               :AndIf (,'#')≢,⍕target
                                   ('target="',(⍕target),'" exists already with ⎕NC=',(⍕⎕NC target),' and is protected')⎕SIGNAL(∨/' -protect'⍷options)/11
@@ -622,7 +621,7 @@
       WSFOLDER←⊃⎕NPARTS ⎕WSID
       ThisTestID←(,'ZI4,<->,ZI2,<->,ZI2,<->,ZI2,<:>,ZI2,<:>,ZI3'⎕FMT 1 6⍴⎕TS),' *** DTest ',2⊃Version
       LOGSi←LOGS←3⍴⊂''   ⍝ use distinct variables for initial logs and test logs
-
+     
       (verbose filter halt quiet trace timestamp order)←args.(verbose filter halt quiet trace ts order)
       :If (,quiet)≢(,1)
           ⎕←ThisTestID  ⍝ this MUST go into the session because it marks the start of this test (useful to capture session.log later!)
@@ -816,9 +815,11 @@
               →FAIL
           :EndIf
       :EndIf
+      filter←{w←⍵ ⋄ ~∨/'?*'∊⍵: ⍵ ⋄ ((w='?')/w)←'.' ⋄ ((w='*')/w)←⊂'.*' ⋄ ∊⍵}filter
       :If null≢filter
-      :AndIf 0∊⍴fns←(1∊¨filter∘⍷¨fns)/fns
+      :AndIf 0∊⍴fns←(0<≢filter∘{(⍺⎕s'&')⍵}¨fns)/fns
           LogError'*** no functions match filter "',filter,'"'
+          (⎕lc[1]+1)⎕stop 1⊃⎕si
           LOGSi←LOGS
           →FAIL
       :EndIf
@@ -1069,7 +1070,6 @@
               ⍝ use progressive iota to find new log in old log and remove the common parts (simple ∊ is not good enough...)
             ⍝   z←+/∧\{⍵=⍵[1]+0,⍳¯1+≢⍵}∆OldLog{((≢⍺)⍴⍋⍋⍺⍳⍺⍪⍵)⍳(≢⍵)⍴⍋⍋⍺⍳⍵⍪⍺}log
               z←∆OldLog _cita.NrOfCommonLines log
-              log,←⊂⎕←'old log and new log have ',(⍕z)' common lines that should be ignored!!'
               log←z↓log
               log←∊log,¨⊂NL
      
@@ -1304,7 +1304,7 @@
           synt←(i↓lst.Parse)('nargs=',i↑lst.Parse)
           args←(⎕NEW ⎕SE.Parser synt).Parse args
           :If 19>DyaVersion
-             args.nosource←0   ⍝ avoid VALUE ERROR (Parse only allow for nosource from 19 onwards...)
+              args.nosource←0   ⍝ avoid VALUE ERROR (Parse only allow for nosource from 19 onwards...)
           :EndIf
           args.(quiet save production halt nosource)←{2⊃⎕VFI⍕⍵}¨args.(quiet save production halt nosource)  ⍝ saw a string here when we went through the Parsing above - so let's ensure these vars are numeric...
       :EndIf
@@ -1448,7 +1448,7 @@
                           LogError'Error establishing defaults in namespace ',target,': ',⎕JSON ⎕DMX                          ⍝ CompCheck: ignore
                       :EndTrap
                   :ElseIf 2=⎕NC target  ⍝ if target is an existing variable name
-                      LogError'Can not created namespace ',target,' - a variable with that name already exists'
+                      LogError'Can not create namespace ',target,' - a variable with that name already exists'
                   :EndIf
               :EndIf
      
@@ -1483,7 +1483,7 @@
                       :Continue
                   :EndIf
               :EndIf
-              :Trap DEBUG↓11
+              :Trap halt↓11
                   ⍝z←⎕SE.SALT.Load tmp←tmpPath,((~0∊⍴target)/' -target=',target),options
                   loaded←options LoadCode tmpPath target cmd
 ⍝                  (2⊃¨loaded)←{(,⊂⍣(2=≡⍵)rtack ⍵)}¨2⊃¨loaded
@@ -1689,10 +1689,7 @@
                   ⎕SIGNAL 0  ⍝ CompCheck: ignore   ⍝ reset ⎕DM, ⎕DMX to avoid problems with refs when saving
                   :Trap DEBUG↓0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
                       :If ~0∊⍴type←GetParam'type'
-                          :If isWin
-                      ⍝ This uses an undocumented function. It won't be documented because it is due to be changed soon - so we don't want
-                      ⍝ to be bound by any published behaviour ;)
-                      ⍝ So THIS documentation is purely informal and only describes CURRENT behaviour:
+                          :If DyaVersion≥19
                       ⍝ <type>     is one of 'ActiveXControl' 'InProcessServer' 'Library' 'NativeExe' 'OutOfProcessServer' 'StandaloneNativeExe'
                       ⍝ <flags>    is the sum of zero or more of the following:
                       ⍝ BOUND_CONSOLE 2
@@ -1726,7 +1723,7 @@
                               command←command,(0<≢det)/' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
                               2 #.⎕NQ pars
                           :Else
-                              Log'Builds using "type" (to create something else than a DWS) are only supported on Windows!'
+                              ('Type' 'E')Log'The "type" parameter of TARGET is supported on v19 and better!'
                           :EndIf
                       :Else
                           command←')SAVE ',wsid
