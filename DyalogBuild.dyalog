@@ -1551,7 +1551,7 @@
                   :ElseIf (,1)≡,⍴loaded ⍝ exactly one name
                       Log{(uc 1↑⍵),1↓⍵}fileType,cmd,' ',source,' loaded as ',⍕⊃loaded
                   :Else     ⍝ many names: -verbose shows complete list always, otherwise limit to ⎕PW
-                      Log((⍕⍴,loaded),' ',fileType,' names loaded from ',source,' into ',(⍕target),'.'){⎕PW>12+≢⍺,⍵:⍺,⍵ ⋄ ⍺,(⎕UCS 13),(⎕UCS 13)@(' '∘=)⍵}{1=≡⍵:⍵ ⋄ '(',(¯1↓∊⍕¨⍵,¨' '),')'}loaded
+                      Log((⍕⍴,loaded),' ',fileType,' names loaded from ',source,' into ',(⍕target),'.'){⎕PW>12+≢⍺,⍵:⍺,⍵ ⋄ ⍺}{1=≡⍵:⍵ ⋄ '(',(¯1↓∊⍕¨⍵,¨' '),')'}loaded
                   :EndIf
               :EndIf
      
