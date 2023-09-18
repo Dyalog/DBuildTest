@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.85
+:Namespace DyalogBuild ⍝ V 1.85
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -819,7 +819,6 @@
       :If null≢filter
       :AndIf 0∊⍴fns←(0<≢filter∘{(⍺⎕s'&')⍵}¨fns)/fns
           LogError'*** no functions match filter "',filter,'"'
-          (⎕lc[1]+1)⎕stop 1⊃⎕si
           LOGSi←LOGS
           →FAIL
       :EndIf
@@ -2000,7 +1999,7 @@
     :Section UCMD
 
     ∇ r←List
-      Init 0   ⍝ make sure _Version is available...
+      Init 1   ⍝ make sure _Version is available...
       r←⎕NS¨3⍴⊂''
       r.Group←⊂'DEVOPS'
       r.Name←'DBuild' 'DTest' 'GetTools4CITA'
@@ -2016,7 +2015,7 @@
 
     ∇ Û←Run(Ûcmd Ûargs)
      ⍝ Run a build
-      Init 0
+      Init 1
       ('UCMD "',Ûcmd,'" requires at least Dyalog v18.0')⎕SIGNAL(DyaVersion<18)/11
       :Select Ûcmd
       :Case 'DBuild'
@@ -2029,7 +2028,7 @@
     ∇
 
     ∇ r←level Help Cmd;d
-      Init 0
+      Init 1
       :Select Cmd
       :Case 'DBuild'
           r←⊂'Run one or more DyalogBuild script files (.dyalogbuild) | Version ',2⊃Version
