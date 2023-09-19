@@ -8,9 +8,9 @@
 ⍝ =============   Init: set up vars a tools as needed
  r←''
 
- WeHaveAlog←{⎕NEXISTS ##.TESTSOURCE,(2⊃⎕nparts theTest),'.log.json'}   ⍝ was a log file written?
+ WeHaveAlog←{⎕NEXISTS ##.TESTSOURCE,(2⊃⎕nparts theTest),'.CITA.log.json'}   ⍝ was a log file written?
  GetJSONlog←{⍝ read the log file and return a → target in r[1] and the log in r[2]
-     a←(∊2↑⎕NPARTS ##.TESTSOURCE),(2⊃⎕nparts theTest),'.log.json'
+     a←(∊2↑⎕NPARTS ##.TESTSOURCE),(2⊃⎕nparts theTest),'.CITA.log.json'
      0::(cleanExit Because'Caught error processing ',a,':',(⎕UCS 13),(⎕JSON⍠'Compact' 0)⎕DMX)⍬
      res ← ⍬(⎕JSON 1⊃⎕NGET a)
      res ⊣ 1⎕ndelete a
@@ -18,8 +18,8 @@
 
  ClearLogs←{⍝ delete logfiles
      0<≢⍵:sink←1(⎕NDELETE ⎕OPT'Wildcard'('*'∊⍵))##.TESTSOURCE,⍵  ⍝ wipe out that expected log-file
-     sink←1 ⎕NDELETE ##.TESTSOURCE,'test_',(2⊃⎕nparts theTest),'.log'  ⍝ wipe out that expected log-file
-     trash←1 ⎕NDELETE ##.TESTSOURCE,'test_',(2⊃⎕nparts theTest),'.log.json'
+     sink←1 ⎕NDELETE ##.TESTSOURCE,'test_',(2⊃⎕nparts theTest),'.CITA.log'  ⍝ wipe out that expected log-file
+     trash←1 ⎕NDELETE ##.TESTSOURCE,'test_',(2⊃⎕nparts theTest),'.CITA.log.json'
      ⍬
  }
 
@@ -30,7 +30,7 @@
          ⍬
     ⍝  }pars←'CITATest=',(f←##.TESTSOURCE,theTest,(~'.'∊theTest)/'.dyalogtest'),' mode=DTest ',(' dtestmods="'cmdLineParams ⍵),' -off -loglvl=32',(##.halt/' -halt'),(##.trace/' -trace'),(##.verbose/' -verbose'),'"'
      }pars←'CITATest=',(f←##.TESTSOURCE,theTest,(~'.'∊theTest)/'.dyalogtest'),' mode=DTest ',(' dtestmods="'cmdLineParams ⍵),' -off -loglvl=32',(##.verbose/' -verbose'),'"'
-     ((1+##.(halt∨trace))⊃30(0.001×⌊/⍬))sub_RunAPLProcess(##.TESTSOURCE,'Executor')pars
+     ((1+##.(halt∨trace))⊃30(0.001×⌊/⍬))sub_RunAPLProcess(##.TESTSOURCE,'lx')pars
      0
  }
 
@@ -65,15 +65,12 @@
      ⍬
  }
 
- ⎕SE.UCMD'GetTools4CITA'   ⍝ populate ⎕se._cita
-
-
 ⍝=========================== The tests   ==================================================
- cmdLineParams←{'SucVal=',('b64!',#.base64enc'json!',1 ⎕JSON ⍵),' ',⍺,' -SuccessValue=json!0'}  ⍝ pass an environment variable SucVal
+ cmdLineParams←{'SucVal=',('b64!',⎕se._cita.base64enc'json!',1 ⎕JSON ⍵),' ',⍺,' -SuccessValue=json!0'}  ⍝ pass an environment variable SucVal
 theTest←'test_assert.aplf'
 →0 Execute 0
 
- cmdLineParams←{'SucVal=',('b64!',#.base64enc'json!',1 ⎕JSON ⍵),' ',⍕⍺}  ⍝ pass an environment variable SucVal
+ cmdLineParams←{'SucVal=',('b64!',⎕se._cita.base64enc'json!',1 ⎕JSON ⍵),' ',⍕⍺}  ⍝ pass an environment variable SucVal
  theTest←'SuccessValueEnvVar0'
  →0 Execute 0
  →1 Execute'0'
@@ -98,10 +95,10 @@ theTest←'test_assert.aplf'
 
  theTest←'SuccessValueLongString'
  cmdLineParams←{⍺,' -SuccessValue=b64!',(⍕⍵),' '}  ⍝ pass value as modifier for DTest command
- →0 Execute #.base64enc'apl!''<The test executed on >,ZI4,<->,ZI2,<->,ZI2,< found no problems!>''⎕fmt 1 3⍴⎕TS'
+ →0 Execute ⎕se._cita.base64enc'apl!''<The test executed on >,ZI4,<->,ZI2,<->,ZI2,< found no problems!>''⎕fmt 1 3⍴⎕TS'
 
  cmdLineParams←{⍺,' -SuccessValue=b64!',(⍕⍵),' '}  ⍝ pass value as modifier for DTest command
- →1 Execute #.base64enc'apl!,''<The test executed on >,ZI4,<->,ZI2,<->,ZI2,< found no problems!>''⎕fmt 1 3⍴⎕TS'
+ →1 Execute ⎕se._cita.base64enc'apl!,''<The test executed on >,ZI4,<->,ZI2,<->,ZI2,< found no problems!>''⎕fmt 1 3⍴⎕TS'
 
 
 

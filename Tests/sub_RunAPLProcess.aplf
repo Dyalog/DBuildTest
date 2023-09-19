@@ -1,14 +1,16 @@
-﻿ R←secsTimeout sub_RunAPLProcess arg;apl;exited;ai3;msTimeout
+ R←secsTimeout sub_RunAPLProcess arg;apl;exited;ai3;msTimeout
 ⍝ arg = APLProcess argument(s)
 ⍝ R=¯1: timeout
 ⍝ other values: returncode of APLProcess (Windows only)
+R←⍬
 msTimeout←{0::⍵ ⋄ ⍵×1000}secsTimeout
  :If 0=#.⎕NC'APLProcess'
 ⍝     ⎕SE.SALT.Load ##.TESTSOURCE,'APLProcess.aplc -target=#'
      ⎕SE.SALT.Load'APLProcess -target=#'
  :EndIf
  arg←2↑eis arg
- arg[2]←⊂(2⊃arg),' DYALOG_NETCORE='{0=≢⍵:⍵ ⋄ ⍺,⍵}2 ⎕NQ'.' 'GetEnvironment' 'DYALOG_NETCORE'  ⍝ if our process had DYALOG_NETCORE explicitely set, pass it on...
+ arg[2]←⊂(2⊃arg),' DYALOG_NOPOPUPS=1',' DYALOG_NETCORE='{0=≢⍵:'' ⋄ ⍺,⍵}2 ⎕NQ'.' 'GetEnvironment' 'DYALOG_NETCORE'  ⍝ if our process had DYALOG_NETCORE explicitely set, pass it on...
+
  exited←¯1
  ai3←⎕AI[3] ⋄ proc←⎕NEW #.APLProcess arg
  :While ~proc.IsRunning proc.Proc.Id ⋄ ai3←⎕AI[3] ⋄ :EndWhile   ⍝ wait until process has started
@@ -19,11 +21,11 @@ msTimeout←{0::⍵ ⋄ ⍵×1000}secsTimeout
 
  :If 0=⎕NC'exited'
  :OrIf exited∊0 ¯1   ⍝ TIMEOUT
-     log←'Process did not complete within ',(1⍕0.001×⎕AI[3]-ai3),' seconds and was killed (SecondsTimeout=',(⍕secsTimeout),')'
+     log←⎕←'Process did not complete within ',(1⍕0.001×⎕AI[3]-ai3),' seconds and was killed (SecondsTimeout=',(⍕secsTimeout),')'
      {}proc.Kill
      R←¯1 ⋄ →End
  :EndIf
-
+:if ##._isWin
  R←proc.GetExitCode
-
+:endif
 End:

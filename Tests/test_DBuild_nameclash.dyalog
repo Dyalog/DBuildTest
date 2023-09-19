@@ -1,5 +1,6 @@
 ﻿ r←test_DBuild_nameclash dummy;res;args
  r←''
+ ⎕se.SALTUtils.DEBUG←0  
  res←##.Build args←##.TESTSOURCE,'DBuild_nameclash.dyalogbuild -c -q=2'
 
  :If 1 Check∨/'6 errors encountered.'⍷∊res

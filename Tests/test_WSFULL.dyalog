@@ -1,4 +1,4 @@
-﻿ r←test_WSFULL dummy;myapl;res;ret;f
+﻿ r←test_WSFULL dummy;myapl;res;ret;f;logfile;t;rc
 ⍝ test that DBuild and DTest behave as expected when dealing with a WS FULL in a test/build
 ⍝ We test this by launching another interpreter to run the test
 ⍝ and we then examine the log-file.
@@ -7,8 +7,7 @@
  ⎕SE.SALT.Load ##.TESTSOURCE,'sub_RunAPLProcess.aplf'
  r←''
  logfile←##.TESTSOURCE,'testWSFULL'
-
- ret←300 sub_RunAPLProcess(##.TESTSOURCE,'Executor')('RunUCMD="DTest ',##.TESTSOURCE,'test_wsfull1.dyalog -loglvl=32 -off',(##.verbose/' -verbose'),' -testlog=',logfile,'" CITA_Log="',logfile,'"')
+ ret←300 sub_RunAPLProcess(##.TESTSOURCE,'lx')('RunUCMD="DEVOPS.DTest ',##.TESTSOURCE,'test_wsfull1.dyalog -loglvl=32 -off',(##.verbose/' -verbose'),' -testlog=',logfile,'"')
  :If ##._isWin
      :If 22 Check ret
          →0 Because'Failing test did not end with code 22 (returned ',(⍕ret),')' ⋄ :EndIf
@@ -29,7 +28,7 @@
      →0 Because∊(⊂'Log of DBuild_WSFULL did not indicate errors:'),##.NL,,(⊂'  > ')∘,¨res,¨⊂##.NL ⋄ :EndIf
 
  logfile←##.TESTSOURCE,'DBuildWSFULL'
- ret←300 sub_RunAPLProcess(##.TESTSOURCE,'Executor')('RunUCMD="DBuild ',##.TESTSOURCE,'DBuild_WSFULL.dyalogbuild -q" CITA_Log="',logfile,'" CITAnqOFF=1')
+ ret←300 sub_RunAPLProcess(##.TESTSOURCE,'lx')('RunUCMD="DEVOPS.DBuild ',##.TESTSOURCE,'DBuild_WSFULL.dyalogbuild -q" CITA_LOG="',logfile,'" CITAnqOFF=1')
 
  :If 1 Check ⎕NEXISTS f←logfile,'.RunUCMD.log'  ⍝ was a log-file written?
      →0 Because'Failing build not produce log-file "',f,'"' ⋄ :EndIf
