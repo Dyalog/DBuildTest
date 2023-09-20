@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.85
+﻿:Namespace DyalogBuild ⍝ V 1.85
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -1023,7 +1023,7 @@
               tab←⎕FREAD tie,10
               ⎕FUNTIE tie
               CoCo.res←res←⌊0.5+100×÷/+⌿≢¨tab[;2 4]
-              r,←⊂⎕←'Coverage = ',(⍕res),'%'
+              r,←⊂'Coverage = ',(⍕res),'%'
               :If 2=⎕NC'r2'    ⍝ if we have processed data
                   r,←⊂']open ',r2,'     ⍝ to see coverage details...'    ⍝ let the user see it!
               :EndIf   ⍝ otherwise the calling environment will have tu use shared CoCo.AggregateCoverageDataAndCreateReport
@@ -1102,7 +1102,6 @@
      
           :If ~0∊⍴3⊃LOGS
           :AndIf (off>0)∨loglvl _hasBitSet 1
-              ⎕←'Errors were collected - writing them to logFile',(off=1)/' before doing ⎕OFF ',⍕21+WSFULL
               :Trap 0
                   (⊂∊(3⊃LOGS),¨⊂NL)⎕NPUT logFile 1
               :Else
@@ -1116,7 +1115,6 @@
           :EndIf
      
           :If off=1
-              ⎕←'OFF 20'
               ⎕OFF 20
           :EndIf
       :EndIf
@@ -1675,7 +1673,7 @@
                                   str←',',str
                               :EndIf
                               :If (⍎nam)≢⍎str  ⍝ CompCheck: ignore
-                                  Log ⎕←'⎕SAVE workaround failed because of ',nam
+                                  Log '⎕SAVE workaround failed because of ',nam
                               :EndIf
                               rfs⍪←(nam)(str)  ⍝ remember refs stringified...
                               ⎕EX nam         ⍝ and delete them
@@ -1909,7 +1907,6 @@
                       msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
                   :Else
                       msg,←' when DTest expected an empty charvec to indicate success'
-            ⍝   ⎕←msg
                   :EndIf
               :EndIf
           :EndIf
@@ -2255,12 +2252,8 @@
     ⍝ So if it crashes...that is well deserved...
     ⍝ write status file
           file←file,'.',status
-          ⎕←'"',msg,'"_LogStatus"',status,'"'
-          ⎕←'called by ',(2⊃⎕SI),'[',(⍕2⊃⎕LC),']'
-          ⎕←'file=',file
           :If ⎕NEXISTS file
-              ⎕←'exists, writing '
-              (⊂msg)⎕NPUT ⎕←file,'-exists',⍕1+≢⊃0(⎕NINFO ⎕OPT'Wildcard' 1)(file,'*')
+              (⊂msg)⎕NPUT file,'-exists',⍕1+≢⊃0(⎕NINFO ⎕OPT'Wildcard' 1)(file,'*')
           :Else
               (⊂msg)⎕NPUT file
           :EndIf
@@ -2287,7 +2280,7 @@
 ⍝                      z←0  ⍝ TODO: remove this
                   :Else
                       z←0
-                      ⎕←log,←⊂'Did not find ⎕se.RunCITA∆OldLog - not ignoring anything from the old log'
+                      log,←⊂'Did not find ⎕se.RunCITA∆OldLog - not ignoring anything from the old log'
                   :EndIf
                   log←z↓log
                   log←∊log,¨⊂NL
@@ -2303,7 +2296,6 @@
                       :EndWhile
                       log←l2
                       ⎕EX'l2'
-                      ⎕←'fixed it!'
                   :Else
                       ⎕←'Unfixable WS FULL!'
                       →0
@@ -2320,8 +2312,6 @@
               ⎕←'si' ⋄ ⎕←⍕⎕SI,[1.5]⎕LC
           :EndTrap
       ⍝    :If rc≠¯42
-          ⎕←'Wrote the log (file="',file,'"), now we will call ⎕OFF ',⍕|rc
-          ⎕←'⎕tnums=',⎕TNUMS
           ⎕OFF(|rc)
        ⍝   :EndIf
           ⍝1300⌶77  ⍝ Andy
