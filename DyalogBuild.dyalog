@@ -95,7 +95,7 @@
 ⍝ 2023 05 10 MBaas, v1.82: DTest now counts and reports the number of "Checks" that were executed (calls of function Check)
 ⍝ 2023 05 20 MBaas, v1.83: DBuild: the icon-parameter of the target-directive may use "./" to indicate path relative to the location of the .dyalogbuild file
 ⍝ 2023 07 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
-⍝ 2023 09 03 MBaas, v1.85: DBuild: now supports building StandaloneNativeExe on macOS and Linux as well (from v19.0 onwards). ]DTest -f= supports wildcards * and ?
+⍝ 2023 09 21 MBaas, v1.85: DBuild: now supports building StandaloneNativeExe on macOS and Linux as well (from v19.0 onwards). ]DTest -f= supports wildcards * and ?
 
     SuccessValue←''
     ⍝ does not get in as a var with v19s startup
@@ -321,7 +321,7 @@
                                   ('target="',(⍕target),'" exists already with ⎕NC=',(⍕⎕NC target),' and is protected')⎕SIGNAL(∨/' -protect'⍷options)/11
                                   ⎕EX target
                               :EndIf
-                              ref←{0::⍵ ⋄ ⍎⍵}target
+                              ref←{326=⎕dr ⍵:⍵ ⋄ ⍎⍵}target
                               res←2 ref.⎕FIX'file://',fl
                           :Else
                               res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',(⍕target,options),'": ',NL
@@ -592,6 +592,8 @@
       ⍝ switches: args.(filter setup teardown verbose)
       ⍝ result "r" is build in XTest (excute test) as global "r" gets updated. Can't return explicit result in XTest because we're running it in a thread.
       Init 2
+      'Dyalog APL 18.2 or later is required to run DTest'⎕signal (DyaVersion<18.2)/11
+      
       i←quiet←0  ⍝ Clear/Log needs these
       Clear args.clear
      
@@ -817,7 +819,7 @@
       :EndIf
       filter←{w←⍵ ⋄ ~∨/'?*'∊⍵: ⍵ ⋄ ((w='?')/w)←'.' ⋄ ((w='*')/w)←⊂'.*' ⋄ ∊⍵}filter
       :If null≢filter
-      :AndIf 0∊⍴fns←(0<≢filter∘{(⍺⎕s'&')⍵}¨fns)/fns
+      :AndIf 0∊⍴fns←⊃,/{(∊0<⍴¨⍵)/⍵}filter∘{(⍺ ⎕S'%')⍵}¨fns
           LogError'*** no functions match filter "',filter,'"'
           LOGSi←LOGS
           →FAIL
@@ -827,7 +829,7 @@
           setups←' 'Split args.setup
       :EndIf
      
-      r←''  ⍝ must be global here, is localized in the calling fn
+      r←''  ⍝ must be global here, it is the result of the calling fn ()
       start0←⎕AI[3]
       :Select ,order
       :Case ,0  ⍝ order=0: random (or reproduce random from file)
@@ -1622,7 +1624,7 @@
       :Else
           :If 0<≢GetParam'nosource'
           :OrIf nosource>¯1
-              ('Type' 'W')Log'Using "nosource" requires at least Version 19'
+              ('Type' 'W')Log'Use of "nosource" requires Dyalog version 19.0 or later'
           :EndIf
       :EndIf
       :If 0=n  ⍝ if no errors were found
@@ -1687,6 +1689,7 @@
                   :Trap DEBUG↓0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
                       :If ~0∊⍴type←GetParam'type'
                           :If DyaVersion≥19
+                          :orif _isWin∧DyaVersion≥13
                       ⍝ <type>     is one of 'ActiveXControl' 'InProcessServer' 'Library' 'NativeExe' 'OutOfProcessServer' 'StandaloneNativeExe'
                       ⍝ <flags>    is the sum of zero or more of the following:
                       ⍝ BOUND_CONSOLE 2
@@ -1720,7 +1723,11 @@
                               command←command,(0<≢det)/' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
                               2 #.⎕NQ pars
                           :Else
-                              ('Type' 'E')Log'The "type" parameter of TARGET is supported on v19 and better!'
+                          :if ~_isWin
+                              ('Type' 'E')Log'Use of the "type" parameter with "TARGET" requires Dyalog version 19.0 or later'
+                              :else
+                              ('Type' 'E')Log'Use of the "type" parameter with "TARGET" requires Dyalog version 13.0 or later'
+                              :endif
                           :EndIf
                       :Else
                           command←')SAVE ',wsid
@@ -1893,7 +1900,7 @@
           :If type=0  ⍝ only add this information if Log came w/o explicit type
               type←3   ⍝ and the default message type is "Error"
               :If (⎕DR msg)=326
-                  msg←'code returned data with unsupported ⎕DR=326'
+                  ⎕←msg←'code returned data with unsupported ⎕DR=326'
               :ElseIf ~(⎕DR∊msg)∊80 82 160
                   msg←'code returned numeric ',((0 1⍳⍴⍴msg)⊃'scalar' 'vector'),' = ',⍕msg
                   :If SuccessValue≢''
@@ -2043,7 +2050,7 @@
               r,←⊂'    -halt           halt on error rather than log and continue'
               :If 19≤DyaVersion
                   r,←⊂'    -nosource       do not preserve "source-as-typed" (neccessary if you want to create workspaces'
-                  r,←⊂'                    that can be used on Classic and Unicode Editions!)'
+                  r,←⊂'                    that can be used on both Classic and Unicode Editions!)'
               :EndIf
               r,←⊂'    -production     remove links to source files (and execute code given in PROD instructions in buildfile)'
               r,←⊂'    -quiet[=n]      only output actual errors (quiet=2 only writes them to log, not into session)'
