@@ -2,8 +2,8 @@
 ⍝ tests DBuild by building the tube ws and comparing it to the shipped version
  r←''
  ⎕TRAP←0 'S'
- 
- 
+
+
  rc←(0.001×⌊/⍬)sub_RunAPLProcess(##.TESTSOURCE,'lx.dws')('RunUCMD="DBuild /git/dyalog-tube-ws/dyalog-tube-ws.dyalogbuild -quiet -prod -off -save=1" CITA_LOG=tube.log')
 
  ⍝ 'Depth'⎕CY'dfns' ⍝ is missing in 190c32. This (updated) version taken from https://github.com/abrudz/primitives/blob/main/depth.aplo
@@ -43,7 +43,7 @@
  xp.⎕CY'tube'  ⍝ is the original version that is shipped with the product
 
  'bd'⎕NS''
- bd.⎕CY'/git/dyalog-tube-ws/tube' ⍝ compare to the ws that was just build
+ bd.⎕CY (2⎕nq'.' 'GetEnvironment' 'GitPath'),'/dyalog-tube-ws/tube' ⍝ compare to the ws that was just build
 
  compare←{
      0=≢⍵:''
