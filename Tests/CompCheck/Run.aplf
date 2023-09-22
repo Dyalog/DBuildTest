@@ -51,7 +51,7 @@
 
      :For i :In ⍸(1↓Features∆)[;1]>minVers
          c←i⊃features
-         :If 0<≢l←(('(?:\W|∧)',(2⊃c),'(?:\W|$)')⎕S'%'⎕U2360'Mode' 'L')s
+         :If 0<≢l←(('(?:\W|∧)',(2⊃c),'(?:\W|$)')⎕S'%'⎕OPT'Mode' 'L')s
              R←0
              ⎕←NL,'Found uses of ',(2⊃Features∆[1+i;]),' (introduced with V',(⍕1⊃c),') in these statements:'
              :If 1=3⊃c
