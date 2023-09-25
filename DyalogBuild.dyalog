@@ -322,7 +322,7 @@
                                   ('target="',(⍕target),'" exists already with ⎕NC=',(⍕⎕NC target),' and is protected')⎕SIGNAL(∨/' -protect'⍷options)/11
                                   ⎕EX target
                               :EndIf
-                              ref←{326=⎕DR ⍵:⍵ ⋄ ⍎⍵}target
+                              ref←{9=⎕NC'⍵':⍵ ⋄ ⍎⍵}target
                               res←2 ref.⎕FIX'file://',fl
                           :Else
                               res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',(⍕target,options),'": ',NL
@@ -820,7 +820,7 @@
       :EndIf
       filter←{w←⍵ ⋄ ~∨/'?*'∊⍵:⍵ ⋄ ((w='?')/w)←'.' ⋄ ((w='*')/w)←⊂'.*' ⋄ ∊⍵}filter
       :If null≢filter
-      :AndIf 0∊⍴fns←⊃,/{(∊0<⍴¨⍵)/⍵}filter∘{(⍺ ⎕S'%')⍵}¨fns
+      :AndIf 0=≢fns←filter ⎕S'%'⊢fns
           LogError'*** no functions match filter "',filter,'"'
           LOGSi←LOGS
           →FAIL
@@ -1694,7 +1694,7 @@
                   ⎕SIGNAL 0  ⍝ CompCheck: ignore   ⍝ reset ⎕DM, ⎕DMX to avoid problems with refs when saving
                   :Trap DEBUG↓0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
                       :If ~0∊⍴type←GetParam'type'
-                          :If DyaVersion≥19
+                          :If DyaVersion≥19 ⍝ Can we save? This feature is available on all platforms from v19.0 and Windows from v13.0, so check if we have the right version...
                           :OrIf _isWin∧DyaVersion≥13
                       ⍝ <type>     is one of 'ActiveXControl' 'InProcessServer' 'Library' 'NativeExe' 'OutOfProcessServer' 'StandaloneNativeExe'
                       ⍝ <flags>    is the sum of zero or more of the following:
@@ -1906,7 +1906,7 @@
           :If type=0  ⍝ only add this information if Log came w/o explicit type
               type←3   ⍝ and the default message type is "Error"
               :If (⎕DR msg)=326
-                  ⎕←msg←'code returned data with unsupported ⎕DR=326'
+                  msg←'code returned data with unsupported ⎕DR=326'
               :ElseIf ~(⎕DR∊msg)∊80 82 160
                   msg←'code returned numeric ',((0 1⍳⍴⍴msg)⊃'scalar' 'vector'),' = ',⍕msg
                   :If SuccessValue≢''
@@ -2392,7 +2392,7 @@
               :EndIf
               2 ref.⎕FIX'file://',f
           :Else
-              R←1(⎕←,1(⎕JSON⍠'Compact' 0)⎕DMX)
+              R←1(⎕←,1(⎕JSON ⎕OPT'Compact' 0)⎕DMX)
           :EndTrap
         ∇
     :EndNamespace

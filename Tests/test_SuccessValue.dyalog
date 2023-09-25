@@ -11,7 +11,7 @@
  WeHaveAlog←{⎕NEXISTS ##.TESTSOURCE,(2⊃⎕nparts theTest),'.CITA.log.json'}   ⍝ was a log file written?
  GetJSONlog←{⍝ read the log file and return a → target in r[1] and the log in r[2]
      a←(∊2↑⎕NPARTS ##.TESTSOURCE),(2⊃⎕nparts theTest),'.CITA.log.json'
-     0::(cleanExit Because'Caught error processing ',a,':',(⎕UCS 13),(⎕JSON⍠'Compact' 0)⎕DMX)⍬
+     0::(cleanExit Because'Caught error processing ',a,':',(⎕UCS 13),(⎕JSON⎕OPT'Compact' 0)⎕DMX)⍬
      res ← ⍬(⎕JSON 1⊃⎕NGET a)
      res ⊣ 1⎕ndelete a
  }
