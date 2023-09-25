@@ -95,7 +95,8 @@
 ⍝ 2023 05 10 MBaas, v1.82: DTest now counts and reports the number of "Checks" that were executed (calls of function Check)
 ⍝ 2023 05 20 MBaas, v1.83: DBuild: the icon-parameter of the target-directive may use "./" to indicate path relative to the location of the .dyalogbuild file
 ⍝ 2023 07 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
-⍝ 2023 09 21 MBaas, v1.85: DBuild: now supports building StandaloneNativeExe on macOS and Linux as well (from v19.0 onwards). ]DTest -f= supports wildcards * and ?
+⍝ 2023 09 23 MBaas, v1.85: DBuild: now supports building StandaloneNativeExe on macOS and Linux as well (from v19.0 onwards). ]DTest -f= supports wildcards * and ?;DTest:RandomVal early exit if ⍵=1
+⍝
 
     SuccessValue←''
     ⍝ does not get in as a var with v19s startup
@@ -321,7 +322,7 @@
                                   ('target="',(⍕target),'" exists already with ⎕NC=',(⍕⎕NC target),' and is protected')⎕SIGNAL(∨/' -protect'⍷options)/11
                                   ⎕EX target
                               :EndIf
-                              ref←{326=⎕dr ⍵:⍵ ⋄ ⍎⍵}target
+                              ref←{326=⎕DR ⍵:⍵ ⋄ ⍎⍵}target
                               res←2 ref.⎕FIX'file://',fl
                           :Else
                               res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',(⍕target,options),'": ',NL
@@ -592,8 +593,8 @@
       ⍝ switches: args.(filter setup teardown verbose)
       ⍝ result "r" is build in XTest (excute test) as global "r" gets updated. Can't return explicit result in XTest because we're running it in a thread.
       Init 2
-      'Dyalog APL 18.2 or later is required to run DTest'⎕signal (DyaVersion<18.2)/11
-      
+      'Dyalog APL 18.2 or later is required to run DTest'⎕SIGNAL(DyaVersion<18.2)/11
+     
       i←quiet←0  ⍝ Clear/Log needs these
       Clear args.clear
      
@@ -817,7 +818,7 @@
               →FAIL
           :EndIf
       :EndIf
-      filter←{w←⍵ ⋄ ~∨/'?*'∊⍵: ⍵ ⋄ ((w='?')/w)←'.' ⋄ ((w='*')/w)←⊂'.*' ⋄ ∊⍵}filter
+      filter←{w←⍵ ⋄ ~∨/'?*'∊⍵:⍵ ⋄ ((w='?')/w)←'.' ⋄ ((w='*')/w)←⊂'.*' ⋄ ∊⍵}filter
       :If null≢filter
       :AndIf 0∊⍴fns←⊃,/{(∊0<⍴¨⍵)/⍵}filter∘{(⍺ ⎕S'%')⍵}¨fns
           LogError'*** no functions match filter "',filter,'"'
@@ -1183,6 +1184,11 @@
 
     ∇ R←{ctxt}RandomVal arg;rFile;r
 ⍝ generate random values
+      :If (,arg)≡,1
+      :OrIf arg≡1 1
+          R←1
+          →0
+      :EndIf
       :If 0=⎕NC'ctxt'
           ctxt←⎕SI[2 3]{(1⊃⍺),'_',(1⊃⍵),'_',(2⊃⍺),'_',2⊃⍵}⍕¨⎕LC[2 3]
       :EndIf  ⍝ use ⎕SI as indicator of context
@@ -1675,7 +1681,7 @@
                                   str←',',str
                               :EndIf
                               :If (⍎nam)≢⍎str  ⍝ CompCheck: ignore
-                                  Log '⎕SAVE workaround failed because of ',nam
+                                  Log'⎕SAVE workaround failed because of ',nam
                               :EndIf
                               rfs⍪←(nam)(str)  ⍝ remember refs stringified...
                               ⎕EX nam         ⍝ and delete them
@@ -1689,7 +1695,7 @@
                   :Trap DEBUG↓0 ⍝ yes, all trap have a halt/ after them - this one doesn't and shouldn't.
                       :If ~0∊⍴type←GetParam'type'
                           :If DyaVersion≥19
-                          :orif _isWin∧DyaVersion≥13
+                          :OrIf _isWin∧DyaVersion≥13
                       ⍝ <type>     is one of 'ActiveXControl' 'InProcessServer' 'Library' 'NativeExe' 'OutOfProcessServer' 'StandaloneNativeExe'
                       ⍝ <flags>    is the sum of zero or more of the following:
                       ⍝ BOUND_CONSOLE 2
@@ -1723,11 +1729,11 @@
                               command←command,(0<≢det)/' (',(⍕⍴det),'⍴',(∊{''≡0↑⍵:'''',⍵,''' ' ⋄ (⍕⍵),' '}¨det),')'
                               2 #.⎕NQ pars
                           :Else
-                          :if ~_isWin
-                              ('Type' 'E')Log'Use of the "type" parameter with "TARGET" requires Dyalog version 19.0 or later'
-                              :else
-                              ('Type' 'E')Log'Use of the "type" parameter with "TARGET" requires Dyalog version 13.0 or later'
-                              :endif
+                              :If ~_isWin
+                                  ('Type' 'E')Log'Use of the "type" parameter with "TARGET" requires Dyalog version 19.0 or later'
+                              :Else
+                                  ('Type' 'E')Log'Use of the "type" parameter with "TARGET" requires Dyalog version 13.0 or later'
+                              :EndIf
                           :EndIf
                       :Else
                           command←')SAVE ',wsid
