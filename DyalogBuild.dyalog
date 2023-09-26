@@ -616,7 +616,7 @@
       :EndIf
     ∇
 
-    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog;file;res;subj;j;pre;rc
+    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog;file;res;subj;j;pre;rc;mask
       i←quiet←0
       ⍝ Not used here, but we define them test scripts that need to locate data:
       ∆OldLog←⎕SE ⎕WG'Log'
