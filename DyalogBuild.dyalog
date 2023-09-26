@@ -158,7 +158,7 @@
           names,←'base64' 'base64dec' 'base64enc'
      
           '⎕se._cita'⎕NS names
-          _cita.('⎕se._cita'⎕NS ⎕NL-3)
+          _cita.('⎕se._cita'⎕NS ⎕NL ¯3)
       :EndIf
       ⎕SE._cita.Init 2
       :If args≡''
@@ -711,18 +711,17 @@
                   :EndIf
                   :If null≡args.suite  ⍝ if no suite is given
                       :If null≡args.setup
-                          v←('setup_'⍷↑nl)[;1]/nl←ns.⎕NL-3
-                          :If 1=≢v
-                              args.setup←∊v
-                          :ElseIf 1<≢v  ⍝ are there even multiple setups?
-                              args.setup←¯1↓∊v,¨' '
+                          nl←ns.⎕NL ¯3
+                          mask←('setup_'⍷↑nl)[;1]
+                          args.setup←1↓∊' ',¨mask/nl
+                          :If 1<+/mask
                               :If 2=GetFilesystemType f   ⍝ single file given
                                   Log'No -suite nor -setup selected - running test against all setups!'
                               :Else                       ⍝ directory
                                   Log'No -suite nor -setup selected - running all tests in "',f,'" against all setups!'
                               :EndIf
                           :EndIf
-                          :If ~0∊⍴v←('teardown_'⍷↑nl)[;1]/nl←ns.⎕NL-3
+                          :If ~0∊⍴v←('teardown_'⍷↑nl)[;1]/nl←ns.⎕NL ¯3
                               args.teardown←¯1↓∊v,¨' '
                           :EndIf
      
@@ -764,7 +763,7 @@
               LogError'*** error loading suite "',suite,'": ',2⊃v
           :Else
               sargs←2⊃v
-              :For v :In (sargs.⎕NL-2)∩args.⎕NL-2 ⍝ overlap?
+              :For v :In (sargs.⎕NL ¯2)∩args.⎕NL ¯2 ⍝ overlap?
                   :If null≢args⍎v
                       overwritten,←⊂v
                       ⍎'sargs.',v,'←args.',v
@@ -813,7 +812,7 @@
               fns←∪matches[⍋matches[;2];1]
           :EndIf
       :Else ⍝ No functions selected - run all named test_*
-          fns←{⍵⌿⍨(⊂'test_')≡¨5↑¨⍵}ns.⎕NL-3
+          fns←{⍵⌿⍨(⊂'test_')≡¨5↑¨⍵}ns.⎕NL ¯3
           :If 0=≢fns
               LogError'*** no functions match pattern "test_*"'
               LOGSi←LOGS
@@ -1608,8 +1607,8 @@
           z←TestClassic{
               2=⎕NC ⍵:⍵{0<⍴,⍵:⍺,': ',⍵ ⋄ ''}∆TestClassic⍎⍵
               3=⎕NC ⍵:⍵{0<⍴,⍵:⍺,': ',⍵ ⋄ ''}∆TestClassic ⎕CR ⍵
-              +∇¨(⊂⍵,'.'),¨(⍎⍵).⎕NL-2.1 3.1 9.1  ⍝ +∇ avoids crashes in 12.1...15
-          }¨(⊂'#.'),¨#.⎕NL-2.1 3.1 3.2 9.1
+              +∇¨(⊂⍵,'.'),¨(⍎⍵).⎕NL ¯2.1 ¯3.1 ¯9.1  ⍝ +∇ avoids crashes in 12.1...15
+          }¨(⊂'#.'),¨#.⎕NL ¯2.1 ¯3.1 ¯3.2 ¯9.1
           :If 0<⍴z
               LogError('Classic test found incompatible characters in following functions/variables:',NL),¯2↓∊z{('- ',⍺,⍵)/⍨×,⍴⍺}⍥1 rtack NL
           :Else
