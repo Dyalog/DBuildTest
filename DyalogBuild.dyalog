@@ -95,7 +95,7 @@
 ⍝ 2023 05 10 MBaas, v1.82: DTest now counts and reports the number of "Checks" that were executed (calls of function Check)
 ⍝ 2023 05 20 MBaas, v1.83: DBuild: the icon-parameter of the target-directive may use "./" to indicate path relative to the location of the .dyalogbuild file
 ⍝ 2023 07 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
-⍝ 2023 09 23 MBaas, v1.85: DBuild: now supports building StandaloneNativeExe on macOS and Linux as well (from v19.0 onwards). ]DTest -f= supports wildcards * and ?;DTest:RandomVal early exit if ⍵=1
+⍝ 2023 09 25 MBaas, v1.85: DBuild: now supports building StandaloneNativeExe on macOS and Linux as well (from v19.0 onwards). ]DTest -f= supports wildcards * and ?;DTest:RandomVal early exit if ⍵=1; ]DTest with folder argument executes single setup_ fn (previously ignored it)
 ⍝
 
     SuccessValue←''
@@ -712,7 +712,9 @@
                   :If null≡args.suite  ⍝ if no suite is given
                       :If null≡args.setup
                           v←('setup_'⍷↑nl)[;1]/nl←ns.⎕NL-3
-                          :If 1<≢v  ⍝ are there even multiple setups?
+                          :If 1=≢v
+                              args.setup←∊v
+                          :ElseIf 1<≢v  ⍝ are there even multiple setups?
                               args.setup←¯1↓∊v,¨' '
                               :If 2=GetFilesystemType f   ⍝ single file given
                                   Log'No -suite nor -setup selected - running test against all setups!'
