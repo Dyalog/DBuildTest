@@ -1,1 +1,0 @@
-{  api: "CodeCoverage",  assets: "",  description: "Monitors which parts of an application got actually executed",  group: "aplteam",  info_url: "https://github.com/aplteam/CodeCoverage",  io: 1,  ml: 1,  name: "CodeCoverage",  source: "CodeCoverage.aplc",  tags: "apltree,code-coverage,test-framework,unit-tests,windows,linux,mac-os",  version: "0.9.1+46",  wx: 3,}

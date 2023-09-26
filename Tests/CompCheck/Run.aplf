@@ -1,4 +1,4 @@
-﻿ R←{opts}Run ref;s;z;minVers;critical;c;l;sf;V;f;features;v;v∆;NL;i;Features∆;nq;uncmnt;avuClassic
+ R←{opts}Run ref;s;z;minVers;critical;c;l;sf;V;f;features;v;v∆;NL;i;Features∆;nq;uncmnt;avuClassic
  ⍝ opts: select tests,
  ⍝ 1: will it run on Classic?
  ⍝ and/or: minimum-version for it to run:
@@ -11,12 +11,19 @@
 
  features←↓1↓Features∆←Features ⍝ just the data of this table (no headers)
  Features∆[;2]←{('\\h\*'⎕R'')⍵}¨Features∆[;2]
- Features∆[;2]←{('\[\^\\w\]'⎕R'')⍵}¨Features∆[;2]
+ Features∆[;2]←{('\[\∧\\w\]'⎕R'')⍵}¨Features∆[;2]
  f←(≢features)⍴0
  :If 9=⎕NC'ref'
      s←⎕SRC ref
  :ElseIf ⎕NEXISTS ref
-     s←⊃⎕NGET ref
+     ref←⊃2 ⎕FIX'file://',ref
+     :Select ⌊⎕NC ref
+     :Case,9
+         s←⎕src⍎ref
+         s←∊s,¨⎕ucs 10  ⍝ "flatten" it
+     :Else
+     ⎕←'No :Case for ⎕NC "',(⍕ref),'" = ',⍕⌊⎕nc ref
+     :EndSelect
  :Else
      ⎕←'What''s in ref? Expecting ns or filespec'
      ∘∘∘
@@ -36,7 +43,7 @@
  :EndIf
 
  :If 0<minVers←⊃((opts>11)/opts),0
-     s←('^.*⍝ CompCheck: ignore.*$'⎕R'')s
+     s←('∧.*⍝ CompCheck: ignore.*$'⎕R'')s
      s←{1↓¨(⍵=⎕UCS 10)⊂⍵}(⎕UCS 10),s  ⍝ nested lines
      nq←{0=≠\⍵=''''}¨s                ⍝ not quoted (leaves one quote, but that is no problem for this purpose)
      uncmnt←nq{~(∨\⍺∧⍵='⍝')}¨s        ⍝ not commented
@@ -44,7 +51,7 @@
 
      :For i :In ⍸(1↓Features∆)[;1]>minVers
          c←i⊃features
-         :If 0<≢l←(('(?:\W|^)',(2⊃c),'(?:\W|$)')⎕S'%'⍠'Mode' 'L')s
+         :If 0<≢l←(('(?:\W|∧)',(2⊃c),'(?:\W|$)')⎕S'%'⎕OPT'Mode' 'L')s
              R←0
              ⎕←NL,'Found uses of ',(2⊃Features∆[1+i;]),' (introduced with V',(⍕1⊃c),') in these statements:'
              :If 1=3⊃c

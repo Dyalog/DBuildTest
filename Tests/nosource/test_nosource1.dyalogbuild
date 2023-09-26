@@ -1,0 +1,8 @@
+DYALOG BUILD:1.84
+ID: foo, Version=1
+
+
+APL: ./*.aplf
+EXEC:  #.⎕fx'R  ←  fnWithBlanks  C'   '  R  ←  1  +  1  '
+
+TARGET: ./foo ,save=1,nosource=1
