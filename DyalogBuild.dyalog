@@ -713,7 +713,9 @@
                       :If null≡args.setup
                           nl←ns.⎕NL ¯3
                           mask←('setup_'⍷↑nl)[;1]
-                          args.setup←1↓∊' ',¨mask/nl
+                          :If 0<+/mask
+                              args.setup←1↓∊' ',¨mask/nl
+                          :EndIf
                           :If 1<+/mask
                               :If 2=GetFilesystemType f   ⍝ single file given
                                   Log'No -suite nor -setup selected - running test against all setups!'
