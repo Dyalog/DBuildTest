@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.85.1
+﻿:Namespace DyalogBuild ⍝ V 1.85.1
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -430,7 +430,7 @@
       s←⎕SRC ⎕THIS                  ⍝ appearently this only works in V16+
       f←Words⊃s                     ⍝ split first line
       n←2⊃f                         ⍝ ns name
-      v←'.0',⍨'V'~⍨⊃⌽f              ⍝ version number
+      v←'V'~⍨⊃⌽f                    ⍝ version number
       d←1↓∊'-',¨3↑Words{w←⎕VFI¨⍵ ⋄ ⍵⊃⍨⊃{(,⍵)/,⍳⍴⍵}∊(∧/¨3↑¨1⊃¨w)}⌽Comments s ⍝ date (sorry, extra complicated - but getting date from last comment that has one)
     ∇
 
