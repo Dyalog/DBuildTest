@@ -1,4 +1,4 @@
-﻿ r←test_ReturnCode dummy;myapl;rc
+ r←test_ReturnCode dummy;myapl;rc
 ⍝ test if DBuild ends with correct return-code!
 ⍝ We test this by launching another interpreter
 ⍝ and testing its returncode. Unfortunately atm (July 2020)
@@ -23,7 +23,7 @@
 
      rc←300 sub_RunAPLProcess((##.TESTSOURCE,'lx')('CITATest=',##.TESTSOURCE,'test_retcode.dyalog mode=DTest ok=1 dtestmods="-off -loglvl=32',(##.verbose/' -verbose'),'"'))
      :If 20 Check rc
-         →cleanExit Because'Succeeding test did not end with code 20 (returned ',(⍕cr),')' ⋄ :EndIf
+         →cleanExit Because'Succeeding test did not end with code 20 (returned ',(⍕rc),')' ⋄ :EndIf
      :If 0 Check ⎕NEXISTS ##.TESTSOURCE,'test_ok.log'  ⍝ was a log-file written?
          →cleanExit Because'Succeeding test produced log-file' ⋄ :EndIf
      :If 1 Check ⎕NEXISTS f←##.TESTSOURCE,'test_retcode.CITA.log.json'  ⍝ was a log-file written?
