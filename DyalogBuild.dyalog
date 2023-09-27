@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.85
+:Namespace DyalogBuild ⍝ V 1.85.1
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -96,7 +96,7 @@
 ⍝ 2023 05 20 MBaas, v1.83: DBuild: the icon-parameter of the target-directive may use "./" to indicate path relative to the location of the .dyalogbuild file
 ⍝ 2023 07 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
 ⍝ 2023 09 25 MBaas, v1.85: DBuild: now supports building StandaloneNativeExe on macOS and Linux as well (from v19.0 onwards). ]DTest -f= supports wildcards * and ?;DTest:RandomVal early exit if ⍵=1; ]DTest with folder argument executes single setup_ fn (previously ignored it)
-⍝
+⍝ 2032 09 27 MBaas, v1.85.1: DTest: fixed bug where using the "-order" with a numeric vector enclosed in " had no effect.
 
     SuccessValue←''
     ⍝ does not get in as a var with v19s startup
@@ -632,6 +632,7 @@
      
       repeat←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}args.repeat
       loglvl←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}args.loglvl
+      order←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}order
       off←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}args.off
       :If halt
           ⎕TRAP←0 'S'
