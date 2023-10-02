@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.85.1
+:Namespace DyalogBuild ⍝ V 1.85.1
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -97,6 +97,7 @@
 ⍝ 2023 07 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
 ⍝ 2023 09 25 MBaas, v1.85: DBuild: now supports building StandaloneNativeExe on macOS and Linux as well (from v19.0 onwards). ]DTest -f= supports wildcards * and ?;DTest:RandomVal early exit if ⍵=1; ]DTest with folder argument executes single setup_ fn (previously ignored it)
 ⍝ 2032 09 27 MBaas, v1.85.1: DTest: fixed bug where using the "-order" with a numeric vector enclosed in " had no effect.
+⍝ 2032 09 28 MBaas, v1.85.2: DTest: Version returns a "proper" numeric version no., "SemVer" has a semantic version no.
 
     SuccessValue←''
     ⍝ does not get in as a var with v19s startup
@@ -426,7 +427,13 @@
     ∇
 
     ∇ (n v d)←Version;f;s;z
-    ⍝ Version of DBuildTest (3 elems: name version date)
+    ⍝ Version of DBuildTest (3 elems: name version date) with a "proper number" for the version (formatted, though)
+      (n v d)←SemVer
+      v←{(2>+\⍵='.')/⍵}v
+    ∇
+
+    ∇ (n v d)←SemVer
+    ⍝ Version of DBuildTest (3 elems: name version date) using semantic versioning
       s←⎕SRC ⎕THIS                  ⍝ appearently this only works in V16+
       f←Words⊃s                     ⍝ split first line
       n←2⊃f                         ⍝ ns name
@@ -459,7 +466,7 @@
 
     ∇ R←dVersion
       ⍝ numeric version (maj.min) of DBuildTest (for comparison against the min. version given in the Dyalogtest element of a .dyalogtest)
-      R←2⊃⎕VFI{(2>+\⍵='.')/⍵}2⊃Version
+      R←2⊃⎕VFI 2⊃Version
     ∇
 
     Split←{dlb¨1↓¨(1,⍵∊⍺)⊂(⊃⍺),⍵}                       ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
@@ -622,7 +629,7 @@
       ∆OldLog←⎕SE ⎕WG'Log'
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
       WSFOLDER←⊃⎕NPARTS ⎕WSID
-      ThisTestID←(,'ZI4,<->,ZI2,<->,ZI2,<->,ZI2,<:>,ZI2,<:>,ZI3'⎕FMT 1 6⍴⎕TS),' *** DTest ',2⊃Version
+      ThisTestID←(,'ZI4,<->,ZI2,<->,ZI2,<->,ZI2,<:>,ZI2,<:>,ZI3'⎕FMT 1 6⍴⎕TS),' *** DTest ',2⊃SemVer
       LOGSi←LOGS←3⍴⊂''   ⍝ use distinct variables for initial logs and test logs
      
       (verbose filter halt quiet trace timestamp order)←args.(verbose filter halt quiet trace ts order)
@@ -738,7 +745,7 @@
                       {}3 ⎕MKDIR TESTSOURCE
                   :EndIf
                   :If '.dyalogtest'≡lc extension
-                      templ←('DyalogTest : ',2⊃Version)'ID         :' 'Description:' '' 'Setup   :' 'Teardown:' '' 'Test:'
+                      templ←('DyalogTest : ',2⊃SemVer)'ID         :' 'Description:' '' 'Setup   :' 'Teardown:' '' 'Test:'
                   :Else
                       templ←('r←',z,' dummy;foo')'r←''''' ':If .. Check ..'('      →0 Because ''test failed'' ⋄ :EndIf')
                   :EndIf
@@ -911,7 +918,7 @@
                       subj←¯1↓subj
                   :EndIf
                   CoCo←⎕NEW CodeCoverage(,⊂subj)
-                  CoCo.Info←'Report created by DTest ',(2⊃Version),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
+                  CoCo.Info←'Report created by DTest ',(2⊃SemVer),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
                   :If 1<≢args.coverage
                   :AndIf (⎕DR' ')=⎕DR args.coverage
                       :If ∨/'\/'∊args.coverage  ⍝ if the argument looks like a filename (superficial test)
@@ -2045,7 +2052,7 @@
       Init 1
       :Select Cmd
       :Case 'DBuild'
-          r←⊂'Run one or more DyalogBuild script files (.dyalogbuild) | Version ',2⊃Version
+          r←⊂'Run one or more DyalogBuild script files (.dyalogbuild) | Version ',2⊃SemVer
           r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet[=0|1|2]] [-halt] ',((19≤DyaVersion)/'[-nosource[=0|1]] '),'[-save[=0|1|2]] [-off[=0|1]] [-TestClassic] -target=Target'
           :Select level
           :Case 0
@@ -2112,8 +2119,8 @@
           :EndSelect
      
       :Case 'DTest'
-          r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory | Version ',2⊃Version
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup[=fn]] [-suite=file] [-teardown[=fn]] [-testlog=logfile] [-tests=] [-ts] [-timeout=t] [-trace] [-verbose] [-clear[=n]] [-init] [-order={0|1|"NumVec"}]'
+          r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory | Version ',2⊃SemVer
+          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup[=fn]] [-suite=file] [-teardown[=fn]] [-testlog=logfile] [-tests=] [-ts] [-timeout=t] [-trace] [-verbose] [-clear[=n]] [-init] [-order={0|1|"NumVec"}] -SuccessValue=...]'
           :Select level
           :Case 0
               r,←⊂']',Cmd,' -?? ⍝ for more info'
@@ -2145,7 +2152,7 @@
               r,←⊂'    -quiet                QA mode: only output actual errors'
               r,←⊂'    -repeat=n             repeat tests n times'
               r,←⊂'    -setup[=fn]           run the function fn before any tests'
-              r,←⊂'    -successvalue=string  defines an alternate value that indicates successfull execution of test (default is empty string)'
+              r,←⊂'    -SuccessValue=string  defines an alternate value that indicates successfull execution of test (default is empty string)'
               r,←⊂'                           (Note: this can be tricky when you want to use 0 - see wiki for details.)'
               r,←⊂'    -suite=file           run tests defined by a .dyalogtest file'
               r,←⊂'    -teardown[=fn]        run the function fn after all tests'
@@ -2158,7 +2165,7 @@
               r,←⊂''
               r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DTest for more information'
           :Case 'GetTools4CITA'
-              r←⊂'Primarily an internal tool for testing with CITA | Version ',2⊃Version
+              r←⊂'Primarily an internal tool for testing with CITA | Version ',2⊃SemVer
               r,←⊂'    ]',Cmd,' [ns]'
               :Select
               :Case 0
