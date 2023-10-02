@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.85.1
+﻿:Namespace DyalogBuild ⍝ V 1.85.3
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -98,6 +98,7 @@
 ⍝ 2023 09 25 MBaas, v1.85: DBuild: now supports building StandaloneNativeExe on macOS and Linux as well (from v19.0 onwards). ]DTest -f= supports wildcards * and ?;DTest:RandomVal early exit if ⍵=1; ]DTest with folder argument executes single setup_ fn (previously ignored it)
 ⍝ 2032 09 27 MBaas, v1.85.1: DTest: fixed bug where using the "-order" with a numeric vector enclosed in " had no effect.
 ⍝ 2032 09 28 MBaas, v1.85.2: DTest: Version returns a "proper" numeric version no., "SemVer" has a semantic version no.
+⍝ 2032 10 02 MBaas, v1.85.3: DTest: on failing tests (or setups) DTest reported SuccessValue as vec when it was scalar
 
     SuccessValue←''
     ⍝ does not get in as a var with v19s startup
@@ -1921,14 +1922,14 @@
               :ElseIf ~(⎕DR∊msg)∊80 82 160
                   msg←'code returned numeric ',((0 1⍳⍴⍴msg)⊃'scalar' 'vector'),' = ',⍕msg
                   :If SuccessValue≢''
-                      msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ ((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
+                      msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ ((0 1⍳⍴⍴⍵)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
                   :Else
                       msg,←' when DTest expected an empty charvec to indicate success'
                   :EndIf
               :Else
                   msg←'code returned character value = "',(¯1↓,msg,⎕UCS 10),'"'
                   :If SuccessValue≢''
-                      msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
+                      msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴⍵)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
                   :Else
                       msg,←' when DTest expected an empty charvec to indicate success'
                   :EndIf
