@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.85.3
+﻿:Namespace DyalogBuild ⍝ V 1.85.4
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -99,6 +99,7 @@
 ⍝ 2032 09 27 MBaas, v1.85.1: DTest: fixed bug where using the "-order" with a numeric vector enclosed in " had no effect.
 ⍝ 2032 09 28 MBaas, v1.85.2: DTest: Version returns a "proper" numeric version no., "SemVer" has a semantic version no.
 ⍝ 2032 10 02 MBaas, v1.85.3: DTest: on failing tests (or setups) DTest reported SuccessValue as vec when it was scalar
+⍝ 2023 10 03 MBaas, v1.85.4: "]cmd -?" shows fully qualified name of UCMD in options for more help
 
     SuccessValue←''
     ⍝ does not get in as a var with v19s startup
@@ -2054,11 +2055,11 @@
       :Select Cmd
       :Case 'DBuild'
           r←⊂'Run one or more DyalogBuild script files (.dyalogbuild) | Version ',2⊃SemVer
-          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet[=0|1|2]] [-halt] ',((19≤DyaVersion)/'[-nosource[=0|1]] '),'[-save[=0|1|2]] [-off[=0|1]] [-TestClassic] -target=Target'
+          r,←⊂'    ]',(⊃List.Group),'.',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet[=0|1|2]] [-halt] ',((19≤DyaVersion)/'[-nosource[=0|1]] '),'[-save[=0|1|2]] [-off[=0|1]] [-TestClassic] -target=Target'
           :Select level
           :Case 0
-              r,←⊂']',Cmd,' -?? ⍝ for more details about command line and modifiers'
-              r,←⊂']',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
+              r,←⊂']',(⊃List.Group),'.',Cmd,' -?? ⍝ for more details about command line and modifiers'
+              r,←⊂']',(⊃List.Group),'.',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
               r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DBuild for more information'
           :Case 1
               r,←'' 'Argument is:'
@@ -2077,7 +2078,7 @@
               r,←⊂'    -target=Target  override target spec from dyalogbuild file'
               r,←⊂'    -TestClassic    check imported code for compatibility with classic editions (character set, not language features)'
               r,←⊂''
-              r,←⊂']',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
+              r,←⊂']',(⊃List.Group),'.',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
               r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DBuild for more information'
           :Case 2
               r,←⊂''
@@ -2121,10 +2122,10 @@
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory | Version ',2⊃SemVer
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup[=fn]] [-suite=file] [-teardown[=fn]] [-testlog=logfile] [-tests=] [-ts] [-timeout=t] [-trace] [-verbose] [-clear[=n]] [-init] [-order={0|1|"NumVec"}] -SuccessValue=...]'
+          r,←⊂'    ]',(⊃List.Group),'.',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup[=fn]] [-suite=file] [-teardown[=fn]] [-testlog=logfile] [-tests=] [-ts] [-timeout=t] [-trace] [-verbose] [-clear[=n]] [-init] [-order={0|1|"NumVec"}] -SuccessValue=...]'
           :Select level
           :Case 0
-              r,←⊂']',Cmd,' -?? ⍝ for more info'
+              r,←⊂']',(⊃List.Group),'.',Cmd,' -?? ⍝ for more info'
           :Case 1
               r,'' 'Argument is one of:'
               r,←⊂'    ns                    namespace in the current workspace'
@@ -2153,11 +2154,11 @@
               r,←⊂'    -quiet                QA mode: only output actual errors'
               r,←⊂'    -repeat=n             repeat tests n times'
               r,←⊂'    -setup[=fn]           run the function fn before any tests'
-              r,←⊂'    -SuccessValue=string  defines an alternate value that indicates successfull execution of test (default is empty string)'
+              r,←⊂'    -SuccessValue=string  defines an alternate value that indicates successful execution of test (default is empty string)'
               r,←⊂'                           (Note: this can be tricky when you want to use 0 - see wiki for details.)'
-              r,←⊂'    -suite=file           run tests defined by a .dyalogtest file'
+              r,←⊂'    -suite=file           run tests defined by a .dyalogtest file (you can also pass filename directly as argument)'
               r,←⊂'    -teardown[=fn]        run the function fn after all tests'
-              r,←⊂'    -testlog=             force name of logfile(s) (default name of testfile)'
+              r,←⊂'    -testlog=             force name of logfile(s) (defaults to name of testfile)'
               r,←⊂'    -tests=               comma separated list of tests to run'
               r,←⊂'    -timeout[=t]          sets a timeout. Seconds after which test(suite)s will be terminated. (Default is 0: no timeout)'
               r,←⊂'    -ts                   add timestamp (no date) to logged messages'
@@ -2167,10 +2168,10 @@
               r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DTest for more information'
           :Case 'GetTools4CITA'
               r←⊂'Primarily an internal tool for testing with CITA | Version ',2⊃SemVer
-              r,←⊂'    ]',Cmd,' [ns]'
+              r,←⊂'    ]',(⊃List.Group),'.',Cmd,' [ns]'
               :Select
               :Case 0
-                  r,←⊂']',Cmd,' -?? ⍝ for more info'
+                  r,←⊂']',(⊃List.Group),'.',Cmd,' -?? ⍝ for more info'
               :Case 1
                   r,←⊂'This copies a few tools from the DTest namespace into `⎕se._cita` and some into the namespace passed as argument (default is #)'
                   r,←⊂''
