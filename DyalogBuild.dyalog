@@ -2236,7 +2236,7 @@
           :EndIf
         ∇
 
-        ∇ {file}←{msg}_LogStatus status;file;⎕ML;rc;t;log;z;l2
+        ∇ {file}←{msg}_LogStatus status;file;⎕ML;rc;t;log;z;l2;Myrc
         ⍝ (⍳100)⎕trace 1⊃⎕si
 ⍝ A step (setup|test|teardown) is finished, report its status to the engine.
 ⍝ msg allows inject of a message into the file, otherwise an empty file will be created.
