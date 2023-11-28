@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.85.4
+﻿:Namespace DyalogBuild ⍝ V 1.85.5
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -100,6 +100,7 @@
 ⍝ 2032 09 28 MBaas, v1.85.2: DTest: Version returns a "proper" numeric version no., "SemVer" has a semantic version no.
 ⍝ 2032 10 02 MBaas, v1.85.3: DTest: on failing tests (or setups) DTest reported SuccessValue as vec when it was scalar
 ⍝ 2023 10 03 MBaas, v1.85.4: "]cmd -?" shows fully qualified name of UCMD in options for more help
+⍝ 2023 11 28 MBaas, v.1.85.5: localized vars in SemVer
 
     SuccessValue←''
     ⍝ does not get in as a var with v19s startup
@@ -434,7 +435,7 @@
       v←{(2>+\⍵='.')/⍵}v
     ∇
 
-    ∇ (n v d)←SemVer
+    ∇ (n v d)←SemVer;s;f
     ⍝ Version of DBuildTest (3 elems: name version date) using semantic versioning
       s←⎕SRC ⎕THIS                  ⍝ appearently this only works in V16+
       f←Words⊃s                     ⍝ split first line
