@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.85
+﻿:Namespace DyalogBuild ⍝ V 1.85.5
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -96,7 +96,11 @@
 ⍝ 2023 05 20 MBaas, v1.83: DBuild: the icon-parameter of the target-directive may use "./" to indicate path relative to the location of the .dyalogbuild file
 ⍝ 2023 07 05 MBaas, v1.84: DBuild: added "nousource" directive and option for TARGET to save a dws w/o source (neccessary when building for Classic & Unicode!)
 ⍝ 2023 09 25 MBaas, v1.85: DBuild: now supports building StandaloneNativeExe on macOS and Linux as well (from v19.0 onwards). ]DTest -f= supports wildcards * and ?;DTest:RandomVal early exit if ⍵=1; ]DTest with folder argument executes single setup_ fn (previously ignored it)
-⍝
+⍝ 2032 09 27 MBaas, v1.85.1: DTest: fixed bug where using the "-order" with a numeric vector enclosed in " had no effect.
+⍝ 2032 09 28 MBaas, v1.85.2: DTest: Version returns a "proper" numeric version no., "SemVer" has a semantic version no.
+⍝ 2032 10 02 MBaas, v1.85.3: DTest: on failing tests (or setups) DTest reported SuccessValue as vec when it was scalar
+⍝ 2023 10 03 MBaas, v1.85.4: "]cmd -?" shows fully qualified name of UCMD in options for more help
+⍝ 2023 11 28 MBaas, v.1.85.5: localized vars in SemVer
 
     SuccessValue←''
     ⍝ does not get in as a var with v19s startup
@@ -426,11 +430,17 @@
     ∇
 
     ∇ (n v d)←Version;f;s;z
-    ⍝ Version of DBuildTest (3 elems: name version date)
+    ⍝ Version of DBuildTest (3 elems: name version date) with a "proper number" for the version (formatted, though)
+      (n v d)←SemVer
+      v←{(2>+\⍵='.')/⍵}v
+    ∇
+
+    ∇ (n v d)←SemVer;s;f
+    ⍝ Version of DBuildTest (3 elems: name version date) using semantic versioning
       s←⎕SRC ⎕THIS                  ⍝ appearently this only works in V16+
       f←Words⊃s                     ⍝ split first line
       n←2⊃f                         ⍝ ns name
-      v←'.0',⍨'V'~⍨⊃⌽f              ⍝ version number
+      v←'V'~⍨⊃⌽f                    ⍝ version number
       d←1↓∊'-',¨3↑Words{w←⎕VFI¨⍵ ⋄ ⍵⊃⍨⊃{(,⍵)/,⍳⍴⍵}∊(∧/¨3↑¨1⊃¨w)}⌽Comments s ⍝ date (sorry, extra complicated - but getting date from last comment that has one)
     ∇
 
@@ -459,7 +469,7 @@
 
     ∇ R←dVersion
       ⍝ numeric version (maj.min) of DBuildTest (for comparison against the min. version given in the Dyalogtest element of a .dyalogtest)
-      R←2⊃⎕VFI{(2>+\⍵='.')/⍵}2⊃Version
+      R←2⊃⎕VFI 2⊃Version
     ∇
 
     Split←{dlb¨1↓¨(1,⍵∊⍺)⊂(⊃⍺),⍵}                       ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
@@ -622,7 +632,7 @@
       ∆OldLog←⎕SE ⎕WG'Log'
       DYALOG←2 ⎕NQ'.' 'GetEnvironment' 'DYALOG'
       WSFOLDER←⊃⎕NPARTS ⎕WSID
-      ThisTestID←(,'ZI4,<->,ZI2,<->,ZI2,<->,ZI2,<:>,ZI2,<:>,ZI3'⎕FMT 1 6⍴⎕TS),' *** DTest ',2⊃Version
+      ThisTestID←(,'ZI4,<->,ZI2,<->,ZI2,<->,ZI2,<:>,ZI2,<:>,ZI3'⎕FMT 1 6⍴⎕TS),' *** DTest ',2⊃SemVer
       LOGSi←LOGS←3⍴⊂''   ⍝ use distinct variables for initial logs and test logs
      
       (verbose filter halt quiet trace timestamp order)←args.(verbose filter halt quiet trace ts order)
@@ -632,6 +642,7 @@
      
       repeat←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}args.repeat
       loglvl←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}args.loglvl
+      order←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}order
       off←{~isChar ⍵:⍵ ⋄ ⍬⍴2⊃⎕VFI ⍵}args.off
       :If halt
           ⎕TRAP←0 'S'
@@ -737,7 +748,7 @@
                       {}3 ⎕MKDIR TESTSOURCE
                   :EndIf
                   :If '.dyalogtest'≡lc extension
-                      templ←('DyalogTest : ',2⊃Version)'ID         :' 'Description:' '' 'Setup   :' 'Teardown:' '' 'Test:'
+                      templ←('DyalogTest : ',2⊃SemVer)'ID         :' 'Description:' '' 'Setup   :' 'Teardown:' '' 'Test:'
                   :Else
                       templ←('r←',z,' dummy;foo')'r←''''' ':If .. Check ..'('      →0 Because ''test failed'' ⋄ :EndIf')
                   :EndIf
@@ -910,7 +921,7 @@
                       subj←¯1↓subj
                   :EndIf
                   CoCo←⎕NEW CodeCoverage(,⊂subj)
-                  CoCo.Info←'Report created by DTest ',(2⊃Version),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
+                  CoCo.Info←'Report created by DTest ',(2⊃SemVer),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
                   :If 1<≢args.coverage
                   :AndIf (⎕DR' ')=⎕DR args.coverage
                       :If ∨/'\/'∊args.coverage  ⍝ if the argument looks like a filename (superficial test)
@@ -1913,14 +1924,14 @@
               :ElseIf ~(⎕DR∊msg)∊80 82 160
                   msg←'code returned numeric ',((0 1⍳⍴⍴msg)⊃'scalar' 'vector'),' = ',⍕msg
                   :If SuccessValue≢''
-                      msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ ((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
+                      msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ ((0 1⍳⍴⍴⍵)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
                   :Else
                       msg,←' when DTest expected an empty charvec to indicate success'
                   :EndIf
               :Else
                   msg←'code returned character value = "',(¯1↓,msg,⎕UCS 10),'"'
                   :If SuccessValue≢''
-                      msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴msg)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
+                      msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴⍵)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
                   :Else
                       msg,←' when DTest expected an empty charvec to indicate success'
                   :EndIf
@@ -2044,12 +2055,12 @@
       Init 1
       :Select Cmd
       :Case 'DBuild'
-          r←⊂'Run one or more DyalogBuild script files (.dyalogbuild) | Version ',2⊃Version
-          r,←⊂'    ]',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet[=0|1|2]] [-halt] ',((19≤DyaVersion)/'[-nosource[=0|1]] '),'[-save[=0|1|2]] [-off[=0|1]] [-TestClassic] -target=Target'
+          r←⊂'Run one or more DyalogBuild script files (.dyalogbuild) | Version ',2⊃SemVer
+          r,←⊂'    ]',(⊃List.Group),'.',Cmd,' <files> [-clear[=NCs]] [-production] [-quiet[=0|1|2]] [-halt] ',((19≤DyaVersion)/'[-nosource[=0|1]] '),'[-save[=0|1|2]] [-off[=0|1]] [-TestClassic] -target=Target'
           :Select level
           :Case 0
-              r,←⊂']',Cmd,' -?? ⍝ for more details about command line and modifiers'
-              r,←⊂']',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
+              r,←⊂']',(⊃List.Group),'.',Cmd,' -?? ⍝ for more details about command line and modifiers'
+              r,←⊂']',(⊃List.Group),'.',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
               r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DBuild for more information'
           :Case 1
               r,←'' 'Argument is:'
@@ -2068,7 +2079,7 @@
               r,←⊂'    -target=Target  override target spec from dyalogbuild file'
               r,←⊂'    -TestClassic    check imported code for compatibility with classic editions (character set, not language features)'
               r,←⊂''
-              r,←⊂']',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
+              r,←⊂']',(⊃List.Group),'.',Cmd,' -??? ⍝ for description of the DyalogBuild script format'
               r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DBuild for more information'
           :Case 2
               r,←⊂''
@@ -2111,11 +2122,11 @@
           :EndSelect
      
       :Case 'DTest'
-          r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory | Version ',2⊃Version
-          r,←⊂'    ]',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup[=fn]] [-suite=file] [-teardown[=fn]] [-testlog=logfile] [-tests=] [-ts] [-timeout=t] [-trace] [-verbose] [-clear[=n]] [-init] [-order={0|1|"NumVec"}]'
+          r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory | Version ',2⊃SemVer
+          r,←⊂'    ]',(⊃List.Group),'.',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup[=fn]] [-suite=file] [-teardown[=fn]] [-testlog=logfile] [-tests=] [-ts] [-timeout=t] [-trace] [-verbose] [-clear[=n]] [-init] [-order={0|1|"NumVec"}] -SuccessValue=...]'
           :Select level
           :Case 0
-              r,←⊂']',Cmd,' -?? ⍝ for more info'
+              r,←⊂']',(⊃List.Group),'.',Cmd,' -?? ⍝ for more info'
           :Case 1
               r,'' 'Argument is one of:'
               r,←⊂'    ns                    namespace in the current workspace'
@@ -2144,11 +2155,11 @@
               r,←⊂'    -quiet                QA mode: only output actual errors'
               r,←⊂'    -repeat=n             repeat tests n times'
               r,←⊂'    -setup[=fn]           run the function fn before any tests'
-              r,←⊂'    -successvalue=string  defines an alternate value that indicates successfull execution of test (default is empty string)'
+              r,←⊂'    -SuccessValue=string  defines an alternate value that indicates successful execution of test (default is empty string)'
               r,←⊂'                           (Note: this can be tricky when you want to use 0 - see wiki for details.)'
-              r,←⊂'    -suite=file           run tests defined by a .dyalogtest file'
+              r,←⊂'    -suite=file           run tests defined by a .dyalogtest file (you can also pass filename directly as argument)'
               r,←⊂'    -teardown[=fn]        run the function fn after all tests'
-              r,←⊂'    -testlog=             force name of logfile(s) (default name of testfile)'
+              r,←⊂'    -testlog=             force name of logfile(s) (defaults to name of testfile)'
               r,←⊂'    -tests=               comma separated list of tests to run'
               r,←⊂'    -timeout[=t]          sets a timeout. Seconds after which test(suite)s will be terminated. (Default is 0: no timeout)'
               r,←⊂'    -ts                   add timestamp (no date) to logged messages'
@@ -2157,11 +2168,11 @@
               r,←⊂''
               r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DTest for more information'
           :Case 'GetTools4CITA'
-              r←⊂'Primarily an internal tool for testing with CITA | Version ',2⊃Version
-              r,←⊂'    ]',Cmd,' [ns]'
+              r←⊂'Primarily an internal tool for testing with CITA | Version ',2⊃SemVer
+              r,←⊂'    ]',(⊃List.Group),'.',Cmd,' [ns]'
               :Select
               :Case 0
-                  r,←⊂']',Cmd,' -?? ⍝ for more info'
+                  r,←⊂']',(⊃List.Group),'.',Cmd,' -?? ⍝ for more info'
               :Case 1
                   r,←⊂'This copies a few tools from the DTest namespace into `⎕se._cita` and some into the namespace passed as argument (default is #)'
                   r,←⊂''
@@ -2225,7 +2236,7 @@
           :EndIf
         ∇
 
-        ∇ {file}←{msg}_LogStatus status;file;⎕ML;rc;t;log;z;l2
+        ∇ {file}←{msg}_LogStatus status;file;⎕ML;rc;t;log;z;l2;Myrc
         ⍝ (⍳100)⎕trace 1⊃⎕si
 ⍝ A step (setup|test|teardown) is finished, report its status to the engine.
 ⍝ msg allows inject of a message into the file, otherwise an empty file will be created.
