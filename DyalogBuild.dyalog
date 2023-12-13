@@ -1644,7 +1644,7 @@
           :If (1=GetNumParam'nosource')∧0≠2 args.Switch'nosource'
           :OrIf 1=2 args.Switch'nosource'
               {}5171⌶#
-              {}5172⌶0
+              {}5172⌶1
           :EndIf
       :Else
           :If 0<≢GetParam'nosource'
