@@ -482,6 +482,10 @@
     Splitb←{     1↓¨(1,⍺)⊂'.',⍵}                        ⍝ Split of ⍵ where ⍺=1 (no dlb)
     SplitFirst←{dlb¨1↓¨(1,<\⍵=⍺)⊂⍺,⍵}                   ⍝ Split ⍵ on first occurence of ⍺, and remove leading blanks from each segment
     GetParam←{⍺←'' ⋄ dtb dlb(⌊/names⍳eis ⍵)⊃values,⊂⍺}  ⍝ Get value of parameter
+    ⍝unq←{(3>≢⍵)∨~isChar ⍵:⍵ ⋄ z←'""'≡⍵[1,≢⍵] ⋄ z↓(-z)↓⍵}
+    ⍝↑↑↑unquote string (fails if we have a string like '"my long Path", -flag=" and my flag"') - but I don't think that's likely to happend with the current params
+    ⍝↓↓↓ better:
+    unq←{(3>≢⍵)∨~isChar ⍵:⍵ ⋄ ('^\s*"([^"]*)"'⎕R'\1')⍵}
     dlb←{(∨\' '≠⍵)/⍵}                                   ⍝ delete leading blanks
     dtb←{(-{⍵⊥⍵}⍵=' ')↓⍵}                               ⍝ delete trailing blanks (DB)
     null←0                                              ⍝ UCMD switch not specified
@@ -1394,6 +1398,7 @@
           params←⎕SE.Dyalog.Utils.ExpandConfig params
           (names values)←↓[1]↑¯2↑¨(⊂⊂''),¨'='sSplit¨','sSplit params
           cmd←lc cmd~' ' ⋄ names←lc names
+          params←unq params
           :If (i=1)∧'dyalogbuild'≢cmd
               'First line of file must define DyalogBuild version'⎕SIGNAL 11
           :EndIf
@@ -1583,6 +1588,7 @@
           :CaseList 'lx' 'exec' 'prod' 'defaults'
               :If 0∊⍴tmp←GetParam'expression' ''
                   LogError'expression missing'
+                  LogError'expression missing in line >',line,'<'
               :Else
                   tmp←params ⍝ MBaas: use entire segment after ":" as argument (so that : and , can be used in these APL Expressions!)
                   :If cmd≡'lx'
