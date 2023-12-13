@@ -5,7 +5,7 @@
  #.⎕EX'foo' ⋄ #.foo←'goo'
 
 ⍝ run build-script (non-prod mode)
- res←##.Build args←##.TESTSOURCE,'DBuild_1.dyalogbuild -c -q=2 -s=0'
+ res←##.Build args←##.TESTSOURCE,'DBuild_1.dyalogbuild -clear -quiet=2 -save=0'
 
  :If 0 Check∨/' errors encountered.'⍷∊res
      →0 Because('DBuild did not succeed but reported: ',res),(⎕UCS 13),']DBuild ',args,' ⍝ to execute it...' ⋄ :EndIf
@@ -41,12 +41,16 @@
  :If 11 Check #.⎕PP
      →0 Because'DEFAULTS did not correctly process ⎕PP' ⋄ :EndIf
 
+1 Assert ×≢50#.⎕atx'MyNS0.MyNS0'  ⍝ we've build w/o "-p" - do we have linked source?
+
 ⍝ re-run build-script (this time in production mode)
- {}##.Build,##.TESTSOURCE,'DBuild_1.dyalogbuild -c -p -q=2'
+ {}##.Build,##.TESTSOURCE,'DBuild_1.dyalogbuild -clear -production -quiet=2'
 
  :If 'Production'Check #.ProdFlag
      →0 Because'ProdFlag did not have expected value "Production", but rather "',#.ProdFlag,'"' ⋄ :EndIf
 
- res←##.Build args←##.TESTSOURCE,'DBuild_nameclash.dyalogbuild -c -q=2 -s=0'
+0 Assert ≢50#.⎕atx'MyNS0.MyNS0'  ⍝ check if "-production" modifier has been effective and avoided linking of source file
+
+ res←##.Build args←##.TESTSOURCE,'DBuild_nameclash.dyalogbuild -clear -quiet=2 -save=0'
  :If 1 Check∨/'6 errors encountered.'⍷∊res
      →0 Because'DBuild did not fail with 4 errors (3 nameclashes + final msg) while executing...',(⎕UCS 13),']DBuild ',args ⋄ :EndIf
