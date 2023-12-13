@@ -442,7 +442,7 @@
 
     ∇ (n v d)←SemVer;s;f
     ⍝ Version of DBuildTest (3 elems: name version date) using semantic versioning
-      s←61 ⎕ATX 1⊃⎕SI               
+      s←⎕SRC ⎕THIS
       f←Words⊃s                     ⍝ split first line
       n←2⊃f                         ⍝ ns name
       v←'V'~⍨⊃⌽f                   ⍝ version number
