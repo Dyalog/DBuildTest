@@ -328,9 +328,13 @@
                                   ⎕EX target
                               :EndIf
                               ref←{9=⎕NC'⍵':⍵ ⋄ ⍎⍵}target
+                              :If ∨/'-nolink'⍷options
+                                  res←2 ref.⎕FIX 1⊃⎕NGET fl 1
+                              :Else
                               res←2 ref.⎕FIX'file://',fl
+                              :EndIf
                           :Else
-                              res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',(⍕target,options),'": ',NL
+                              res←'*** Error ⎕FIXing code in ',fl,': ',NL
                               res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')   ⍝ CompCheck: ignore
                           :EndTrap
                           res ⎕SIGNAL('***'≡3↑⍕res)/11
