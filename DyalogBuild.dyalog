@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.85.5
+﻿:Namespace DyalogBuild ⍝ V 1.85.6
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -101,6 +101,7 @@
 ⍝ 2032 10 02 MBaas, v1.85.3: DTest: on failing tests (or setups) DTest reported SuccessValue as vec when it was scalar
 ⍝ 2023 10 03 MBaas, v1.85.4: "]cmd -?" shows fully qualified name of UCMD in options for more help
 ⍝ 2023 11 28 MBaas, v.1.85.5: localized vars in SemVer
+⍝ 2023 12 13 MBaas, v.1.85.6: DyalogBuild accepts parameters enclosed in quotes; DBuild "-p" and "-nosource" weren't working as intended with v19
 
     SuccessValue←''
     ⍝ does not get in as a var with v19s startup
@@ -327,9 +328,13 @@
                                   ⎕EX target
                               :EndIf
                               ref←{9=⎕NC'⍵':⍵ ⋄ ⍎⍵}target
-                              res←2 ref.⎕FIX'file://',fl
+                              :If ∨/'-nolink'⍷options
+                                  res←2 ref.⎕FIX 1⊃⎕NGET fl 1
+                              :Else
+                                  res←2 ref.⎕FIX'file://',fl
+                              :EndIf
                           :Else
-                              res←'*** Error executing "⎕SE.SALT.Load ',fl,' -target=',(⍕target,options),'": ',NL
+                              res←'*** Error ⎕FIXing code in ',fl,': ',NL
                               res,←⎕DMX.(OSError{⍵,2⌽(×≢⊃⍬⍴2⌽⍺)/'") ("',⊃⍬⍴2⌽⍺}Message{⍵,⍺,⍨': '/⍨×≢⍺}⊃⍬⍴DM,⊂'')   ⍝ CompCheck: ignore
                           :EndTrap
                           res ⎕SIGNAL('***'≡3↑⍕res)/11
@@ -437,10 +442,10 @@
 
     ∇ (n v d)←SemVer;s;f
     ⍝ Version of DBuildTest (3 elems: name version date) using semantic versioning
-      s←⎕SRC ⎕THIS                  ⍝ appearently this only works in V16+
+      s←⎕SRC ⎕THIS
       f←Words⊃s                     ⍝ split first line
       n←2⊃f                         ⍝ ns name
-      v←'V'~⍨⊃⌽f                    ⍝ version number
+      v←'V'~⍨⊃⌽f                   ⍝ version number
       d←1↓∊'-',¨3↑Words{w←⎕VFI¨⍵ ⋄ ⍵⊃⍨⊃{(,⍵)/,⍳⍴⍵}∊(∧/¨3↑¨1⊃¨w)}⌽Comments s ⍝ date (sorry, extra complicated - but getting date from last comment that has one)
     ∇
 
@@ -473,10 +478,14 @@
     ∇
 
     Split←{dlb¨1↓¨(1,⍵∊⍺)⊂(⊃⍺),⍵}                       ⍝ Split ⍵ on ⍺, and remove leading blanks from each segment
-    sSplit←{dlb¨1↓¨(1,(0=2|+\⍵='"')∧⍵∊⍺)⊂(⊃⍺),⍵}                  ⍝ string safe split (does not confused by stuff enclosed in quotes)
+    sSplit←{dlb¨1↓¨(1,(0=2|+\⍵='"')∧⍵∊⍺)⊂(⊃⍺),⍵}                  ⍝ string safe split (does not get confused by stuff enclosed in quotes)
     Splitb←{     1↓¨(1,⍺)⊂'.',⍵}                        ⍝ Split of ⍵ where ⍺=1 (no dlb)
     SplitFirst←{dlb¨1↓¨(1,<\⍵=⍺)⊂⍺,⍵}                   ⍝ Split ⍵ on first occurence of ⍺, and remove leading blanks from each segment
     GetParam←{⍺←'' ⋄ dtb dlb(⌊/names⍳eis ⍵)⊃values,⊂⍺}  ⍝ Get value of parameter
+    ⍝unq←{(3>≢⍵)∨~isChar ⍵:⍵ ⋄ z←'""'≡⍵[1,≢⍵] ⋄ z↓(-z)↓⍵}
+    ⍝↑↑↑unquote string (fails if we have a string like '"my long Path", -flag=" and my flag"') - but I don't think that's likely to happend with the current params
+    ⍝↓↓↓ better:
+    unq←{(3>≢⍵)∨~isChar ⍵:⍵ ⋄ ('^\s*"([^"]*)"'⎕R'\1')⍵}
     dlb←{(∨\' '≠⍵)/⍵}                                   ⍝ delete leading blanks
     dtb←{(-{⍵⊥⍵}⍵=' ')↓⍵}                               ⍝ delete trailing blanks (DB)
     null←0                                              ⍝ UCMD switch not specified
@@ -1389,6 +1398,7 @@
           params←⎕SE.Dyalog.Utils.ExpandConfig params
           (names values)←↓[1]↑¯2↑¨(⊂⊂''),¨'='sSplit¨','sSplit params
           cmd←lc cmd~' ' ⋄ names←lc names
+          params←unq params
           :If (i=1)∧'dyalogbuild'≢cmd
               'First line of file must define DyalogBuild version'⎕SIGNAL 11
           :EndIf
@@ -1578,6 +1588,7 @@
           :CaseList 'lx' 'exec' 'prod' 'defaults'
               :If 0∊⍴tmp←GetParam'expression' ''
                   LogError'expression missing'
+                  LogError'expression missing in line >',line,'<'
               :Else
                   tmp←params ⍝ MBaas: use entire segment after ":" as argument (so that : and , can be used in these APL Expressions!)
                   :If cmd≡'lx'
@@ -1639,7 +1650,7 @@
           :If (1=GetNumParam'nosource')∧0≠2 args.Switch'nosource'
           :OrIf 1=2 args.Switch'nosource'
               {}5171⌶#
-              {}5172⌶0
+              {}5172⌶1
           :EndIf
       :Else
           :If 0<≢GetParam'nosource'
