@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.85.6
+:Namespace DyalogBuild ⍝ V 1.85.6
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -329,7 +329,7 @@
                               :EndIf
                               ref←{9=⎕NC'⍵':⍵ ⋄ ⍎⍵}target
                               :If ∨/'-nolink'⍷options
-                                  res←2 ref.⎕FIX 1⊃⎕NGET fl 1
+                                  res←2 ref.⎕FIX 1⊃(⎕NGET ⎕OPT'ContentType' 'APLCode')fl 1
                               :Else
                                   res←2 ref.⎕FIX'file://',fl
                               :EndIf
