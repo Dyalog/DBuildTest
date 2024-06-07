@@ -29,7 +29,7 @@
          ⍺:⎕←⍵
          ⍬
     ⍝  }pars←'CITATest=',(f←##.TESTSOURCE,theTest,(~'.'∊theTest)/'.dyalogtest'),' mode=DTest ',(' dtestmods="'cmdLineParams ⍵),' -off -loglvl=32',(##.halt/' -halt'),(##.trace/' -trace'),(##.verbose/' -verbose'),'"'
-     }pars←'CITATEST=',(f←##.TESTSOURCE,theTest,(~'.'∊theTest)/'.dyalogtest'),' mode=DTest ',(' dtestmods="'cmdLineParams ⍵),' -off -loglvl=32',(##.verbose/' -verbose'),'"'
+     }pars←'CITATEST=',(f←##.TESTSOURCE,theTest,(~'.'∊theTest)/'.dyalogtest'),' mode=DTest ',(' dtestmods="'cmdLineParams ⍵),' -setup= -off -loglvl=32',(##.verbose/' -verbose'),(##.halt/' -halt'),'"'
      ((1+##.(halt∨trace))⊃30(0.001×⌊/⍬))sub_RunAPLProcess(##.TESTSOURCE,'lx')pars
      0
  }
@@ -66,7 +66,7 @@
  }
 
 ⍝=========================== The tests   ==================================================
- cmdLineParams←{'SucVal=',('b64!',⎕se._cita.base64enc'json!',1 ⎕JSON ⍵),' ',⍺,' -SuccessValue=json!0'}  ⍝ pass an environment variable SucVal
+cmdLineParams←{'SucVal=',('b64!',⎕se._cita.base64enc'json!',1 ⎕JSON ⍵),' ',⍺,' -SuccessValue=json!0'}  ⍝ pass an environment variable SucVal
 theTest←'test_assert.aplf'
 →0 Execute 0
 
@@ -96,11 +96,6 @@ theTest←'test_assert.aplf'
  theTest←'SuccessValueLongString'
  cmdLineParams←{⍺,' -SuccessValue=b64!',(⍕⍵),' '}  ⍝ pass value as modifier for DTest command
  →0 Execute ⎕se._cita.base64enc'apl!''<The test executed on >,ZI4,<->,ZI2,<->,ZI2,< found no problems!>''⎕fmt 1 3⍴⎕TS'
-
- cmdLineParams←{⍺,' -SuccessValue=b64!',(⍕⍵),' '}  ⍝ pass value as modifier for DTest command
- →1 Execute ⎕se._cita.base64enc'apl!,''<The test executed on >,ZI4,<->,ZI2,<->,ZI2,< found no problems!>''⎕fmt 1 3⍴⎕TS'
-
-
 
 
 cleanExit:

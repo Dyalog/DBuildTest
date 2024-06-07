@@ -1,4 +1,4 @@
-DyalogTest : 1.70
+DyalogTest : 1.87
 ID         : DyalogBuildTest
 Description: test suite for ]DTest and ]DBuild 
 Description: We need to run this suite because we can't just run ALL tests
@@ -6,12 +6,15 @@ Description: because test_failure fails expectedly (and needs to be executed/tes
 
 ⍝AlertIfCoverageBelow: 80     ⍝ expect at least 80% 
 
+setup:                       ⍝ no setup - to avoid confusion when setup_Coverage is executed (it is used in a dedicated .dyalogtest)
+
 Test: test_Compatibility     ⍝ ensure that it is compatible with Classic interpreters (this test needs the CompCheck-folder!)
 
 Test: test_DSL               ⍝ basic tests of the DSL
 Test: test_dfn               ⍝ can we have simple dfns as tests?
 Test: test_ReturnCode        ⍝ testing returncode of DTest 
 Test: test_SuccessValue 
+Test: test_Coverage          ⍝ test CodeCoverage
 
 Test: test_DBuild_1          ⍝ some features of DBuild   -- disabled because of "-c" (which clears #)
 

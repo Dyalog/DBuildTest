@@ -1,0 +1,5 @@
+DyalogTest : 1.70
+ID         : test_Coverage
+Test: test_Coverage_main
+setup: setup_Coverage
+codecoverage_subject: #.ns_Coverage
