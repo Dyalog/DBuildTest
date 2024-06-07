@@ -1,4 +1,4 @@
-:Namespace DyalogBuild ⍝ V 1.85.6
+﻿:Namespace DyalogBuild ⍝ V 1.87.0
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -100,11 +100,26 @@
 ⍝ 2032 09 28 MBaas, v1.85.2: DTest: Version returns a "proper" numeric version no., "SemVer" has a semantic version no.
 ⍝ 2032 10 02 MBaas, v1.85.3: DTest: on failing tests (or setups) DTest reported SuccessValue as vec when it was scalar
 ⍝ 2023 10 03 MBaas, v1.85.4: "]cmd -?" shows fully qualified name of UCMD in options for more help
-⍝ 2023 11 28 MBaas, v.1.85.5: localized vars in SemVer
-⍝ 2023 12 13 MBaas, v.1.85.6: DyalogBuild accepts parameters enclosed in quotes; DBuild "-p" and "-nosource" weren't working as intended with v19
+⍝ 2023 11 28 MBaas, v1.85.5: localized vars in SemVer
+⍝ 2023 12 13 MBaas, v1.85.6: DyalogBuild accepts parameters enclosed in quotes; DBuild "-p" and "-nosource" weren't working as intended with v19
+⍝ 2024 02 14 MBaas, v1.86.0: DTest: revised mechanism to load added CodeCoverage: either from a folder in one of
+⍝                            the UCMD folders or using CODECOVERAGE_PATH;LogError & Log were spitting out their arguments
+⍝                            into the session (unless q=0, but sometimes even then) - disabled that as the log should now
+⍝                            collect all output  anyway. Pls. let us know if this a problem for you.
+⍝ 2024 06 07 MBaas, v1.87.0: DTest.Check - Check was supposed to display the line of code that called check - this wasn't working and now does.
+⍝                            Kai has upgraded CodeCoverage to 0.10.6 which now can also process code in #.
+⍝                            NB: Kai's class is no longer distributed with DTest, but can be downloaded from https://github.com/aplteam/CodeCoverage/releases
+⍝                                Please also see prev. comment wrt location of the CodeCoverage class. (ofc we're using the latest 0.10.7)
+⍝                            DTest -? did not mention the -coverag flag. Fixed.
+⍝                            DTest: Missing setup/teardown-fns did not ⎕STOP when -halt was set
+⍝                            DTest: it is possible to add an empty "setup:" declaration to .dyalogtest files to avoid running any setup functions
+⍝                            DTest: logging was in some cases duplicated into the session - I think this is avoided now w/o any loss of information.
 
+
+    CodeCoverageVersion←'0.10.7'
     SuccessValue←''
     ⍝ does not get in as a var with v19s startup
+
     ∇ R←DEBUG
       R←⎕SE.SALTUtils.DEBUG ⍝ used for testing to disable error traps  ⍝ BTW, m19091 for that being "⎕se" (instead of ⎕SE) even after Edit > Reformat.
     ∇
@@ -635,7 +650,7 @@
       :EndIf
     ∇
 
-    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog;file;res;subj;j;pre;rc;mask
+    ∇ XTest args;⎕TRAP;start;source;ns;files;f;z;fns;filter;verbose;LOGS;LOGSi;steps;setups;setup;DYALOG;WSFOLDER;suite;halt;m;v;sargs;overwritten;type;TESTSOURCE;extension;repeat;run;quiet;setupok;trace;matches;t;orig;nl∆;LoggedErrors;i;start0;nl;templ;base;WSFULL;msg;en;off;order;ts;timestamp;home;CoCo;r1;r2;tie;tab;ThisTestID;ignore;loglvl;logBase;logFile;log;∆OldLog;file;res;subj;j;pre;rc;mask;path;lib;ucmdf;ccf;tmpName;CodeCoverage
       i←quiet←0
       ⍝ Not used here, but we define them test scripts that need to locate data:
       ∆OldLog←⎕SE ⎕WG'Log'
@@ -660,7 +675,7 @@
       repeat←1⌈repeat
       file←''
       args.coverage_subj←null
-      args.coverage_ignore←⍕⎕THIS
+      args.coverage_ignore←{¯1↓∊((⊂⍕⍵),¨'.',¨⍵.⎕NL ¯3 ¯4),¨','}⎕THIS
       WSFULL←0  ⍝ indicates if we were hit by WS FULL
       ⎕SE.DTEST_COUNTER_OF_CALLS_TO_CHECK←0
      
@@ -712,7 +727,7 @@
               :EndIf
      
               :If 1=type  ⍝ deal with directories in f
-                  TESTSOURCE←f,(~'/\'∊⍨⊃⌽f)/⎕SE.SALTUtils.FS ⍝ use it accordingly! (and be sure it ends with dir sep)
+                  TESTSOURCE←∊1 ⎕NPARTS f,(~'/\'∊⍨⊃⌽f)/'/' ⍝ use it accordingly! (and be sure it ends with dir sep)'
                   files←('*.dyalog'ListFiles f)[;1]
                   files,←('*.aplf'ListFiles f)[;1]    ⍝ .aplf extension!
                   :For f :In files
@@ -746,7 +761,6 @@
                           :If ~0∊⍴v←('teardown_'⍷↑nl)[;1]/nl←ns.⎕NL ¯3
                               args.teardown←¯1↓∊v,¨' '
                           :EndIf
-     
                       :EndIf
                   :EndIf
               :EndIf
@@ -849,8 +863,11 @@
           →FAIL
       :EndIf
      
-      :If null≢setups←args.setup
+      :If 0<≢args.setup
+      :AndIf null≢setups←args.setup
           setups←' 'Split args.setup
+      :Else
+          setups←null
       :EndIf
      
       r←''  ⍝ must be global here, it is the result of the calling fn ()
@@ -864,6 +881,39 @@
           order←order{(⍺∩⍵),⍵~⍺}⍳≢fns  ⍝ numvec: validate and use that order (but make sure every test gets executed!)
       :EndSelect
       LOGSi←LOGS
+      :If null≢args.coverage ⍝ if switch is set
+      :AndIf (1↑1⊃⎕VFI⍕args.coverage)∨1<≢args.coverage  ⍝ and we have either numeric value for switch or a longer string
+      :AndIf 0=⎕NC'CoCo'   ⍝ only neccessary if we don't have an instance yet...
+          :If 0=≢home←2 ⎕NQ #'GetEnvironment' 'DTEST_CODECOVERAGE_PATH'  ⍝ no env var set
+          ⍝ we can't yet rely on Tatin (too much reorganization of THIS code), so let's see if we can use it to bring in CodeCoverage (w/o affecting the environment)^
+              tmpName←'⎕se.t',⍕1+≢'t'⎕SE.⎕NL 2 3 9
+              z←{0::'' ⋄ ⎕SE.UCMD ⍵}'TATIN.LoadPackages aplteam-CodeCoverage-',CodeCoverageVersion,' ',tmpName   ⍝ try to load it with ucmd
+              :If ⊃'1 package loaded into'⍷z
+                  CodeCoverage←tmpName⍎'CodeCoverage' ⍝ establish CoCo here as a ref to the one we loaded into tmpName
+                  →gotit   ⍝ check the message from ucmd
+              :EndIf
+              :For path :In ucmdf←(⊃⎕SE.SALTUtils.PATHDEL)(≠⊆⊢)⎕SE.SALT.Set'cmddir'  ⍝ search all UCMD folders
+                  :Trap 22
+                      lib←0 1 ⎕NINFO path,'/aplteam-CodeCoverage-',CodeCoverageVersion   ⍝ for a subfolder "aplteam-CodeCoverage-" with specific version
+                      :If 0<¯1↑⍴lib
+                          home←1⊃lib
+                          :Leave
+                      :EndIf
+                  :EndTrap
+              :EndFor
+          :EndIf
+          ccf←home∘,¨'/CodeCoverage.aplc' '/APLSource/CodeCoverage.aplc'('/aplteam-CodeCoverage-',CodeCoverageVersion,'/APLSource/CodeCoverage.aplc')  ⍝ also look in plausible subfolders
+          :If 0=≢home
+          :OrIf ~∨/z←⎕NEXISTS¨ccf
+              LogError'Unable to find folder with CodeCoverage files for version ',CodeCoverageVersion,', please download it from https://github.com/aplteam/CodeCoverage/releases and save folder "aplteam-CodeCoverage',CodeCoverageVersion,'" in one of the UCMD folders  ',('  - '∘,¨ucmdf),' or save it anywhere and set DTEST_CODECOVERAGE_PATH appropriately'
+              setupok←0
+              →END
+          :EndIf
+          ccf←⊃z/ccf
+          2 ⎕FIX'file://',ccf
+          ⎕←'loaded coco from ',home
+     gotit:
+      :EndIf
       :For run :In ⍳repeat
           :If verbose∧repeat>1
               0 Log'run #',(⍕run),' of ',⍕repeat
@@ -902,6 +952,8 @@
                           setupok←0
                       :EndTrap
                   :Else
+                      :If halt
+                          ⎕TRAP←0 'S' ⋄ (⎕LC[1]+1)⎕STOP 1⊃⎕SI ⋄ :EndIf
                       LogTest'-setup function not found: ',f
                       setupok←0
                   :EndIf
@@ -912,22 +964,11 @@
               :If null≢args.coverage ⍝ if switch is set
               :AndIf (1↑1⊃⎕VFI⍕args.coverage)∨1<≢args.coverage  ⍝ and we have either numeric value for switch or a longer string
               :AndIf 0=⎕NC'CoCo'   ⍝ only neccessary if we don't have an instance yet...
-                  :If 9=⎕NC'SALT_Data'
-                      home←1⊃⎕NPARTS SALT_Data.SourceFile  ⍝ CompCheck: ignore
-                  :Else
-                      home←1⊃⎕NPARTS 50 ⎕ATX 1⊃⎕SI
-                  :EndIf
-                  :If 0≠⊃z←home _cita.LoadCodeCoverage(⍕⎕THIS)
-                      LogError'Problem loading CodeCoverage: ',2⊃z
-                      setupok←0
-                      →END
-                  :EndIf
                   :If null≡subj←args.coverage_subj
                       :If 0<≢subj←#.⎕NL ¯9
-                          subj←∊(⊂'#.'),¨subj,¨','
+                          subj←¯1↓∊(⊂'#.'),¨subj,¨','
                       :EndIf
-                      subj,←(⍕ns),','
-                      subj←¯1↓subj
+                      subj,←',',⍕ns
                   :EndIf
                   CoCo←⎕NEW CodeCoverage(,⊂subj)
                   CoCo.Info←'Report created by DTest ',(2⊃SemVer),' which was called with these arguments: ',⊃¯2↑⎕SE.Input
@@ -945,9 +986,9 @@
                   :EndIf
                   :If 0=≢ignore←args.coverage_ignore
                           ⍝ignore←∊(⊂⍕⎕THIS),¨'.',¨(⎕THIS.⎕NL ¯3 4),¨','
-                      ignore←∊{(⊂⍕⍵),¨'.',¨(⍵.⎕NL ¯3 4),¨','}⎕SE.input.c
+                      ignore←∊{(⊂⍕⍵),¨'.',¨(⍵.⎕NL ¯3 ¯4),¨','}⎕SE.input.c
                   :EndIf
-                  ignore,←(((0<≢ignore)∧','≠¯1↑ignore)⍴','),¯1↓∊(⊂(⍕⎕THIS),'.ns.'),¨('Check' 'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Log' 'Assert' 'IfNot')
+                  ignore,←(((0<≢ignore)∧','≠¯1↑ignore)⍴','),¯1↓∊(⊂(⍕⎕THIS),'.ns.'),¨('Check' 'base64' 'base64dec' 'base64enc' 'Because' 'Fail' 'IsNotElement' 'RandomVal' 'tally' 'eis' 'Log' 'Assert' 'IfNot'),¨','
                   CoCo.ignore←ignore
                   CoCo.Start ⍬
               :EndIf
@@ -1010,22 +1051,30 @@
                           LogError msg
                       :EndTrap
                   :Else
+                      :If halt
+                          ⎕TRAP←0 'S' ⋄ (⎕LC[1]+1)⎕STOP 1⊃⎕SI ⋄ :EndIf
                       LogError'-teardown function not found: ',f
                   :EndIf
               :EndIf
      
      END:
-              pre←'       '
               :For j :In ⍳3
                   :If ~0∊⍴j⊃LOGS
-                      r,←(⊂((3↑pre),j⊃'Infos' 'Warnings' '*** Errors'),' logged ',((setup≢null)/' with setup "',setup,'":')),pre∘,¨(NL ⎕R(NL,pre))(j⊃LOGS)
+                      t←(j⊃'Infos' 'Warnings' '*** Errors'),' logged'
+                      :If 2=⎕NC'setup'
+                      :AndIf (setup≢null)
+                          t,←' with setup "',setup,'"'
+                      :EndIf
+                      t,←':',⎕UCS 13
+                      t,←(2⍴' '){w←⍵ ⋄ w←(~(⎕UCS 13 10)⍷w)/w ⋄ w←(~(⎕UCS 10 13)⍷w)/w ⋄ ((w∊⎕UCS 10 13)/w)←⊂(⎕UCS 13),⍺ ⋄ ∊w}{1=≡⍵:⍵ ⋄ ¯1↓∊⍵,¨⎕UCS 10}j⊃LOGS
+                      r,←⊂t
                   :EndIf
               :EndFor
               :If 0∊⍴3⊃LOGS
                   r,←(quiet≡null)/⊂'   ',(((setup≢null)∧1≠1↑⍴setups)/setup,': '),(⍕steps),' test',((1≠steps)/'s'),' (=',(⍕⎕SE.DTEST_COUNTER_OF_CALLS_TO_CHECK),' calls to "Check" or "Assert") passed in ',(1⍕0.001×⎕AI[3]-start),'s'
                   1(⎕NDELETE ⎕OPT'Wildcard' 1)TESTSOURCE,'*.rng.txt' ⍝ delete memorized random numbers when tests succeeded
-              :Else
-                  r,←⊂' Time spent: ',(1⍕0.001×⎕AI[3]-start),'s'
+              :ElseIf 2=⎕NC'start'
+                  r,←⊂'Time spent: ',(1⍕0.001×⎕AI[3]-start),'s'
               :EndIf
           :EndFor ⍝ Setup
       :EndFor ⍝ repeat
@@ -1053,6 +1102,9 @@
               :If 2=⎕NC'r2'    ⍝ if we have processed data
                   r,←⊂']open ',r2,'     ⍝ to see coverage details...'    ⍝ let the user see it!
               :EndIf   ⍝ otherwise the calling environment will have tu use shared CoCo.AggregateCoverageDataAndCreateReport
+              :If 2=⎕NC'tmpName'
+                  ⎕EX tmpName
+              :EndIf
           :EndIf
       :EndIf
       →FAIL2  ⍝ skip adding LOGS to r (we've done that before already and only need the code below if something made us →FAIL)
@@ -1066,7 +1118,7 @@
       LOGS←3⍴⊂''   ⍝ reset LOGS, it's in r now...
      FAIL2:
       LOGS←LOGSi,¨LOGS  ⍝ prepend initial logs
-      r←table r
+      r←↑⎕SE.Dyalog.Utils.layoutText ¯1↓∊r,¨⎕UCS 13
      
       :If off>0
       :OrIf loglvl>0
@@ -1146,6 +1198,7 @@
       :EndIf
     ∇
 
+
     ∇ msg Fail value
       msg ⎕SIGNAL(1∊value)/777
     ∇
@@ -1181,7 +1234,7 @@
           :EndIf
           :Trap 3
             ⍝ INDEX ERROR possible if we can't get the ⎕NR (for example, if called by a class member) - though this should be fixed now...
-              ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',##.dtb(1+2⊃⎕LC)⊃↓(2⊃⎕RSI).(180⌶(2⊃⎕SI))
+              ⎕←'call: ',(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',##.dtb(1+2⊃⎕LC)⊃↓(1⊃⎕RSI).(180⌶(2⊃⎕SI))
           :EndTrap
           (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
           ⍝ test failed! Execution suspended so that you can examine the problem...
@@ -1900,6 +1953,7 @@
 
     LineNo←{    '[',(,'ZI3'⎕FMT ⊃,⍵),']'    }  ⍝ m19572 deals with Edit|Reformat not removing the blanks in the dfn!
     PrefixTS← {(⊃'hh:mm:ss.fff"> "'(1200⌶)1⎕DT'J'),⍵}
+
     ∇ {r}←{f}LogTest msg;type;i
     ⍝ this function is mapped to function "Log" that is defined in the ns in which tests are executed
     ⍝ optional f is ('Type' 'I|W|E') (or 'Info|Warning|Error', 1st char matters) and/or ('Prefix' 'any text to prefix to the msg')
@@ -1928,6 +1982,7 @@
                   f←''
               :EndIf
           :EndIf
+          f←'  ',f  ⍝ add some indent for multiline output
           :If type=0  ⍝ only add this information if Log came w/o explicit type
               type←3   ⍝ and the default message type is "Error"
               :If (⎕DR msg)=326
@@ -1940,11 +1995,12 @@
                       msg,←' when DTest expected an empty charvec to indicate success'
                   :EndIf
               :Else
-                  msg←'code returned character value = "',(¯1↓,msg,⎕UCS 10),'"'
+                  msg←'code returned character value = "',((50<≢msg)/(⎕UCS 10),'  '),('\n'⎕R'\n  '⍠('Mode' 'D'))({(¯2↓msg),(¯2↑msg)~⎕UCS 10 13}msg),'" '   ⍝ add some indent for multiline msgs
+                  msg,←⎕UCS 10
                   :If SuccessValue≢''
-                      msg,←' that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴⍵)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
+                      msg,←'that did not match SuccessValue=',{' '=⍥⎕DR ⍵:'''',⍵,'''' ⋄ 'num ',((0 1⍳⍴⍴⍵)⊃'scalar ' 'vector '),⍕⍵}SuccessValue
                   :Else
-                      msg,←' when DTest expected an empty charvec to indicate success'
+                      msg,←'when DTest expected an empty charvec to indicate success'
                   :EndIf
               :EndIf
           :EndIf
@@ -2005,10 +2061,10 @@
           LOGS[type],←⊂eis pre,msg
       :EndIf
       :If quiet=0
-          ⎕←pre,,msg
+          ⍝⎕←pre,,msg
       :ElseIf quiet=1
       :AndIf type=3
-          ⎕←pre,,msg
+          ⍝⎕←pre,,msg
       :EndIf
     ∇
 
@@ -2025,8 +2081,9 @@
       decor←decor,' ERROR ',decor
       ('Type' 'E')('Prefix'decor)Log msg
       :If quiet=1    ⍝  make sure that errors are shown (unless we are explicitely told to shut up (quiet=2)- this is mostly relevant when Build is called during ]DTest)
-          ⎕←msg
+          ⍝⎕←msg
       :EndIf
+     
     ∇
 
     :EndSection
@@ -2134,7 +2191,7 @@
      
       :Case 'DTest'
           r←⊂'Run (a selection of) functions named test_* from a namespace, file or directory | Version ',2⊃SemVer
-          r,←⊂'    ]',(⊃List.Group),'.',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup[=fn]] [-suite=file] [-teardown[=fn]] [-testlog=logfile] [-tests=] [-ts] [-timeout=t] [-trace] [-verbose] [-clear[=n]] [-init] [-order={0|1|"NumVec"}] -SuccessValue=...]'
+          r,←⊂'    ]',(⊃List.Group),'.',Cmd,' {<ns>|<file>|<path>} [-halt] [-filter=string] [-off] [-quiet] [-repeat=n] [-loglvl=n] [-setup[=fn]] [-suite=file] [-teardown[=fn]] [-testlog=logfile] [-tests=] [-ts] [-timeout=t] [-trace] [-verbose] [-clear[=n]] [-coverage] [-init] [-order={0|1|"NumVec"}] -SuccessValue=...]'
           :Select level
           :Case 0
               r,←⊂']',(⊃List.Group),'.',Cmd,' -?? ⍝ for more info'
@@ -2393,33 +2450,6 @@
 
 
         NrOfCommonLines←{+/∧\{⍵=⍵[1]+¯1+⍳≢⍵}⍺{((≢⍺)⍴⍋⍋⍺⍳⍺⍪⍵)⍳(≢⍵)⍴⍋⍋⍺⍳⍵⍪⍺}⍵}
-
-        ∇ R←home LoadCodeCoverage ref;f;t;ccv;homeccv
-⍝ loads CodeCoverage from home[/folder] into ns "ref"
-⍝ name of folder must contain "aplteam-CodeCoverage-" and a version number that is configured below
-⍝ (if we find apl-dependencies.txt, we search it for "aplteam-CodeCoverage" and use version given there.
-⍝  But currently it is not required to be there)
-          R←0 ''
-          :Trap 0
-              ccv←'0.9.2'   ⍝ version of CodeCoverage
-              home←{⍵,(~∨/'\/\'=⊢/⍵)/⎕SE.SALT.FS}home  ⍝ make it is a folder
-              :If ⎕NEXISTS f←home,'apl-dependencies.txt'
-                  t←1⊃⎕NGET f
-                  ccv←⊃('aplteam-CodeCoverage-(.*)$'⎕S'\1')t
-              :EndIf
-              homeccv←home,'aplteam-CodeCoverage-',ccv
-              :If {0 2∊⍨10|⎕DR ⍵}ref  ⍝ this is "isChar", but we can't use that (dunno where it might be...)
-                  ref←⍎ref
-              :EndIf
-              :If ~⎕NEXISTS f←homeccv,'/CodeCoverage.aplc'   ⍝ look for it in a subfolder
-              :AndIf ~⎕NEXISTS f←home,'/CodeCoverage.aplc'   ⍝ or in the home folder
-                  R←0('Could not find CodeCoverage source in "',f,'"')
-              :EndIf
-              2 ref.⎕FIX'file://',f
-          :Else
-              R←1(⎕←,1(⎕JSON ⎕OPT'Compact' 0)⎕DMX)
-          :EndTrap
-        ∇
     :EndNamespace
     :EndSection
 :EndNamespace ⍝ DyalogBuild  $Revision$
