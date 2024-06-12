@@ -114,6 +114,7 @@
 ⍝                            DTest: Missing setup/teardown-fns did not ⎕STOP when -halt was set
 ⍝                            DTest: it is possible to add an empty "setup:" declaration to .dyalogtest files to avoid running any setup functions
 ⍝                            DTest: logging was in some cases duplicated into the session - I think this is avoided now w/o any loss of information.
+⍝                            DTest: -clear switch also removes existing LINKs in #
 
 
     CodeCoverageVersion←'0.10.7'
@@ -1942,6 +1943,7 @@
       :If (clear≡1)∨0∊⍴,clear
           ⍝ #.(⎕EX ⎕NL⍳9)
           #.⎕EX #.⎕NL⍳9
+          {}'(all:1)'⎕SE.Link.Break #
           Log'workspace cleared'
       :ElseIf ∧/1⊃tmp←⎕VFI clear
           n←#.⎕NL 2⊃tmp
