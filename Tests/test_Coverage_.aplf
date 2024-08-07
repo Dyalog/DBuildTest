@@ -1,0 +1,4 @@
+R←test_Coverage_ null
+R←''
+{}'sample "boilerplate" fn which will be replicated 100 times by setup_Coverage.dyalog'
+{}'these lines just help to make the tests less boring'

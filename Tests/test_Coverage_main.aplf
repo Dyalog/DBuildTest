@@ -1,0 +1,6 @@
+ R←test_Coverage_main null;trg;i
+ R←''
+ trg←1↑2⊃⎕VFI 1⊃160⌶'COVERAGE_TARGET'
+ :For i :In ⍳trg
+     {}#.ns_Coverage⍎'test_Coverage_',(,'ZI4'⎕fmt i),' ⍬'
+ :EndFor
