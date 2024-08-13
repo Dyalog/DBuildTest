@@ -588,9 +588,9 @@
     :Section TEST "DSL" FUNCTIONS
 
     ∇ {r}←l Assert b;cl;cc;t;v;nr;z
-      nr←1↓⎕NR 2⊃⎕XSI
-      cl←⎕LC[2]⊃nr  ⍝ the current line
-      :If verbose ⍝ look for "verbose" in current ns or its parent
+      nr←1↓⎕NR 2⊃⎕XSI   ⍝ drop off header
+      cl←⎕LC[2]⊃nr      ⍝ the current line
+      :If verbose       ⍝ look for "verbose" in current ns or its parent
           ⎕←cl
       :EndIf
       →(l Check b)↓r←0
