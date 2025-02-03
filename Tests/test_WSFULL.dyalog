@@ -30,7 +30,7 @@
  logfile←##.TESTSOURCE,'DBuildWSFULL'
  ret←300 sub_RunAPLProcess(##.TESTSOURCE,'lx')('RunUCMD="DEVOPS.DBuild ',##.TESTSOURCE,'DBuild_WSFULL.dyalogbuild -q" CITA_LOG="',logfile,'" CITAnqOFF=1')
 
- :If 1 Check ⎕NEXISTS f←logfile,'.RunUCMD.log'  ⍝ was a log-file written?
+ :If 1 Check ⎕NEXISTS f←##.TESTSOURCE,'RunUCMD.log'  ⍝ was a log-file written?
      →0 Because'Failing build not produce log-file "',f,'"' ⋄ :EndIf
 
  t←1⊃⎕NGET f
@@ -39,6 +39,6 @@
 
  1(⎕NDELETE ⎕OPT'Wildcard' 1)logfile,'.*'  ⍝ can do because LogFile has no "_", so we won't delete production files
  1 ⎕NDELETE ##.TESTSOURCE,'testWSFULL.log'
- 1 ⎕NDELETE ##.TESTSOURCE,'DBuildWSFULL.RunUCMD.log'
+ 1 ⎕NDELETE ##.TESTSOURCE,'RunUCMD.log'
  1 ⎕NDELETE ##.TESTSOURCE,'testWSFULL.log.json'
  1 ⎕NDELETE ##.TESTSOURCE,'MemRep.dcf'

@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.87.0
+﻿:Namespace DyalogBuild ⍝ V 1.87.1
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -115,6 +115,7 @@
 ⍝                            DTest: it is possible to add an empty "setup:" declaration to .dyalogtest files to avoid running any setup functions
 ⍝                            DTest: logging was in some cases duplicated into the session - I think this is avoided now w/o any loss of information.
 ⍝                            DTest: -clear switch also removes existing LINKs in #
+⍝ 2024 08 13 MBaas, v1.87.1: DTest: Check shows more info about data type and shape of arguments when they are not equal
 
 
     CodeCoverageVersion←'0.10.7'
@@ -587,9 +588,9 @@
     :Section TEST "DSL" FUNCTIONS
 
     ∇ {r}←l Assert b;cl;cc;t;v;nr;z
-      nr←1↓⎕NR 2⊃⎕SI
-      cl←⎕LC[2]⊃nr  ⍝ the current line
-      :If verbose ⍝ look for "verbose" in current ns or its parent
+      nr←1↓⎕NR 2⊃⎕XSI   ⍝ drop off header
+      cl←⎕LC[2]⊃nr      ⍝ the current line
+      :If verbose       ⍝ look for "verbose" in current ns or its parent
           ⎕←cl
       :EndIf
       →(l Check b)↓r←0
@@ -782,7 +783,7 @@
               :EndIf
               :If halt  ⍝ we found an error and need to stop
                   ⎕←'"',source,'" is neither a namespace nor a folder or a .dyalogtest file.'
-                  (⎕LC[1]+1)⎕STOP 1⊃⎕SI
+                  (⎕LC[1]+1)⎕STOP 1⊃⎕XSI
               :EndIf
               LogTest'"',source,'" is neither a namespace nor a folder or a .dyalogtest file.'
               (TESTSOURCE base)←2↑1 ⎕NPARTS source
@@ -906,7 +907,7 @@
           ccf←home∘,¨'/CodeCoverage.aplc' '/APLSource/CodeCoverage.aplc'('/aplteam-CodeCoverage-',CodeCoverageVersion,'/APLSource/CodeCoverage.aplc')  ⍝ also look in plausible subfolders
           :If 0=≢home
           :OrIf ~∨/z←⎕NEXISTS¨ccf
-              LogError'Unable to find folder with CodeCoverage files for version ',CodeCoverageVersion,', please download it from https://github.com/aplteam/CodeCoverage/releases and save folder "aplteam-CodeCoverage',CodeCoverageVersion,'" in one of the UCMD folders  ',('  - '∘,¨ucmdf),' or save it anywhere and set DTEST_CODECOVERAGE_PATH appropriately'
+              LogError'Unable to find folder with CodeCoverage files for version ',CodeCoverageVersion,', please download it from https://github.com/aplteam/CodeCoverage/releases and save folder "aplteam-CodeCoverage',CodeCoverageVersion,'" in one of the UCMD folders  ',(∊'  - '∘,¨ucmdf),' or save it anywhere and set DTEST_CODECOVERAGE_PATH appropriately'
               setupok←0
               →END
           :EndIf
@@ -954,7 +955,7 @@
                       :EndTrap
                   :Else
                       :If halt
-                          ⎕TRAP←0 'S' ⋄ (⎕LC[1]+1)⎕STOP 1⊃⎕SI ⋄ :EndIf
+                          ⎕TRAP←0 'S' ⋄ (⎕LC[1]+1)⎕STOP 1⊃⎕XSI ⋄ :EndIf
                       LogTest'-setup function not found: ',f
                       setupok←0
                   :EndIf
@@ -1053,7 +1054,7 @@
                       :EndTrap
                   :Else
                       :If halt
-                          ⎕TRAP←0 'S' ⋄ (⎕LC[1]+1)⎕STOP 1⊃⎕SI ⋄ :EndIf
+                          ⎕TRAP←0 'S' ⋄ (⎕LC[1]+1)⎕STOP 1⊃⎕XSI ⋄ :EndIf
                       LogError'-teardown function not found: ',f
                   :EndIf
               :EndIf
@@ -1212,32 +1213,32 @@
       si←''
       :If 0=≢fn←('((?!\d)[\wÀ-ÖØ-Ýßà-öø-üþ∆⍙\x{24b6}-\x{24cf}]+)\[\d+]'⎕S'\1')msg  ⍝ anything looking like function[lc] already in msg? (rx by AB)
       :AndIf ~3∊∊⎕NC¨fn                     ⍝ then do not include it again...
-          si←(2⊃⎕SI),'[',(⍕2⊃⎕LC),']: '
+          si←(2⊃⎕XSI),'[',(⍕2⊃⎕LC),']: '
       :EndIf
       r←r,((~0∊≢r)/⎕UCS 10),si,msg
     ∇
 
-    ∇ r←expect Check got
+    ∇ r←expect Check got;desc;fv;show
       ⎕SE.DTEST_COUNTER_OF_CALLS_TO_CHECK+←1
       :If r←expect≢got
       :AndIf ##.halt
+          show←{
+              fv←1+80≥≢,⍕⍵   ⍝ can we sow "full value" (or is it too long?
+              e←0∊⍴⍵         ⍝ is it empty?
+              s←(⎕DR ⍵)∊80 82 160 320
+              t←1+s+2×326=⎕DR ⍵
+              (e/'empty '),(t⊃'numeric' 'character' 'pointer (nested)'),' ',((1+2⌊⍴⍴⍵)⊃'scalar' 'vector' 'array'),(~e)/((0<⍴⍴⍵)/' of shape=',(⍕⍴⍵)),(fv⊃'. Preview=' ' with value='),⍎fv⊃'80↑⍕,⍵' '⍕,⍵'
+          }
           ⎕←' TEST SUSPENDED! ───────────────────────────────────────────────────────────'
           ⎕←'expect≢got:'
-          :If 200≥⎕SIZE'expect'
-              ⎕←'expect=',,expect
-          :Else
-              ⎕←'expect   ⍝ left argument of "Check"-call'
-          :EndIf
-          :If 200≥⎕SIZE'got'
-              ⎕←'got=',,got
-          :Else
-              ⎕←'got      ⍝ did not match right argument - examine variables or <Esc> into calling function'
-          :EndIf
+          ⎕←'expect=',show expect
+          ⎕←'got=',show got
+          ⎕←'⍝ examine variables or <Esc> into calling function'
           :Trap 3
             ⍝ INDEX ERROR possible if we can't get the ⎕NR (for example, if called by a class member) - though this should be fixed now...
-              ⎕←'call: ',(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',##.dtb(1+2⊃⎕LC)⊃↓(1⊃⎕RSI).(180⌶(2⊃⎕SI))
+              ⎕←'call: ',(2⊃⎕XSI),'[',(⍕2⊃⎕LC),'] ',##.dtb(1+2⊃⎕LC)⊃↓(1⊃⎕RSI).(180⌶(2⊃⎕XSI))
           :EndTrap
-          (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
+          (1+⊃⎕LC)⎕STOP 1⊃⎕XSI ⍝ stop in next line
           ⍝ test failed! Execution suspended so that you can examine the problem...
       :EndIf
     ∇
@@ -1253,8 +1254,8 @@
           :If 200≥⎕SIZE'B'
               ⎕←'B=',,B
           :EndIf
-          ⎕←(2⊃⎕SI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕SI
-          (1+⊃⎕LC)⎕STOP 1⊃⎕SI ⍝ stop in next line
+          ⎕←(2⊃⎕XSI),'[',(⍕2⊃⎕LC),'] ',(1+2⊃⎕LC)⊃⎕THIS.⎕NR 2⊃⎕XSI
+          (1+⊃⎕LC)⎕STOP 1⊃⎕XSI ⍝ stop in next line
           ⍝ test failed! Execution suspended so that you can examine the problem...
       :EndIf
     ∇
@@ -1832,7 +1833,7 @@
                       :Else
                           ('Type' 'E')Log'Problem creating ',wsid,':',NL,∊⎕DMX.DM,¨⊂NL
                       :EndIf
-                      :If halt ⋄ (⎕LC[1]+2)⎕STOP 1⊃⎕SI
+                      :If halt ⋄ (⎕LC[1]+2)⎕STOP 1⊃⎕XSI
                           ⎕←'Function halted.'
                       ⍝ stop here
                       :EndIf
@@ -1988,7 +1989,8 @@
           :If type=0  ⍝ only add this information if Log came w/o explicit type
               type←3   ⍝ and the default message type is "Error"
               :If (⎕DR msg)=326
-                  msg←'code returned data with unsupported ⎕DR=326'
+                  ⎕←'code returned data with unsupported ⎕DR=326'  ⍝ msg←!
+                  ⎕TRAP←0 'S' ⋄ (⎕LC[1]+1)⎕STOP 1⊃⎕XSI
               :ElseIf ~(⎕DR∊msg)∊80 82 160
                   msg←'code returned numeric ',((0 1⍳⍴⍴msg)⊃'scalar' 'vector'),' = ',⍕msg
                   :If SuccessValue≢''
@@ -2406,7 +2408,7 @@
               ⎕←(⎕JSON ⎕OPT'Compact' 0)⎕DMX
               ⎕←'file=',file
               ⎕←'log=',log
-              ⎕←'si' ⋄ ⎕←⍕⎕SI,[1.5]⎕LC
+              ⎕←'si' ⋄ ⎕←⍕⎕XSI,[1.5]⎕LC
           :EndTrap
       ⍝    :If rc≠¯42
           ⎕OFF(|rc)
