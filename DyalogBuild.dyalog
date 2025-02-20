@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.87.1
+﻿:Namespace DyalogBuild ⍝ V 1.87.2
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -116,6 +116,7 @@
 ⍝                            DTest: logging was in some cases duplicated into the session - I think this is avoided now w/o any loss of information.
 ⍝                            DTest: -clear switch also removes existing LINKs in #
 ⍝ 2024 08 13 MBaas, v1.87.1: DTest: Check shows more info about data type and shape of arguments when they are not equal
+⍝ 2025 08 13 MBaas, v1.87.2: DTest: fixed an error when argument pointed to a folder with no tests
 
 
     CodeCoverageVersion←'0.10.7'
@@ -732,6 +733,11 @@
                   TESTSOURCE←∊1 ⎕NPARTS f,(~'/\'∊⍨⊃⌽f)/'/' ⍝ use it accordingly! (and be sure it ends with dir sep)'
                   files←('*.dyalog'ListFiles f)[;1]
                   files,←('*.aplf'ListFiles f)[;1]    ⍝ .aplf extension!
+                  :If 0=≢files
+                      LogError'Path "',TESTSOURCE,'" did not contain any test_-files!'
+                      LOGSi←LOGS
+                      →FAIL
+                  :EndIf
                   :For f :In files
                       :Trap (DEBUG∨halt)↓0
                           LoadCode f ns
