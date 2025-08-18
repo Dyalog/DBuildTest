@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.87.2
+﻿:Namespace DyalogBuild ⍝ V 1.87.3
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -117,6 +117,7 @@
 ⍝                            DTest: -clear switch also removes existing LINKs in #
 ⍝ 2024 08 13 MBaas, v1.87.1: DTest: Check shows more info about data type and shape of arguments when they are not equal
 ⍝ 2025 08 13 MBaas, v1.87.2: DTest: fixed an error when argument pointed to a folder with no tests
+⍝ 2025 08 18 MBaas, v1.87.3: DTest: fixed a problem with the UCMD Help
 
 
     CodeCoverageVersion←'0.10.7'
@@ -2245,44 +2246,44 @@
               r,←⊂'    -verbose              display more status messages while running'
               r,←⊂''
               r,←⊂'see https://github.com/Dyalog/DBuildTest/wiki/DTest for more information'
-          :Case 'GetTools4CITA'
-              r←⊂'Primarily an internal tool for testing with CITA | Version ',2⊃SemVer
-              r,←⊂'    ]',(⊃List.Group),'.',Cmd,' [ns]'
-              :Select
-              :Case 0
-                  r,←⊂']',(⊃List.Group),'.',Cmd,' -?? ⍝ for more info'
-              :Case 1
-                  r,←⊂'This copies a few tools from the DTest namespace into `⎕se._cita` and some into the namespace passed as argument (default is #)'
-                  r,←⊂''
-                  r,←⊂'- SetupCompatibilityFns'
-                  r,←⊂'- DyaVersion  numeric variable holding {major}.{minor} Version of current interpreter'
-                  r,←⊂'- APLVersion  actually identifies the platform with value *nix|Win|Mac'
-                  r,←⊂'- isChar ⍵    returns boolean value if argument is char'
-                  r,←⊂'- isWin       niladic function returning boolean to indicate if running on Windows'
-                  r,←⊂'- ⍺ Split ⍵   split string ⍵ on positions that have value ⍺'
-                  r,←⊂'- Init        establishes additional functions'
-                  r,←⊂'- GetDOTNETVersion - returns 4 elements to describe .NET Version that is in use:'
-                  r,←⊂'                     R[1] = 0/1/2: 0=nothing, 1=.net Framework, 2=NET CORE'
-                  r,←⊂'                     R[2] = Version (text vector)'
-                  r,←⊂'                     R[3] = Version (identifiable x.y within [2] in numerical form)'
-                  r,←⊂'                     R[4] = Textual description of the framework'
-                  r,←⊂'- _FileTime_to_TS - legacy from the days w/o ⎕NINFO'
-                  r,←⊂'- Nopen      - helps dealing with native files'
-                  r,←⊂'...and a few others as well as:'
-                  r,←⊂'- base64enc'
-                  r,←⊂'- base64dec'
-                  r,←⊂'- base64 (subfn used by the last 2)'
-                  r,←⊂'to encode/decode a string using base64.'
-                  r,←⊂'The last three as well as the "DSL":'
-                  r,←⊂'- Because'
-                  r,←⊂'- Fail'
-                  r,←⊂'- Check'
-                  r,←⊂'- IfNot'
-                  r,←⊂'- IsNotElement'
-                  r,←⊂'- eis'
-                  r,←⊂'- Assert'
-                  r,←⊂' will also be copied into the ns passed as argument (# by default)'
-              :EndSelect
+          :EndSelect
+      :Case 'GetTools4CITA'
+          r←⊂'Primarily an internal tool for testing with CITA | Version ',2⊃SemVer
+          r,←⊂'    ]',(⊃List.Group),'.',Cmd,' [ns]'
+          :Select level
+          :Case 0
+              r,←⊂']',(⊃List.Group),'.',Cmd,' -?? ⍝ for more info'
+          :Case 1
+              r,←⊂'This copies a few tools from the DTest namespace into `⎕se._cita` and some into the namespace passed as argument (default is #)'
+              r,←⊂''
+              r,←⊂'- SetupCompatibilityFns'
+              r,←⊂'- DyaVersion  numeric variable holding {major}.{minor} Version of current interpreter'
+              r,←⊂'- APLVersion  actually identifies the platform with value *nix|Win|Mac'
+              r,←⊂'- isChar ⍵    returns boolean value if argument is char'
+              r,←⊂'- isWin       niladic function returning boolean to indicate if running on Windows'
+              r,←⊂'- ⍺ Split ⍵   split string ⍵ on positions that have value ⍺'
+              r,←⊂'- Init        establishes additional functions'
+              r,←⊂'- GetDOTNETVersion - returns 4 elements to describe .NET Version that is in use:'
+              r,←⊂'                     R[1] = 0/1/2: 0=nothing, 1=.net Framework, 2=NET CORE'
+              r,←⊂'                     R[2] = Version (text vector)'
+              r,←⊂'                     R[3] = Version (identifiable x.y within [2] in numerical form)'
+              r,←⊂'                     R[4] = Textual description of the framework'
+              r,←⊂'- _FileTime_to_TS - legacy from the days w/o ⎕NINFO'
+              r,←⊂'- Nopen      - helps dealing with native files'
+              r,←⊂'...and a few others as well as:'
+              r,←⊂'- base64enc'
+              r,←⊂'- base64dec'
+              r,←⊂'- base64 (subfn used by the last 2)'
+              r,←⊂'to encode/decode a string using base64.'
+              r,←⊂'The last three as well as the "DSL":'
+              r,←⊂'- Because'
+              r,←⊂'- Fail'
+              r,←⊂'- Check'
+              r,←⊂'- IfNot'
+              r,←⊂'- IsNotElement'
+              r,←⊂'- eis'
+              r,←⊂'- Assert'
+              r,←⊂' will also be copied into the ns passed as argument (# by default)'
           :EndSelect
       :EndSelect
     ∇
