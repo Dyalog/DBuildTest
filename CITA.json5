@@ -7,7 +7,7 @@
 {
     secondstimeout: 900,
     tests: [{
-        "DyalogVersions": "18+",
+        "DyalogVersions": "18-",
         "Test": "./Tests/DTest.dyalogtest",
         "EMail": [{
             "All": "mbaas@dyalog.com"
