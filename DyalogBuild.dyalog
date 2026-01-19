@@ -118,6 +118,7 @@
 ⍝ 2024 08 13 MBaas, v1.87.1: DTest: Check shows more info about data type and shape of arguments when they are not equal
 ⍝ 2025 08 13 MBaas, v1.87.2: DTest: fixed an error when argument pointed to a folder with no tests
 ⍝ 2025 08 18 MBaas, v1.87.3: DTest: fixed a problem with the UCMD Help
+⍝ 2026 01 19 MBaas, v1.87.4: DTest: -verbose did not have the expected effect (regression in 1.86)
 
 
     CodeCoverageVersion←'0.10.7'
@@ -2072,7 +2073,7 @@
           LOGS[type],←⊂eis pre,msg
       :EndIf
       :If quiet=0
-          ⍝⎕←pre,,msg
+          ⎕←pre,,msg
       :ElseIf quiet=1
       :AndIf type=3
           ⍝⎕←pre,,msg
