@@ -2070,10 +2070,10 @@
       :EndIf  ⍝ may happen during Clean...
       :If quiet≠1
       :OrIf type=3
-          LOGS[type],←⊂eis pre,msg
+          LOGS[type],←⊂eis pre,⍕∊msg
       :EndIf
       :If quiet=0
-          ⎕←pre,,msg
+          ⎕←pre,⍕∊msg
       :ElseIf quiet=1
       :AndIf type=3
           ⍝⎕←pre,,msg
