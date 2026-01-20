@@ -2077,6 +2077,11 @@
       :ElseIf quiet=1
       :AndIf type=3
           ⍝⎕←pre,,msg
+          ⍝ alerts during quiet mode will typically lead to immediate exit and end of test with display of log, so this might be redundant.
+          ⍝ discussed during review of a PR:
+          ⍝ > Have you considered the other output statement that is also commented out. If it is not applicable then you should clean up the code.
+          ⍝ I'm not sure what to do about that. This is for alerts in quiet mode. Usually the test will terminate anyway and the log will be shown, 
+          ⍝ so that would be redundant. But it probably was there for a reason, so I'd like to keep it as it is. I'll add this comment to the code as a reminder.
       :EndIf
     ∇
 
