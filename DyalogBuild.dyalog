@@ -2068,16 +2068,16 @@
       :If 0=⎕NC'LOGS'
           LOGS←3⍴⊂''
       :EndIf  ⍝ may happen during Clean...
-      :If quiet≠1
-      :OrIf type=3
-          LOGS[type],←⊂eis pre,⍕∊msg
+      :If quiet≠1      ⍝ if we're not in any quiet mode
+      :OrIf type=3     ⍝ OR if the msg is an error
+          LOGS[type],←⊂eis pre,⍕∊msg   ⍝ record it.
       :EndIf
-      :If quiet=0
-          ⎕←pre,⍕∊msg
-      :ElseIf quiet=1
-      :AndIf type=3
+      :If quiet=0      ⍝ if we're allow to print to the session
+          ⎕←pre,⍕∊msg  ⍝ show the msg immediately
+      :ElseIf quiet=1  ⍝ if we're in quiet mode
+      :AndIf type=3    ⍝ and the message is an error
           ⍝⎕←pre,,msg
-          ⍝ alerts during quiet mode will typically lead to immediate exit and end of test with display of log, so this might be redundant.
+          ⍝ errors  during quiet mode will typically lead to immediate exit and end of test with display of log, so this might be redundant.
           ⍝ discussed during review of a PR:
           ⍝ > Have you considered the other output statement that is also commented out. If it is not applicable then you should clean up the code.
           ⍝ I'm not sure what to do about that. This is for alerts in quiet mode. Usually the test will terminate anyway and the log will be shown, 
