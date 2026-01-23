@@ -1,4 +1,4 @@
-﻿:Namespace DyalogBuild ⍝ V 1.87.3
+﻿:Namespace DyalogBuild ⍝ V 1.87.4
 ⍝ 2017 04 11 MKrom: initial code
 ⍝ 2017 05 09 Adam: included in 16.0, upgrade to code standards
 ⍝ 2017 05 21 MKrom: lowercase Because and Check to prevent breaking exisitng code
@@ -118,6 +118,7 @@
 ⍝ 2024 08 13 MBaas, v1.87.1: DTest: Check shows more info about data type and shape of arguments when they are not equal
 ⍝ 2025 08 13 MBaas, v1.87.2: DTest: fixed an error when argument pointed to a folder with no tests
 ⍝ 2025 08 18 MBaas, v1.87.3: DTest: fixed a problem with the UCMD Help
+⍝ 2026 01 19 MBaas, v1.87.4: DTest: -verbose did not have the expected effect (regression in 1.86)
 
 
     CodeCoverageVersion←'0.10.7'
@@ -2067,15 +2068,20 @@
       :If 0=⎕NC'LOGS'
           LOGS←3⍴⊂''
       :EndIf  ⍝ may happen during Clean...
-      :If quiet≠1
-      :OrIf type=3
-          LOGS[type],←⊂eis pre,msg
+      :If quiet≠1      ⍝ if we're not in any quiet mode
+      :OrIf type=3     ⍝ OR if the msg is an error
+          LOGS[type],←⊂eis pre,⍕∊msg   ⍝ record it.
       :EndIf
-      :If quiet=0
+      :If quiet=0      ⍝ if we're allow to print to the session
+          ⎕←pre,⍕∊msg  ⍝ show the msg immediately
+      :ElseIf quiet=1  ⍝ if we're in quiet mode
+      :AndIf type=3    ⍝ and the message is an error
           ⍝⎕←pre,,msg
-      :ElseIf quiet=1
-      :AndIf type=3
-          ⍝⎕←pre,,msg
+          ⍝ errors  during quiet mode will typically lead to immediate exit and end of test with display of log, so this might be redundant.
+          ⍝ discussed during review of a PR:
+          ⍝ > Have you considered the other output statement that is also commented out. If it is not applicable then you should clean up the code.
+          ⍝ I'm not sure what to do about that. This is for alerts in quiet mode. Usually the test will terminate anyway and the log will be shown, 
+          ⍝ so that would be redundant. But it probably was there for a reason, so I'd like to keep it as it is. I'll add this comment to the code as a reminder.
       :EndIf
     ∇
 
